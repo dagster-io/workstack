@@ -11,7 +11,7 @@ from erk.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_from_context im
 )
 
 
-def test_create_enriched_plan_issue_success() -> None:
+def test_create_enriched_plan_success() -> None:
     """Test successful issue creation from enriched plan with --plan-content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -38,7 +38,7 @@ def test_create_enriched_plan_issue_success() -> None:
     assert "Step 1" in body
 
 
-def test_create_enriched_plan_issue_multiline() -> None:
+def test_create_enriched_plan_multiline() -> None:
     """Test --plan-content option with multi-line content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -75,7 +75,7 @@ Test instructions
     assert "First step" in body
 
 
-def test_create_enriched_plan_issue_empty_plan() -> None:
+def test_create_enriched_plan_empty_plan() -> None:
     """Test error when --plan-content is empty."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -90,7 +90,7 @@ def test_create_enriched_plan_issue_empty_plan() -> None:
     assert "Error: Empty plan content" in result.output
 
 
-def test_create_enriched_plan_issue_missing_option() -> None:
+def test_create_enriched_plan_missing_option() -> None:
     """Test error when --plan-content not provided."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -106,7 +106,7 @@ def test_create_enriched_plan_issue_missing_option() -> None:
     assert "--plan-content" in result.output or "plan-content" in result.output
 
 
-def test_create_enriched_plan_issue_ensures_label() -> None:
+def test_create_enriched_plan_ensures_label() -> None:
     """Test that command ensures erk-plan label exists."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -128,7 +128,7 @@ def test_create_enriched_plan_issue_ensures_label() -> None:
     assert color == "0E8A16"
 
 
-def test_create_enriched_plan_issue_unicode() -> None:
+def test_create_enriched_plan_unicode() -> None:
     """Test issue creation with unicode content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -146,7 +146,7 @@ def test_create_enriched_plan_issue_unicode() -> None:
     assert len(fake_gh.created_issues) == 1
 
 
-def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
+def test_create_enriched_plan_yaml_frontmatter() -> None:
     """Test --plan-content with YAML frontmatter preserved."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()

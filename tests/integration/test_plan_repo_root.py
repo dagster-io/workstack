@@ -1,10 +1,10 @@
-"""Integration test verifying that plan-issue commands use correct git repository root.
+"""Integration test verifying that plan commands use correct git repository root.
 
-This test verifies the fix for the bug where erk plan-issue list/get failed with
+This test verifies the fix for the bug where erk plan list/get failed with
 "not a git repository" error because they passed the erk metadata directory to gh
 commands instead of using repo.root (the actual git repository).
 
-The fix: plan-issue commands now explicitly use repo.root for GitHub operations
+The fix: plan commands now explicitly use repo.root for GitHub operations
 instead of relying on ensure_erk_metadata_dir()'s return value.
 """
 
@@ -18,10 +18,10 @@ from erk.core.plan_store import FakePlanStore
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
-def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
+def test_plan_list_uses_repo_root_not_metadata_dir() -> None:
     """Test that list command uses repo.root for gh operations.
 
-    This is a regression test for the bug where plan-issue list failed with
+    This is a regression test for the bug where plan list failed with
     "not a git repository" error because it passed the erk metadata directory
     to gh commands instead of repo.root.
 
@@ -61,7 +61,7 @@ def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
         )
 
 
-def test_plan_issue_get_uses_repo_root_not_metadata_dir() -> None:
+def test_plan_get_uses_repo_root_not_metadata_dir() -> None:
     """Test that get command uses repo.root for gh operations.
 
     Same regression test as above but for the 'get' command.
@@ -76,7 +76,7 @@ def test_plan_issue_get_uses_repo_root_not_metadata_dir() -> None:
                 nonlocal captured_repo_root
                 captured_repo_root = repo_root
                 # Return minimal valid Plan to satisfy command
-                return self._plan_issues[identifier]
+                return self._plans[identifier]
 
         # Create a fake issue to return
         from datetime import UTC, datetime
@@ -97,7 +97,7 @@ def test_plan_issue_get_uses_repo_root_not_metadata_dir() -> None:
         )
 
         store = TrackingPlanStore()
-        store._plan_issues = {"42": fake_issue}
+        store._plans = {"42": fake_issue}
         ctx = env.build_context(plan_store=store)
 
         # Act: Run the get command

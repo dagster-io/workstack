@@ -1032,14 +1032,14 @@ def test_rendered_plan_block_is_parseable() -> None:
     assert "</details>" in wrapped
 
 
-# === PlanIssueSchema Tests ===
+# === PlanSchema Tests ===
 
 
-def test_plan_issue_schema_validates_valid_data() -> None:
-    """Test PlanIssueSchema accepts valid data."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+def test_plan_schema_validates_valid_data() -> None:
+    """Test PlanSchema accepts valid data."""
+    from erk.integrations.github.metadata_blocks import PlanSchema
 
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     data = {
         "issue_number": 123,
         "worktree_name": "add-user-auth",
@@ -1049,11 +1049,11 @@ def test_plan_issue_schema_validates_valid_data() -> None:
     schema.validate(data)  # Should not raise
 
 
-def test_plan_issue_schema_validates_without_plan_file() -> None:
-    """Test PlanIssueSchema accepts data without optional plan_file."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+def test_plan_schema_validates_without_plan_file() -> None:
+    """Test PlanSchema accepts data without optional plan_file."""
+    from erk.integrations.github.metadata_blocks import PlanSchema
 
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     data = {
         "issue_number": 456,
         "worktree_name": "fix-bug",
@@ -1062,11 +1062,11 @@ def test_plan_issue_schema_validates_without_plan_file() -> None:
     schema.validate(data)  # Should not raise
 
 
-def test_plan_issue_schema_rejects_missing_required_field() -> None:
-    """Test PlanIssueSchema rejects missing required fields."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+def test_plan_schema_rejects_missing_required_field() -> None:
+    """Test PlanSchema rejects missing required fields."""
+    from erk.integrations.github.metadata_blocks import PlanSchema
 
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     data = {
         "issue_number": 123,
         # missing worktree_name
@@ -1076,11 +1076,11 @@ def test_plan_issue_schema_rejects_missing_required_field() -> None:
         schema.validate(data)
 
 
-def test_plan_issue_schema_rejects_non_positive_issue_number() -> None:
-    """Test PlanIssueSchema rejects non-positive issue_number."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+def test_plan_schema_rejects_non_positive_issue_number() -> None:
+    """Test PlanSchema rejects non-positive issue_number."""
+    from erk.integrations.github.metadata_blocks import PlanSchema
 
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     data = {
         "issue_number": 0,
         "worktree_name": "test",
@@ -1090,22 +1090,22 @@ def test_plan_issue_schema_rejects_non_positive_issue_number() -> None:
         schema.validate(data)
 
 
-def test_plan_issue_schema_get_key() -> None:
-    """Test PlanIssueSchema returns correct key."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+def test_plan_schema_get_key() -> None:
+    """Test PlanSchema returns correct key."""
+    from erk.integrations.github.metadata_blocks import PlanSchema
 
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     assert schema.get_key() == "erk-plan"
 
 
-# === create_plan_issue_block Tests ===
+# === create_plan_block Tests ===
 
 
-def test_create_plan_issue_block_with_plan_file() -> None:
-    """Test create_plan_issue_block with plan_file."""
-    from erk.integrations.github.metadata_blocks import create_plan_issue_block
+def test_create_plan_block_with_plan_file() -> None:
+    """Test create_plan_block with plan_file."""
+    from erk.integrations.github.metadata_blocks import create_plan_block
 
-    block = create_plan_issue_block(
+    block = create_plan_block(
         issue_number=123,
         worktree_name="add-user-auth",
         timestamp="2025-11-22T12:00:00Z",
@@ -1117,11 +1117,11 @@ def test_create_plan_issue_block_with_plan_file() -> None:
     assert block.data["plan_file"] == "add-user-auth-plan.md"
 
 
-def test_create_plan_issue_block_without_plan_file() -> None:
-    """Test create_plan_issue_block without plan_file."""
-    from erk.integrations.github.metadata_blocks import create_plan_issue_block
+def test_create_plan_block_without_plan_file() -> None:
+    """Test create_plan_block without plan_file."""
+    from erk.integrations.github.metadata_blocks import create_plan_block
 
-    block = create_plan_issue_block(
+    block = create_plan_block(
         issue_number=456,
         worktree_name="fix-bug",
         timestamp="2025-11-22T12:00:00Z",
@@ -1130,17 +1130,17 @@ def test_create_plan_issue_block_without_plan_file() -> None:
     assert "plan_file" not in block.data
 
 
-# === render_erk_issue_event with plan issue Tests ===
+# === render_erk_issue_event with plan Tests ===
 
 
-def test_render_erk_issue_event_with_plan_issue_block() -> None:
-    """Test render_erk_issue_event with plan issue block and workflow instructions."""
+def test_render_erk_issue_event_with_plan_block() -> None:
+    """Test render_erk_issue_event with plan block and workflow instructions."""
     from erk.integrations.github.metadata_blocks import (
-        create_plan_issue_block,
+        create_plan_block,
         render_erk_issue_event,
     )
 
-    block = create_plan_issue_block(
+    block = create_plan_block(
         issue_number=123,
         worktree_name="add-user-auth",
         timestamp="2025-11-22T12:00:00Z",
@@ -1149,7 +1149,7 @@ def test_render_erk_issue_event_with_plan_issue_block() -> None:
     plan_content = "# Plan\n\n1. Step one\n2. Step two"
     workflow = (
         "## Quick Start\n\n```bash\n"
-        'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan-issue '
+        'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan '
         '#123 add-user-auth"\n```'
     )
     description = f"{plan_content}\n\n---\n\n{workflow}"

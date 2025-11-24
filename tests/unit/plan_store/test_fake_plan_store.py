@@ -15,7 +15,7 @@ from erk.core.plan_store import (
 
 def test_get_plan_success() -> None:
     """Test fetching a plan issue that exists."""
-    plan_issue = Plan(
+    plan = Plan(
         plan_identifier="42",
         title="Test Issue",
         body="Test body",
@@ -28,10 +28,10 @@ def test_get_plan_success() -> None:
         metadata={"number": 42},
     )
 
-    store = FakePlanStore(plans={"42": plan_issue})
+    store = FakePlanStore(plans={"42": plan})
     result = store.get_plan(Path("/fake/repo"), "42")
 
-    assert result == plan_issue
+    assert result == plan
 
 
 def test_get_plan_not_found() -> None:

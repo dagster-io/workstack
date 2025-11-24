@@ -11,7 +11,7 @@ from erk.data.kits.erk.kit_cli_commands.erk.create_plan_from_context import (
 )
 
 
-def test_create_plan_issue_success() -> None:
+def test_create_plan_success() -> None:
     """Test successful issue creation from plan."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -38,7 +38,7 @@ def test_create_plan_issue_success() -> None:
     assert "Step 1" in body
 
 
-def test_create_plan_issue_empty_plan() -> None:
+def test_create_plan_empty_plan() -> None:
     """Test error handling for empty plan."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -53,7 +53,7 @@ def test_create_plan_issue_empty_plan() -> None:
     assert "Error: Empty plan content" in result.output
 
 
-def test_create_plan_issue_unicode() -> None:
+def test_create_plan_unicode() -> None:
     """Test issue creation with unicode content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -71,7 +71,7 @@ def test_create_plan_issue_unicode() -> None:
     assert len(fake_gh.created_issues) == 1
 
 
-def test_create_plan_issue_ensures_label() -> None:
+def test_create_plan_ensures_label() -> None:
     """Test that command ensures erk-plan label exists."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -93,7 +93,7 @@ def test_create_plan_issue_ensures_label() -> None:
     assert color == "0E8A16"
 
 
-def test_create_plan_issue_h2_title() -> None:
+def test_create_plan_h2_title() -> None:
     """Test title extraction falls back to H2."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
@@ -113,7 +113,7 @@ def test_create_plan_issue_h2_title() -> None:
     assert title == "Secondary Title"
 
 
-def test_create_plan_issue_preserves_body() -> None:
+def test_create_plan_preserves_body() -> None:
     """Test that full plan content is preserved in issue body."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()

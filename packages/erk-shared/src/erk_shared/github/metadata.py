@@ -268,10 +268,6 @@ class PlanSchema(MetadataBlockSchema):
         return "erk-plan"
 
 
-# Backward compatibility alias
-PlanIssueSchema = PlanSchema
-
-
 def create_metadata_block(
     key: str,
     data: dict[str, Any],
@@ -542,10 +538,6 @@ def create_plan_block(
         data=data,
         schema=schema,
     )
-
-
-# Backward compatibility alias
-create_plan_issue_block = create_plan_block
 
 
 def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:

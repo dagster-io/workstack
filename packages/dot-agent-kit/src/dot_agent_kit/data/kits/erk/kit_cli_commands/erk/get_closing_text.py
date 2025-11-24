@@ -36,7 +36,7 @@ import click
 
 
 @click.command()
-def get_closing_text_command() -> None:
+def get_closing_text() -> None:
     """Get GitHub issue closing text for PR body.
 
     Checks for `.impl/issue.json` in current directory and returns the "Closes #N"

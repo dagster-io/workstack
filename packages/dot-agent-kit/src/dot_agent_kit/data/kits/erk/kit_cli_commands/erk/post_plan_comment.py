@@ -26,7 +26,7 @@ from erk_shared.naming import sanitize_worktree_name
 @click.option("--plan-content", required=True, help="Plan markdown content")
 @click.option("--plan-title", required=True, help="Plan title for worktree name generation")
 @click.option("--plan-file", required=False, help="Optional path to plan file")
-def post_plan_issue_comment(
+def post_plan_comment(
     issue_number: int,
     plan_content: str,
     plan_title: str,
@@ -109,4 +109,4 @@ Or step-by-step:
 
 
 if __name__ == "__main__":
-    post_plan_issue_comment()
+    post_plan_comment()

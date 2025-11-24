@@ -34,7 +34,7 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 Start by creating an enriched plan from your conversation, which creates a GitHub issue directly:
 
 ```bash
-/erk:save-plan-issue
+/erk:save-plan
 ```
 
 This creates a GitHub issue with the enhanced plan content and the `erk-plan` label. The issue becomes the source of truth.
@@ -109,12 +109,12 @@ The front matter enables progress indicators in `erk status` output.
 
 ### Primary Workflow (Issue-Based)
 
-- `/erk:save-plan-issue` - Create GitHub issue with enriched plan from conversation
-- `/erk:save-raw-plan-issue` - Create GitHub issue with basic plan (no enrichment)
+- `/erk:save-plan` - Create GitHub issue with enriched plan from conversation
+- `/erk:save-raw-plan` - Create GitHub issue with basic plan (no enrichment)
 - `erk implement <issue>` - Create worktree and implement plan from GitHub issue
 - `/erk:implement-plan` - Execute plan in current worktree (called by `erk implement`)
 
 ### Deprecated Commands (File-Based)
 
 - `/erk:create-wt-from-plan-file` - Create worktree from plan on disk (use `erk implement <issue>` instead)
-- `/erk:create-plan-issue-from-plan-file` - Create issue from plan file (use save commands instead)
+- `/erk:create-plan-from-file` - Create issue from plan file (use save commands instead)

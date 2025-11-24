@@ -160,7 +160,7 @@ GitHub closes the issues, but you can add attribution comments:
 Check if linked issues have specific labels:
 
 ```yaml
-- name: Process plan issues only
+- name: Process plans only
   run: |
     ISSUES=$(gh pr view $PR_NUMBER --json closingIssuesReferences --jq '.closingIssuesReferences[].number')
 
@@ -168,8 +168,8 @@ Check if linked issues have specific labels:
       if gh issue view $issue --json labels \
         | jq -e '.labels[] | select(.name == "erk-plan")' > /dev/null; then
 
-        echo "Issue #$issue is a plan issue"
-        # Take action for plan issues
+        echo "Issue #$issue is a plan"
+        # Take action for plans
       fi
     done
 ```

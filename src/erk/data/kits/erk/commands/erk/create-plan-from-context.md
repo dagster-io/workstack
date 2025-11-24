@@ -1,51 +1,44 @@
 ---
-description: Extract plan from context, create GitHub issue, and setup implementation worktree
+description: Create GitHub issue directly from plan in conversation (no disk file)
 ---
 
-# /erk:implement-plan-in-context
+# /erk:create-plan-issue-from-context
 
-Extract implementation plan from the current conversation, create a GitHub issue with the `erk-plan` label, and provide the shell activation command to automatically create a worktree and begin implementation.
+Extract implementation plan from the current conversation and create a GitHub issue directly, without saving a plan file to disk. This provides a streamlined workflow for quick issue creation from conversational context.
 
 ## Usage
 
 ```bash
-/erk:implement-plan-in-context
+/erk:create-plan-issue-from-context
 ```
 
 **No arguments accepted** - This command automatically extracts the plan from the conversation.
 
 ## Purpose
 
-This command provides an end-to-end workflow from plan to implementation in one step. It:
+This command provides a fast path for creating GitHub issues when you don't need a local plan file. It:
 
 - Extracts the plan as-is from the conversation
+- Wraps plan in collapsible metadata block
 - Creates GitHub issue with `erk-plan` label
-- Provides shell activation one-liner for automatic worktree creation and implementation
-
-**What it does:**
-
-- ✅ Extract plan from conversation context
-- ✅ Create GitHub issue with `erk-plan` label
-- ✅ Output shell activation command for implementation
+- Displays issue URL
 
 **What it does NOT do:**
 
-- ❌ No plan enhancement or enrichment (use `/erk:save-context-enriched-plan` for that)
 - ❌ No disk persistence (issue-only workflow)
-- ❌ No automatic worktree creation (requires running the provided command)
+- ❌ No plan enhancement or enrichment
+- ❌ No interactive clarifying questions
+- ❌ No worktree creation (use `/erk:create-planned-wt` separately)
+- ❌ Cannot be used with `/erk:create-planned-wt` later (requires plan file)
 
 ## How It Works
 
 1. **Extracts plan** from conversation (minimum 100 chars, must have structure)
-2. **Creates GitHub issue** with plan body and `erk-plan` label
-3. **Outputs command**: `erk implement <issue-number>`
-
-Running `erk implement <issue-number>` will:
-
-- Create new worktree with auto-generated branch name
-- Set up `.impl/` folder with plan content
-- Save `.impl/issue.json` for PR linking
-- Provide activation instructions
+2. **Wraps in metadata block** using collapsible `<details>` with `erk-plan` key
+3. **Extracts title** from plan (H1 → H2 → first line)
+4. **Ensures label exists** (creates `erk-plan` label if needed)
+5. **Creates GitHub issue** with plan body and label
+6. **Displays result** with issue number and URL
 
 ## Prerequisites
 
@@ -54,32 +47,32 @@ Running `erk implement <issue-number>` will:
 - `gh` CLI must be installed and authenticated
 - GitHub repository must be accessible
 
-## When to Use This Command
+## Limitations
 
-**Use this command when:**
+⚠️ **This workflow creates issues only (no local plan file)**
 
-- You have a plan in conversation and want immediate implementation
-- You want automatic worktree creation and activation
-- You're ready to start implementing right away
+- Cannot create worktree from this issue later (requires plan file on disk)
+- No local backup of plan content (exists only in GitHub issue)
+- Cannot edit plan file before issue creation
 
-**Use `/erk:save-context-enriched-plan` instead when:**
+**If you need worktree workflow:**
 
-- You want to enhance the plan with clarifying questions
-- You need to review/edit the plan before creating worktree
-- You prefer file-based workflow
+1. Use `/erk:save-plan` or `/erk:save-context-enriched-plan` to save plan to disk
+2. Use `/erk:create-wt-from-plan-file` to create worktree
+3. Use `/erk:create-plan-from-file` to create issue
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/erk:implement-plan-in-context` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:create-plan-issue-from-context` command. Follow these steps carefully using ONLY the allowed tools.
 
 ### CRITICAL: Tool Restrictions
 
 **ALLOWED TOOLS:**
 
 - `Read` - For examining the conversation
-- `Bash` - ONLY for `dot-agent kit-command` and git validation
+- `Bash` - ONLY for `gh` commands and `git rev-parse`
 - `AskUserQuestion` - ONLY for error recovery
 
 **FORBIDDEN TOOLS:**
@@ -191,17 +184,22 @@ Suggested action:
 
 Exit with error.
 
-### Step 3: Create GitHub Issue
+### Step 3: Create GitHub Issue (Single Command)
 
-Use the composite kit CLI command that handles the complete workflow:
+Use the new composite kit CLI command that handles the complete workflow:
+
+- Extracts title from plan
+- Ensures erk-plan label exists
+- Creates GitHub issue with plan body
+- Returns structured JSON result
+
+**Algorithm:**
 
 1. Save plan to temporary file (for clean stdin handling):
 
    ```bash
    temp_plan=$(mktemp)
-   cat > "$temp_plan" << 'EOF'
-   [plan content here]
-   EOF
+   echo "$plan_content" > "$temp_plan"
    ```
 
 2. Call the composite kit command:
@@ -233,7 +231,14 @@ Use the composite kit CLI command that handles the complete workflow:
 
    Exit with error.
 
-### Step 4: Display Success Output with Implementation Command
+**What this command does internally:**
+
+- Extracts title (H1 → H2 → first line fallback)
+- Ensures erk-plan label exists (creates if needed)
+- Creates issue with full plan as body
+- Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
+
+### Step 4: Display Success Output
 
 After successfully creating the issue, output:
 
@@ -242,9 +247,12 @@ After successfully creating the issue, output:
 
 🔗 <issue_url>
 
-To create worktree and begin implementation:
+📝 Note: This issue was created without a local plan file. To create a worktree, first save the plan with `/erk:save-plan` or `/erk:save-context-enriched-plan`.
 
-  erk implement <number>
+Next steps:
+1. Review issue content on GitHub
+2. Implement manually or assign to team member
+3. Track progress in GitHub issue
 
 ---
 
@@ -254,8 +262,9 @@ To create worktree and begin implementation:
 **Format notes:**
 
 - Use emoji for visual clarity
-- Show simple `erk implement` command
-- Include JSON output for potential scripting integration
+- Include limitation note (brief, as requested)
+- JSON output for potential scripting integration
+- Clear next steps
 
 ### Error Handling
 
@@ -275,11 +284,12 @@ To create worktree and begin implementation:
 2. **gh CLI not found** - See Step 1
 3. **gh not authenticated** - See Step 1
 4. **No plan found** - See Step 2
-5. **Issue creation failed** - See Step 3
+5. **Issue creation failed** - See Step 3 (kit command handles label creation internally)
 
 ## Important Notes
 
-- **Streamlined workflow**: Plan → Issue → Implementation command in one step
 - **No disk persistence**: Plan exists only in GitHub issue
 - **No enhancement**: Extract plan as-is from conversation
-- **Simple output**: Just displays `erk implement <issue-number>` command to run
+- **Manual label only**: Always uses `erk-plan` label
+- **Issue-only workflow**: Cannot create worktree from this issue later
+- **Speed over reusability**: Trade-off for streamlined workflow

@@ -314,17 +314,17 @@ class DryRunGit(Git):
 
 ### Plan Folder
 
-A `.plan/` folder containing implementation plans and progress tracking for a feature.
+A `.impl/` folder containing implementation plans and progress tracking for a feature.
 
 **Usage**: `erk create --from-plan my-plan.md my-feature`
 
 **Behavior**:
 
-- Plan file is converted to `.plan/` folder structure in the new worktree
+- Plan file is converted to `.impl/` folder structure in the new worktree
 - Contains two files:
   - `plan.md` - Immutable implementation plan
   - `progress.md` - Mutable progress tracking with checkboxes
-- `.plan/` is gitignored (not committed)
+- `.impl/` is gitignored (not committed)
 - Useful for keeping implementation notes with the working code
 
 **Benefits**:
@@ -343,7 +343,7 @@ echo "## Implementation Plan\n1. Step 1\n2. Step 2" > plan.md
 erk create --from-plan plan.md my-feature
 
 # Plan structure created:
-# ~/erks/erk/my-feature/.plan/
+# ~/erks/erk/my-feature/.impl/
 #   ├── plan.md        (immutable)
 #   └── progress.md    (mutable, with checkboxes)
 ```

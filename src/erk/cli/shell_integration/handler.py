@@ -9,7 +9,6 @@ from click.testing import CliRunner
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
-from erk.cli.commands.plan import plan_group
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
 from erk.cli.commands.stack.land_cmd import land_stack_cmd
@@ -59,7 +58,6 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         "consolidate": consolidate_stack,
         "implement": implement,
         "land-stack": land_stack_cmd,
-        "plan": plan_group,
     }
 
     command = command_map.get(command_name)

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from click.testing import CliRunner
 
-from erk.cli.commands.plan import plan_group
+from erk.cli.cli import cli
 from erk.core.plan_store import FakePlanStore, Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
@@ -32,7 +32,7 @@ def test_get_plan_displays_issue() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["get", "42"], obj=ctx)
+        result = runner.invoke(cli, ["get", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -54,7 +54,7 @@ def test_get_plan_not_found() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["get", "999"], obj=ctx)
+        result = runner.invoke(cli, ["get", "999"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1
@@ -84,7 +84,7 @@ def test_get_plan_minimal_fields() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["get", "1"], obj=ctx)
+        result = runner.invoke(cli, ["get", "1"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -114,7 +114,7 @@ def test_get_plan_string_identifier() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["get", "PROJ-123"], obj=ctx)
+        result = runner.invoke(cli, ["get", "PROJ-123"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0

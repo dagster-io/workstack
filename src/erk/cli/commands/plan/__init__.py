@@ -1,22 +1,16 @@
-"""Plan commands for querying plan storage."""
+"""Plan commands moved to top-level.
 
-import click
+All plan commands are now top-level:
+- erk list (formerly erk plan list)
+- erk get (formerly erk plan get)
+- erk close (formerly erk plan close)
+- erk retry (formerly erk plan retry)
 
-from erk.cli.commands.plan.close_cmd import close_plan
-from erk.cli.commands.plan.get import get_plan
-from erk.cli.commands.plan.list_cmd import list_plans, ls_plans
-from erk.cli.commands.plan.retry_cmd import retry_plan
+The plan_group has been removed - no backward compatibility.
+"""
 
-
-@click.group("plan")
-def plan_group() -> None:
-    """Query plans from storage providers."""
-    pass
-
-
-# Register subcommands
-plan_group.add_command(close_plan)
-plan_group.add_command(get_plan)
-plan_group.add_command(list_plans)
-plan_group.add_command(ls_plans)
-plan_group.add_command(retry_plan)
+# Individual command implementations remain in their original files:
+# - close_cmd.py
+# - get.py
+# - list_cmd.py
+# - retry_cmd.py

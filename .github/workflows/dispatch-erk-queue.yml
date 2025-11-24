@@ -135,7 +135,7 @@ jobs:
           echo "Fetching plan content for issue #$ISSUE_NUMBER..."
 
           # Use erk's Python API to fetch plan and create .erp/ folder
-          python3 << 'PYTHON_SCRIPT'
+          uv run --with . python << 'PYTHON_SCRIPT'
           import sys
           import json
           from pathlib import Path

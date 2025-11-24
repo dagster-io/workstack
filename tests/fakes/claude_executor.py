@@ -6,7 +6,7 @@ requiring the actual Claude CLI or using subprocess mocks.
 
 from pathlib import Path
 
-from erk.core.claude_executor import ClaudeExecutor
+from erk.core.claude_executor import ClaudeExecutor, CommandResult
 
 
 class FakeClaudeExecutor(ClaudeExecutor):
@@ -58,26 +58,51 @@ class FakeClaudeExecutor(ClaudeExecutor):
         """
         self._claude_available = claude_available
         self._command_should_fail = command_should_fail
-        self._executed_commands: list[tuple[str, Path, bool]] = []
+        self._executed_commands: list[tuple[str, Path, bool, bool]] = []
         self._interactive_calls: list[tuple[Path, bool]] = []
 
     def is_claude_available(self) -> bool:
         """Return the availability configured at construction time."""
         return self._claude_available
 
-    def execute_command(self, command: str, worktree_path: Path, dangerous: bool) -> None:
+    def execute_command(
+        self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False
+    ) -> CommandResult:
         """Track command execution without running subprocess.
 
         This method records the call parameters for test assertions.
         It does not execute any actual subprocess operations.
 
+        Args:
+            command: The slash command to execute
+            worktree_path: Path to worktree directory
+            dangerous: Whether to skip permission prompts
+            verbose: Whether to show raw output or filtered output
+
+        Returns:
+            CommandResult with success status
+
         Raises:
             RuntimeError: If command_should_fail was set to True
         """
-        self._executed_commands.append((command, worktree_path, dangerous))
+        self._executed_commands.append((command, worktree_path, dangerous, verbose))
 
         if self._command_should_fail:
-            raise RuntimeError(f"Claude command {command} failed (simulated failure)")
+            return CommandResult(
+                success=False,
+                pr_url=None,
+                duration_seconds=0.0,
+                error_message=f"Claude command {command} failed (simulated failure)",
+                filtered_messages=[],
+            )
+
+        return CommandResult(
+            success=True,
+            pr_url=None,
+            duration_seconds=0.0,
+            error_message=None,
+            filtered_messages=[],
+        )
 
     def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:
         """Track interactive execution without replacing process.
@@ -95,10 +120,10 @@ class FakeClaudeExecutor(ClaudeExecutor):
         self._interactive_calls.append((worktree_path, dangerous))
 
     @property
-    def executed_commands(self) -> list[tuple[str, Path, bool]]:
+    def executed_commands(self) -> list[tuple[str, Path, bool, bool]]:
         """Get the list of execute_command() calls that were made.
 
-        Returns list of (command, worktree_path, dangerous) tuples.
+        Returns list of (command, worktree_path, dangerous, verbose) tuples.
 
         This property is for test assertions only.
         """

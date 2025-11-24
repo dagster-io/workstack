@@ -4,6 +4,7 @@ from erk_shared.naming import sanitize_worktree_name
 from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.commands.wt.create_cmd import make_env_content
 from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.ensure import Ensure
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -40,14 +41,10 @@ def rename_wt(ctx: ErkContext, old_name: str, new_name: str, dry_run: bool) -> N
     new_path = worktree_path_for(repo.worktrees_dir, sanitized_new_name)
 
     # Validate old worktree exists
-    if not ctx.git.path_exists(old_path):
-        user_output(f"Worktree not found: {old_path}")
-        raise SystemExit(1)
+    Ensure.path_exists(ctx, old_path, f"Worktree not found: {old_path}")
 
     # Validate new path doesn't already exist
-    if ctx.git.path_exists(new_path):
-        user_output(f"Destination already exists: {new_path}")
-        raise SystemExit(1)
+    Ensure.invariant(not ctx.git.path_exists(new_path), f"Destination already exists: {new_path}")
 
     # Move via git worktree move
     ctx.git.move_worktree(repo.root, old_path, new_path)

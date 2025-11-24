@@ -11,6 +11,7 @@ from erk.cli.core import (
     validate_worktree_name_for_deletion,
     worktree_path_for,
 )
+from erk.cli.ensure import Ensure
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context, regenerate_context
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -98,9 +99,7 @@ def _delete_worktree(
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 
     # Check if worktree exists using git operations (works with both real and sentinel paths)
-    if not ctx.git.path_exists(wt_path):
-        user_output(f"Worktree not found: {wt_path}")
-        raise SystemExit(1)
+    Ensure.path_exists(ctx, wt_path, f"Worktree not found: {wt_path}")
 
     # LBYL: Check if user is currently in the worktree being deleted
     # If so, change to repository root before deletion to prevent

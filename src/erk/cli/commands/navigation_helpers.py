@@ -6,47 +6,10 @@ from erk_shared.git.abc import WorktreeInfo
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.wt.create_cmd import ensure_worktree_for_branch
 from erk.cli.debug import debug_log
+from erk.cli.ensure import Ensure
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
-
-
-class Ensure:
-    """Helper class for asserting invariants with consistent error handling."""
-
-    @staticmethod
-    def truthy[T](value: T, error_message: str) -> T:
-        """Ensure value is truthy, otherwise output error and exit.
-
-        Args:
-            value: Value to check for truthiness
-            error_message: Error message to display if value is falsy
-
-        Returns:
-            The value unchanged if truthy
-
-        Raises:
-            SystemExit: If value is falsy (with exit code 1)
-        """
-        if not value:
-            user_output(error_message)
-            raise SystemExit(1)
-        return value
-
-    @staticmethod
-    def invariant(condition: bool, error_message: str) -> None:
-        """Ensure condition is true, otherwise output error and exit.
-
-        Args:
-            condition: Boolean condition to check
-            error_message: Error message to display if condition is false
-
-        Raises:
-            SystemExit: If condition is false (with exit code 1)
-        """
-        if not condition:
-            user_output(error_message)
-            raise SystemExit(1)
 
 
 def ensure_graphite_enabled(ctx: ErkContext) -> None:
@@ -179,7 +142,7 @@ def activate_worktree(
     """
     wt_path = target_path
 
-    Ensure.invariant(ctx.git.path_exists(wt_path), f"Worktree not found: {wt_path}")
+    Ensure.path_exists(ctx, wt_path, f"Worktree not found: {wt_path}")
 
     worktree_name = wt_path.name
 

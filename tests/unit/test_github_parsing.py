@@ -89,20 +89,22 @@ def test_parse_github_pr_list_malformed_url():
 def test_parse_github_pr_status_single():
     """Test parsing single PR status."""
     json_data = load_fixture("github/pr_status_single.json")
-    state, number, title = parse_github_pr_status(json_data)
+    state, number, title, url = parse_github_pr_status(json_data)
 
     assert state == "OPEN"
     assert number == 456
     assert title == "Add new feature for improved performance"
+    assert url == "https://github.com/owner/repo/pull/456"
 
 
 def test_parse_github_pr_status_no_pr():
     """Test parsing status when no PR exists."""
-    state, number, title = parse_github_pr_status("[]")
+    state, number, title, url = parse_github_pr_status("[]")
 
     assert state == "NONE"
     assert number is None
     assert title is None
+    assert url is None
 
 
 def test_determine_checks_status_all_passing():

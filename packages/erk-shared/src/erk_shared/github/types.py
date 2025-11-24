@@ -12,6 +12,7 @@ class PRInfo(NamedTuple):
     state: PRState
     pr_number: int | None
     title: str | None
+    url: str | None = None
 
 
 @dataclass(frozen=True)

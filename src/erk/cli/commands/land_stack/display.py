@@ -7,6 +7,7 @@ import click
 
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit
+from erk.core.display_utils import format_clickable_pr
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,11 @@ def _show_landing_plan(
     # Display PRs in format: #PR (branch → target) - title
     # Show in landing order (bottom to top)
     for branch_pr in branches:
-        pr_styled = click.style(f"#{branch_pr.pr_number}", fg="cyan")
+        # Use clickable PR link if URL is available
+        if branch_pr.url:
+            pr_styled = format_clickable_pr(branch_pr.pr_number, branch_pr.url, use_graphite=True)
+        else:
+            pr_styled = click.style(f"#{branch_pr.pr_number}", fg="cyan")
         branch_styled = click.style(branch_pr.branch, fg="yellow")
         trunk_styled = click.style(trunk_branch, fg="yellow")
         title_styled = click.style(branch_pr.title, fg="bright_magenta")

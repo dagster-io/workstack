@@ -2,6 +2,7 @@
   {
     "number": 456,
     "state": "OPEN",
-    "title": "Add new feature for improved performance"
+    "title": "Add new feature for improved performance",
+    "url": "https://github.com/owner/repo/pull/456"
   }
 ]

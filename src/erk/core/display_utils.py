@@ -78,18 +78,13 @@ def format_pr_info(
 
     emoji = get_pr_status_emoji(pr)
 
-    # Format PR number text
-    pr_text = f"#{pr.number}"
-
-    # If we have a URL, make it clickable using OSC 8 terminal escape sequence
+    # If we have a URL, make it clickable using the utility function
     if graphite_url:
-        # Wrap the link text in cyan color to distinguish from non-clickable bright_blue indicators
-        colored_pr_text = click.style(pr_text, fg="cyan")
-        clickable_link = f"\033]8;;{graphite_url}\033\\{colored_pr_text}\033]8;;\033\\"
+        clickable_link = format_clickable_pr(pr.number, graphite_url, use_graphite=True)
         return f"{emoji} {clickable_link}"
     else:
         # No URL available - just show colored text without link
-        colored_pr_text = click.style(pr_text, fg="cyan")
+        colored_pr_text = click.style(f"#{pr.number}", fg="cyan")
         return f"{emoji} {colored_pr_text}"
 
 
@@ -230,6 +225,59 @@ def format_worktree_line(
     return line
 
 
+def format_clickable_issue(number: int, url: str) -> str:
+    """Format an issue number as a clickable hyperlink.
+
+    Args:
+        number: The issue number
+        url: The GitHub issue URL
+
+    Returns:
+        OSC 8 hyperlinked issue number in cyan
+    """
+    issue_text = f"#{number}"
+    colored_text = click.style(issue_text, fg="cyan")
+    return f"\033]8;;{url}\033\\{colored_text}\033]8;;\033\\"
+
+
+def format_clickable_pr(number: int, url: str, use_graphite: bool = True) -> str:
+    """Format a PR number as a clickable hyperlink.
+
+    Args:
+        number: The PR number
+        url: The PR URL (GitHub or Graphite)
+        use_graphite: If True and URL is GitHub, convert to Graphite URL
+
+    Returns:
+        OSC 8 hyperlinked PR number in cyan
+    """
+    # Convert GitHub URL to Graphite if requested
+    if use_graphite and "github.com" in url:
+        # Parse: https://github.com/owner/repo/pull/123
+        parts = url.rstrip("/").split("/")
+        if len(parts) >= 5 and parts[-2] == "pull":
+            owner = parts[-4]
+            repo = parts[-3]
+            url = f"https://app.graphite.com/github/pr/{owner}/{repo}/{number}"
+
+    pr_text = f"#{number}"
+    colored_text = click.style(pr_text, fg="cyan")
+    return f"\033]8;;{url}\033\\{colored_text}\033]8;;\033\\"
+
+
+def format_clickable_issue_rich(number: int, url: str) -> str:
+    """Format an issue number as a Rich markup hyperlink.
+
+    Args:
+        number: The issue number
+        url: The GitHub issue URL
+
+    Returns:
+        Rich markup hyperlink string
+    """
+    return f"[link={url}][cyan]#{number}[/cyan][/link]"
+
+
 def format_plan_display(
     plan_identifier: str,
     state: str,
@@ -253,15 +301,19 @@ def format_plan_display(
     state_color = "green" if state == "OPEN" else "red"
     state_str = click.style(state, fg=state_color)
 
-    # Format identifier
-    id_text = f"#{plan_identifier}"
-
-    # If we have a URL, make it clickable using OSC 8
+    # Format identifier - use utility function if URL available
     if url:
-        colored_id = click.style(id_text, fg="cyan")
-        clickable_id = f"\033]8;;{url}\033\\{colored_id}\033]8;;\033\\"
+        # Convert plan_identifier to int if it's numeric, otherwise keep as string
+        try:
+            issue_number = int(plan_identifier)
+            clickable_id = format_clickable_issue(issue_number, url)
+        except ValueError:
+            # Non-numeric identifier, fall back to manual formatting
+            id_text = f"#{plan_identifier}"
+            colored_id = click.style(id_text, fg="cyan")
+            clickable_id = f"\033]8;;{url}\033\\{colored_id}\033]8;;\033\\"
     else:
-        clickable_id = click.style(id_text, fg="cyan")
+        clickable_id = click.style(f"#{plan_identifier}", fg="cyan")
 
     # Format labels
     labels_str = ""

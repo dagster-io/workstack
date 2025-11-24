@@ -9,3 +9,4 @@ class BranchPR(NamedTuple):
     branch: str
     pr_number: int
     title: str
+    url: str | None = None

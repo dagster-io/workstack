@@ -33,6 +33,7 @@ result = ops.graphite().submit(publish=True, restack=True)
 ```
 
 The `submit_branch.py` command uses `publish=True`, which allows Graphite to:
+
 - Create a new PR if one doesn't exist
 - Handle the complete submission flow
 - Properly integrate with Graphite's PR tracking
@@ -48,11 +49,13 @@ Delete lines 34-36 that reject branches without existing PRs. Let Graphite handl
 ### Step 2: Use publish=True Flag
 
 Change line 52 from:
+
 ```python
 result = kit.graphite().submit(publish=False, restack=False)
 ```
 
 To:
+
 ```python
 result = kit.graphite().submit(publish=True, restack=False)
 ```
@@ -72,6 +75,7 @@ This mirrors the successful pattern in `submit_branch.py` (lines 474-530).
 ### Step 4: Optional - Add PR Creation Messaging
 
 Consider adding a check after successful submit to distinguish between:
+
 - Created new PR (PR didn't exist before)
 - Updated existing PR (PR already existed)
 
@@ -82,6 +86,7 @@ This can be done by checking if `pr_info` was initially None, then comparing wit
 ### Current Intent vs Implementation Mismatch
 
 From the command documentation (update-pr.md line 36-39):
+
 ```
 ## When to Use
 
@@ -90,6 +95,7 @@ From the command documentation (update-pr.md line 36-39):
 ```
 
 The documentation says "update an existing PR", but the real use case (from Graphite workflows) is:
+
 - Submit changes (create PR if needed, OR update if exists)
 - Quick branch updates in Graphite stacks
 
@@ -136,7 +142,7 @@ For update-pr (focused on single branch updates), `restack=False` is appropriate
 
 ### Complex Reasoning
 
-1. **Why not just use submit_branch.py code?** 
+1. **Why not just use submit_branch.py code?**
    - `submit_branch` is more complex: it does pre-analysis (commit/squash), AI analysis (diff review), and post-analysis (metadata updates)
    - `update_pr` should be simpler and faster: just stage, commit, restack, submit
    - Different workflows for different scenarios

@@ -30,28 +30,28 @@ def execute_update_pr() -> dict:
     """
     kit = RealGtKit()
 
-    # 1. Check PR exists
-    pr_info = kit.github().get_pr_info()
-    if not pr_info:
-        return {"success": False, "error": "No PR associated with current branch"}
-
-    pr_number, pr_url = pr_info
-
-    # 2. Commit if uncommitted changes
+    # 1. Commit if uncommitted changes
     if kit.git().has_uncommitted_changes():
         if not kit.git().add_all():
             return {"success": False, "error": "Failed to stage changes"}
         if not kit.git().commit("Update changes"):
             return {"success": False, "error": "Failed to commit changes"}
 
-    # 3. Restack
+    # 2. Restack
     if not kit.graphite().restack():
         return {"success": False, "error": "Failed to restack branch"}
 
-    # 4. Submit update
-    result = kit.graphite().submit(publish=False, restack=False)
+    # 3. Submit update
+    result = kit.graphite().submit(publish=True, restack=False)
     if not result.success:
         return {"success": False, "error": f"Failed to submit update: {result.stderr}"}
+
+    # 4. Fetch PR info after submission
+    pr_info = kit.github().get_pr_info()
+    if not pr_info:
+        return {"success": False, "error": "PR submission succeeded but failed to retrieve PR info"}
+
+    pr_number, pr_url = pr_info
 
     return {"success": True, "pr_number": pr_number, "pr_url": pr_url}
 

@@ -129,9 +129,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         """
         # Verify Claude is available
         if not self.is_claude_available():
-            raise RuntimeError(
-                "Claude CLI not found\nInstall from: https://claude.com/download"
-            )
+            raise RuntimeError("Claude CLI not found\nInstall from: https://claude.com/download")
 
         # Change to worktree directory
         os.chdir(worktree_path)

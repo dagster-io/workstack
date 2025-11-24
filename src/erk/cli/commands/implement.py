@@ -90,7 +90,7 @@ def _build_command_sequence(submit: bool) -> list[str]:
     """
     commands = ["/erk:implement-plan"]
     if submit:
-        commands.extend(["/fast-ci", "/gt:submit-squashed-branch"])
+        commands.extend(["/fast-ci", "/gt:simple-submit"])
     return commands
 
 
@@ -111,7 +111,9 @@ def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
     return args
 
 
-def _execute_interactive_mode(worktree_path: Path, dangerous: bool, executor: ClaudeExecutor) -> None:
+def _execute_interactive_mode(
+    worktree_path: Path, dangerous: bool, executor: ClaudeExecutor
+) -> None:
     """Execute implementation in interactive mode using executor.
 
     Args:

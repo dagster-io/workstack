@@ -584,7 +584,7 @@ def test_implement_submit_in_script_mode() -> None:
         # Verify script content contains chained commands
         assert "/erk:implement-plan" in script_content
         assert "/fast-ci" in script_content
-        assert "/gt:submit-squashed-branch" in script_content
+        assert "/gt:simple-submit" in script_content
 
         # Verify commands are chained with &&
         assert "&&" in script_content
@@ -617,7 +617,7 @@ def test_implement_submit_with_dry_run() -> None:
         # Verify all three commands shown in dry-run output
         assert "/erk:implement-plan" in result.output
         assert "/fast-ci" in result.output
-        assert "/gt:submit-squashed-branch" in result.output
+        assert "/gt:simple-submit" in result.output
 
         # Verify no worktree was actually created
         assert len(git.added_worktrees) == 0
@@ -787,7 +787,7 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
         expected_ci = "claude --permission-mode acceptEdits --dangerously-skip-permissions /fast-ci"
         expected_submit = (
             "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            "/gt:submit-squashed-branch"
+            "/gt:simple-submit"
         )
         assert expected_implement in script_content
         assert expected_ci in script_content
@@ -1132,7 +1132,7 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
         commands = [cmd for cmd, _, _ in executor.executed_commands]
         assert commands[0] == "/erk:implement-plan"
         assert commands[1] == "/fast-ci"
-        assert commands[2] == "/gt:submit-squashed-branch"
+        assert commands[2] == "/gt:simple-submit"
 
 
 def test_script_with_submit_includes_all_commands() -> None:
@@ -1216,4 +1216,4 @@ def test_dry_run_shows_command_sequence() -> None:
         assert "Command sequence:" in result.output
         assert "/erk:implement-plan" in result.output
         assert "/fast-ci" in result.output
-        assert "/gt:submit-squashed-branch" in result.output
+        assert "/gt:simple-submit" in result.output

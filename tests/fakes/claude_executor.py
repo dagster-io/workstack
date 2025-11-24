@@ -90,9 +90,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
             RuntimeError: If Claude CLI is not available
         """
         if not self._claude_available:
-            raise RuntimeError(
-                "Claude CLI not found\nInstall from: https://claude.com/download"
-            )
+            raise RuntimeError("Claude CLI not found\nInstall from: https://claude.com/download")
 
         self._interactive_calls.append((worktree_path, dangerous))
 

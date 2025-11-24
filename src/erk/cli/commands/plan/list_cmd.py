@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 from erk_shared.github.issues import GitHubIssues
+from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
 from rich.console import Console
 from rich.table import Table
@@ -16,6 +17,79 @@ from erk.core.context import ErkContext
 from erk.core.plan_store import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
+
+
+def select_display_pr(prs: list[PullRequestInfo]) -> PullRequestInfo | None:
+    """Select PR to display: prefer open, then merged, then closed.
+
+    Args:
+        prs: List of PRs sorted by created_at descending (most recent first)
+
+    Returns:
+        PR to display, or None if no PRs
+    """
+    # Check for open PRs (published or draft)
+    open_prs = [pr for pr in prs if pr.state in ("OPEN", "DRAFT")]
+    if open_prs:
+        return open_prs[0]  # Most recent open
+
+    # Fallback to merged PRs
+    merged_prs = [pr for pr in prs if pr.state == "MERGED"]
+    if merged_prs:
+        return merged_prs[0]  # Most recent merged
+
+    # Fallback to closed PRs
+    closed_prs = [pr for pr in prs if pr.state == "CLOSED"]
+    if closed_prs:
+        return closed_prs[0]  # Most recent closed
+
+    return None
+
+
+def format_pr_cell(pr: PullRequestInfo) -> str:
+    """Format PR cell with emoji: #123 👀 or #123 👀💥
+
+    Args:
+        pr: PR information
+
+    Returns:
+        Formatted string for table cell
+    """
+    # Map state to emoji (aligned with erk-statusline conventions)
+    emoji_map = {
+        "OPEN": "👀",  # published/open PR
+        "DRAFT": "🚧",  # draft PR
+        "MERGED": "🎉",  # merged PR
+        "CLOSED": "⛔",  # closed PR
+    }
+
+    # Get base emoji for state
+    emoji = emoji_map.get(pr.state, "")
+
+    # Add conflicts indicator for open/draft PRs
+    if pr.state in ("OPEN", "DRAFT") and pr.has_conflicts:
+        emoji += "💥"
+
+    return f"#{pr.number} {emoji}"
+
+
+def format_checks_cell(pr: PullRequestInfo | None) -> str:
+    """Format checks cell: ✅/🚫/🔄/-
+
+    Args:
+        pr: PR information, or None if no PR
+
+    Returns:
+        Formatted string for table cell
+    """
+    if pr is None:
+        return "-"
+
+    if pr.checks_passing is None:
+        return "🔄"  # Pending or no checks
+    if pr.checks_passing:
+        return "✅"  # All pass
+    return "🚫"  # Any failing
 
 
 def determine_action_state(plan: Plan, all_comments: dict[int, list[str]]) -> str:
@@ -229,6 +303,15 @@ def _list_plans_impl(
             # If batch fetch fails, continue without worktree status
             pass
 
+    # Batch fetch PR linkages for all issues
+    pr_linkages: dict[int, list[PullRequestInfo]] = {}
+    if issue_numbers:
+        try:
+            pr_linkages = ctx.github.get_prs_linked_to_issues(repo_root, issue_numbers)
+        except Exception:
+            # If batch fetch fails, continue without PR info
+            pass
+
     # Apply action state filter if specified
     if action_state:
         # Normalize action_state for comparison (user input is lowercase from click.Choice)
@@ -260,6 +343,8 @@ def _list_plans_impl(
     # Create Rich table with columns
     table = Table(show_header=True, header_style="bold")
     table.add_column("Plan", style="cyan", no_wrap=True)
+    table.add_column("PR", no_wrap=True)
+    table.add_column("Checks", no_wrap=True)
     table.add_column("State", no_wrap=True)
     table.add_column("Action", no_wrap=True, width=12)
     table.add_column("Title", no_wrap=True)
@@ -310,8 +395,18 @@ def _list_plans_impl(
             if parsed_name:
                 worktree_name = parsed_name
 
+        # Get PR info for this issue
+        pr_cell = "-"
+        checks_cell = "-"
+        if isinstance(issue_number, int) and issue_number in pr_linkages:
+            prs = pr_linkages[issue_number]
+            selected_pr = select_display_pr(prs)
+            if selected_pr is not None:
+                pr_cell = format_pr_cell(selected_pr)
+                checks_cell = format_checks_cell(selected_pr)
+
         # Add row to table
-        table.add_row(issue_id, state_str, action_str, title, worktree_name)
+        table.add_row(issue_id, pr_cell, checks_cell, state_str, action_str, title, worktree_name)
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation

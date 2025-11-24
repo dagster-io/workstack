@@ -208,3 +208,24 @@ class GitHub(ABC):
             RuntimeError: If gh CLI command fails
         """
         ...
+
+    @abstractmethod
+    def get_prs_linked_to_issues(
+        self, repo_root: Path, issue_numbers: list[int]
+    ) -> dict[int, list[PullRequestInfo]]:
+        """Get PRs linked to issues via closing keywords.
+
+        Queries GitHub for all PRs that link to the given issues using
+        closing keywords (Closes, Fixes, Resolves). Returns a mapping
+        of issue numbers to the PRs that close them.
+
+        Args:
+            repo_root: Repository root directory
+            issue_numbers: List of issue numbers to query
+
+        Returns:
+            Mapping of issue_number -> list of PRs that close that issue.
+            PRs are sorted by created_at descending (most recent first).
+            Returns empty dict if no PRs link to any of the issues.
+        """
+        ...

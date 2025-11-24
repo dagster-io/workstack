@@ -607,3 +607,193 @@ query {{
             cwd=repo_root,
         )
         return result.stdout
+
+    def get_prs_linked_to_issues(
+        self, repo_root: Path, issue_numbers: list[int]
+    ) -> dict[int, list[PullRequestInfo]]:
+        """Get PRs linked to issues via closing keywords.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        # Early exit for empty input
+        if not issue_numbers:
+            return {}
+
+        try:
+            # Get owner/repo from first PR in repo (needed for GraphQL query)
+            # We query for ANY PR to extract owner/repo info
+            cmd = ["gh", "pr", "list", "--limit", "1", "--json", "url"]
+            stdout = execute_gh_command(cmd, repo_root)
+            pr_list = json.loads(stdout)
+
+            # If no PRs exist in repo, return empty dict
+            if not pr_list:
+                return {}
+
+            # Extract owner/repo from first PR URL
+            # Format: https://github.com/owner/repo/pull/123
+            pr_url = pr_list[0]["url"]
+            parts = pr_url.split("/")
+            owner = parts[-4]
+            repo = parts[-3]
+
+            # Build and execute GraphQL query to fetch all issues
+            query = self._build_issue_pr_linkage_query(issue_numbers, owner, repo)
+            response = self._execute_batch_pr_query(query, repo_root)
+
+            # Parse response and build inverse mapping
+            return self._parse_issue_pr_linkages(response, owner, repo)
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError, IndexError):
+            # gh not installed, not authenticated, or parsing failed
+            return {}
+
+    def _build_issue_pr_linkage_query(
+        self, issue_numbers: list[int], owner: str, repo: str
+    ) -> str:
+        """Build GraphQL query to fetch PRs linked to issues.
+
+        Args:
+            issue_numbers: List of issue numbers to query
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            GraphQL query string
+        """
+        # Build aliased issue queries
+        issue_queries = []
+        for issue_num in issue_numbers:
+            issue_query = f"""    issue_{issue_num}: issue(number: {issue_num}) {{
+      number
+      timelineItems(last: 100, itemTypes: CONNECTED_EVENT) {{
+        nodes {{
+          ... on ConnectedEvent {{
+            source {{
+              ... on PullRequest {{
+                number
+                state
+                url
+                isDraft
+                title
+                createdAt
+                statusCheckRollup {{
+                  state
+                }}
+                mergeable
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}"""
+            issue_queries.append(issue_query)
+
+        # Combine into single query
+        query = f"""query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+{chr(10).join(issue_queries)}
+  }}
+}}"""
+        return query
+
+    def _parse_issue_pr_linkages(
+        self, response: dict[str, Any], owner: str, repo: str
+    ) -> dict[int, list[PullRequestInfo]]:
+        """Parse GraphQL response to extract issue-to-PR mappings.
+
+        Args:
+            response: GraphQL response data
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            Mapping of issue_number -> list of PRs sorted by created_at descending
+        """
+        result: dict[int, list[PullRequestInfo]] = {}
+
+        # Extract repository data
+        repo_data = response.get("data", {}).get("repository", {})
+
+        # Process each issue alias
+        for key, issue_data in repo_data.items():
+            # Extract issue number from alias (format: "issue_123")
+            if not key.startswith("issue_"):
+                continue
+
+            issue_number = int(key.split("_")[1])
+
+            # Extract timeline items
+            if issue_data is None:
+                continue
+
+            timeline_items = issue_data.get("timelineItems", {})
+            nodes = timeline_items.get("nodes", [])
+
+            # Extract PR info from timeline items
+            prs_with_timestamps: list[tuple[PullRequestInfo, str]] = []
+            for node in nodes:
+                source = node.get("source")
+                if source is None:
+                    continue
+
+                # Extract PR fields
+                pr_number = source.get("number")
+                state = source.get("state")
+                url = source.get("url")
+                is_draft = source.get("isDraft")
+                title = source.get("title")
+                created_at = source.get("createdAt")
+
+                # Skip if essential fields are missing
+                if pr_number is None or state is None or url is None:
+                    continue
+
+                # Parse checks status
+                checks_passing = None
+                status_rollup = source.get("statusCheckRollup")
+                if status_rollup is not None:
+                    rollup_state = status_rollup.get("state")
+                    if rollup_state == "SUCCESS":
+                        checks_passing = True
+                    elif rollup_state in ("FAILURE", "ERROR"):
+                        checks_passing = False
+
+                # Parse conflicts status
+                has_conflicts = None
+                mergeable = source.get("mergeable")
+                if mergeable == "CONFLICTING":
+                    has_conflicts = True
+                elif mergeable == "MERGEABLE":
+                    has_conflicts = False
+
+                # Create PullRequestInfo
+                pr_info = PullRequestInfo(
+                    number=pr_number,
+                    state=state,
+                    url=url,
+                    is_draft=is_draft if is_draft is not None else False,
+                    title=title,
+                    checks_passing=checks_passing,
+                    owner=owner,
+                    repo=repo,
+                    has_conflicts=has_conflicts,
+                )
+
+                # Store with timestamp for sorting
+                if created_at:
+                    prs_with_timestamps.append((pr_info, created_at))
+
+            # Sort by created_at descending (most recent first)
+            prs_with_timestamps.sort(key=lambda x: x[1], reverse=True)
+
+            # Extract just the PR info (without timestamps)
+            sorted_prs = [pr for pr, _ in prs_with_timestamps]
+
+            # Only add to result if we found PRs
+            if sorted_prs:
+                result[issue_number] = sorted_prs
+
+        return result

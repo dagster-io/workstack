@@ -137,14 +137,15 @@ jobs:
           # Use erk's Python API to fetch plan and create .erp/ folder
           uv run --with . python << 'PYTHON_SCRIPT'
           import sys
+          import os
           import json
           from pathlib import Path
           from erk.core.context import ErkContext
           from erk_shared.erp_folder import create_erp_folder
 
           # Get environment variables
-          issue_number = int("$ISSUE_NUMBER")
-          issue_title = """$ISSUE_TITLE"""
+          issue_number = int(os.environ["ISSUE_NUMBER"])
+          issue_title = os.environ["ISSUE_TITLE"]
           repo_root = Path.cwd()
 
           # Create context to access plan store

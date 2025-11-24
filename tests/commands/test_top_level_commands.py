@@ -173,7 +173,8 @@ def test_top_level_get_command_works() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "ID: 123" in result.output
+        # ID is now rendered as clickable link with OSC 8 escape sequences
+        assert "#123" in result.output
         assert "Test Issue" in result.output
 
 

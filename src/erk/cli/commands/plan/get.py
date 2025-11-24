@@ -32,12 +32,18 @@ def get_plan(ctx: ErkContext, identifier: str) -> None:
     user_output(click.style(plan.title, bold=True))
     user_output("")
 
-    # Display metadata
+    # Display metadata with clickable ID
     state_color = "green" if plan.state.value == "OPEN" else "red"
-    user_output(
-        f"State: {click.style(plan.state.value, fg=state_color)} | "
-        f"ID: {click.style(identifier, fg='cyan')}"
-    )
+
+    # Make ID clickable using OSC 8 if URL is available
+    id_text = f"#{identifier}"
+    if plan.url:
+        colored_id = click.style(id_text, fg="cyan")
+        clickable_id = f"\033]8;;{plan.url}\033\\{colored_id}\033]8;;\033\\"
+    else:
+        clickable_id = click.style(id_text, fg="cyan")
+
+    user_output(f"State: {click.style(plan.state.value, fg=state_color)} | ID: {clickable_id}")
     user_output(f"URL: {plan.url}")
 
     # Display labels

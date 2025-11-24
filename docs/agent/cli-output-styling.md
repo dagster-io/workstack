@@ -21,6 +21,68 @@ Use consistent colors and styling for CLI output via `click.style()`:
 | Dry run markers          | `bright_black`   | No   | `click.style("(dry run)", fg="bright_black")`       |
 | Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`           |
 
+## Clickable Links (OSC 8)
+
+The CLI supports clickable terminal links using OSC 8 escape sequences for PR numbers, plan IDs, and issue references.
+
+### When to Use
+
+Make IDs clickable when:
+
+- A URL is available for the resource
+- The ID is user-facing (e.g., PR numbers, plan IDs, issue numbers)
+- Clicking would provide value (navigate to GitHub, external tracker, etc.)
+
+### Implementation Pattern
+
+**For simple text output (user_output):**
+
+```python
+# Format: \033]8;;URL\033\\text\033]8;;\033\\
+id_text = f"#{identifier}"
+if url:
+    colored_id = click.style(id_text, fg="cyan")
+    clickable_id = f"\033]8;;{url}\033\\{colored_id}\033]8;;\033\\"
+else:
+    clickable_id = click.style(id_text, fg="cyan")
+
+user_output(f"Issue: {clickable_id}")
+```
+
+**For Rich tables:**
+
+```python
+from rich.table import Table
+
+# Rich supports OSC 8 via markup syntax
+id_text = f"#{identifier}"
+if url:
+    issue_id = f"[link={url}][cyan]{id_text}[/cyan][/link]"
+else:
+    issue_id = f"[cyan]{id_text}[/cyan]"
+
+table.add_row(issue_id, ...)
+```
+
+### Styling Convention
+
+- **Clickable IDs**: Use cyan color (`fg="cyan"`) to indicate interactivity
+- **Non-clickable IDs**: Use cyan for consistency, but without OSC 8 wrapper
+- This matches the existing PR link styling pattern
+
+### Examples in Codebase
+
+- `src/erk/core/display_utils.py` - `format_pr_info()` function (reference implementation)
+- `src/erk/cli/commands/plan/list_cmd.py` - Clickable plan IDs in table
+- `src/erk/cli/commands/plan/get.py` - Clickable plan ID in details
+- `src/erk/status/renderers/simple.py` - Clickable issue numbers in status
+
+### Terminal Compatibility
+
+- Most modern terminals support OSC 8 (iTerm2, Terminal.app, Kitty, Alacritty, WezTerm, etc.)
+- On unsupported terminals, links display as normal colored text
+- No action required for graceful degradation
+
 ## Emoji Conventions
 
 Standard emojis for CLI output:

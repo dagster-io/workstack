@@ -278,11 +278,15 @@ def render_metadata_block(block: MetadataBlock) -> str:
 <!-- erk:metadata-block:{block.key} -->
 <details>
 <summary><code>{block.key}</code></summary>
+
 ```yaml
+
 {yaml_content}
+
 ```
+
 </details>
-<!-- /erk:metadata-block -->"""
+<!-- /erk:metadata-block:{block.key} -->"""
 
 
 def render_erk_issue_event(
@@ -464,6 +468,9 @@ def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
     Extract raw metadata blocks using HTML comment markers (Phase 1).
 
     Extracts blocks delimited by:
+    <!-- erk:metadata-block:key --> ... <!-- /erk:metadata-block:key -->
+
+    Also supports old format for backward compatibility:
     <!-- erk:metadata-block:key --> ... <!-- /erk:metadata-block -->
 
     Does NOT validate or parse the body structure. Returns raw body content
@@ -479,7 +486,9 @@ def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
 
     # Phase 1 pattern: Extract only using HTML comment markers
     # Captures key and raw body content between markers
-    pattern = r"<!-- erk:metadata-block:(.+?) -->(.+?)<!-- /erk:metadata-block -->"
+    # Supports both old format (<!-- /erk:metadata-block -->)
+    # and new format (<!-- /erk:metadata-block:key -->)
+    pattern = r"<!-- erk:metadata-block:(.+?) -->(.+?)<!-- /erk:metadata-block(?::\1)? -->"
 
     matches = re.finditer(pattern, text, re.DOTALL)
 

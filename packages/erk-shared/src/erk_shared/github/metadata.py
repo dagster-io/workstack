@@ -327,11 +327,15 @@ def render_metadata_block(block: MetadataBlock) -> str:
 <!-- erk:metadata-block:{block.key} -->
 <details>
 <summary><code>{block.key}</code></summary>
+
 ```yaml
+
 {yaml_content}
+
 ```
+
 </details>
-<!-- /erk:metadata-block -->"""
+<!-- /erk:metadata-block:{block.key} -->"""
 
 
 def render_erk_issue_event(

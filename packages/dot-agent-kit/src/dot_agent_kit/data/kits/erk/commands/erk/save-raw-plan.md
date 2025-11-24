@@ -1,15 +1,15 @@
 ---
-description: Extract plan from Claude session and create GitHub issue (no enrichment)
+description: Extract plan from Claude session and create GitHub issue (no enrichment) (v2 - agent-based)
 ---
 
-# /erk:save-raw-plan
+# /erk:save-raw-plan-v2
 
-Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This command provides a "fast path" for creating issues with deterministic session file parsing and no enrichment.
+Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This is the **v2 agent-based version** that uses structural enforcement instead of text warnings.
 
 ## Usage
 
 ```bash
-/erk:save-raw-plan
+/erk:save-raw-plan-v2
 ```
 
 ## Purpose
@@ -27,133 +27,398 @@ This command provides a **fast path** for creating GitHub issues from session pl
 - ❌ No plan enhancement or enrichment
 - ❌ No interactive clarifying questions
 - ❌ No semantic understanding extraction
-- ❌ No disk file creation (issue is the artifact)
+- ❌ No code implementation (structurally impossible)
 
 **Fast Path vs Enriched Path:**
 
-- **save-raw-plan** (this command): Session files → Raw plan → GitHub issue (fast, deterministic)
-- **save-plan**: Conversation context → Enriched plan → GitHub issue (interactive, comprehensive)
+- **save-raw-plan-v2** (this command): Session files → Raw plan → GitHub issue (fast, deterministic)
+- **save-plan-v2**: Conversation context → Enriched plan → GitHub issue (interactive, comprehensive)
+
+## Architecture
+
+This command uses the same **plan-extractor agent** but in `raw` mode:
+
+```
+/erk:save-raw-plan-v2 (orchestrator)
+  ↓
+  ├─→ Validate prerequisites (git repo, gh auth)
+  ├─→ Determine session ID (from environment or current session)
+  ├─→ Launch plan-extractor agent in RAW mode (Task tool)
+  │     ↓
+  │     Agent reads session JSONL files
+  │     Agent extracts ExitPlanMode content
+  │     Agent returns JSON: {plan_title, plan_content}
+  │     (Agent has NO Edit/Write tools - structurally safe)
+  ├─→ Save plan to temp file
+  ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
+  │     ↓
+  │     Kit CLI creates GitHub issue
+  └─→ Display results (issue URL + copy-pastable commands)
+```
+
+**Key Innovation:** Same structural safety as save-plan-v2 - agent physically cannot edit files.
 
 ## How It Works
 
-1. **Extracts plan from session files** - Searches JSONL files for latest ExitPlanMode
-2. **Validates repository** - Confirms git repository and GitHub CLI availability
-3. **Creates GitHub issue** - Creates issue with `erk-plan` label
-4. **Outputs metadata** - Returns JSON with issue URL and number
-5. **Displays next steps** - Shows four copy-pastable commands for implementation
+1. **Determine session ID** - Get current session or use SESSION_CONTEXT
+2. **Launch agent** - Call plan-extractor in raw mode
+3. **Extract plan** - Agent reads session JSONL for ExitPlanMode
+4. **Create issue** - Use kit CLI to create GitHub issue
+5. **Display results** - Show issue URL and commands
 
 ---
 
-## Agent Instructions
+## Command Instructions
 
-You are executing the `/erk:save-raw-plan` command. This command extracts plans from session files and creates GitHub issues.
+You are executing the `/erk:save-raw-plan-v2` command. Follow these steps carefully:
 
-### CRITICAL: Tool Restrictions
+### Step 1: Validate Prerequisites
 
-**ALLOWED TOOLS:**
-
-- `Bash` - For git commands and kit CLI commands
-- `AskUserQuestion` - ONLY for error recovery if needed
-
-**FORBIDDEN TOOLS:**
-
-- `Read` - Do NOT read conversation manually (uses session files instead)
-- `Edit` - Do NOT modify any existing files
-- `Write` - Do NOT write files manually (kit CLI handles temp files)
-- `Glob` - Do NOT search the codebase
-- `Grep` - Do NOT search the codebase
-- `Task` - Do NOT launch subagents
-
-**CRITICAL:** If you use any forbidden tool, STOP immediately.
-
-### Step 1: Extract Plan from Session Files
-
-Execute the kit CLI command to extract the latest plan from session files:
+Check that prerequisites are met:
 
 ```bash
-dot-agent kit-command erk save-plan-from-session --format json
+# Verify we're in a git repository
+git rev-parse --is-inside-work-tree
+
+# Verify GitHub CLI is authenticated
+gh auth status
 ```
 
-This command:
+**Error handling:**
 
-- Searches Claude session JSONL files for latest ExitPlanMode plan
-- Extracts plan content and title
-- Returns JSON with `plan_content`, `plan_title`, or `error` fields
+If `git rev-parse` fails:
 
-**Parse the JSON output:**
+```
+❌ Error: Not in a git repository
 
-Extract these fields:
+This command must be run from within a git repository.
+```
 
-- `plan_content` - The raw markdown plan text
-- `plan_title` - The title for the GitHub issue
-- `error` - Present if extraction failed
+If `gh auth status` fails:
 
-**If error field is present:**
+```
+❌ Error: GitHub CLI not authenticated
+
+Run: gh auth login
+```
+
+### Step 2: Determine Session ID
+
+The session ID is needed to locate session files.
+
+**Method 1: Check SESSION_CONTEXT environment**
+
+Look for session ID in context:
 
 ```bash
-error_msg=$(echo "$result" | jq -r '.error')
-dot-agent kit-command erk format-error \
-    --brief "No plan found in session files" \
-    --details "$error_msg" \
-    --action "Ensure you used ExitPlanMode in the session" \
-    --action "Check session files exist in ~/.claude/projects/" \
-    --action "Try running /erk:save-plan with conversation context instead"
+# SESSION_CONTEXT is set by hooks like UserPromptSubmit hook
+# Format: session_id=71451478-0883-40d1-a8d4-6c36f219c719
+echo "$SESSION_CONTEXT"
 ```
 
-### Step 2: Validate Repository and GitHub CLI
-
-@../docs/validate-git-repository.md
-
-@../docs/validate-github-cli.md
-
-### Step 3: Create GitHub Issue
-
-Replace `$PLAN_CONTENT` with the `plan_content` variable extracted in Step 1:
-
-@../docs/create-github-issue.md
-
-### Step 4: Output Success Message
-
-After creating the GitHub issue successfully, format the success output using the kit CLI command:
+If found, extract the session ID:
 
 ```bash
-# Parse issue number from URL
-issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
-
-# Format success output
-dot-agent kit-command erk format-success-output \
-    --issue-number "$issue_number" \
-    --issue-url "$issue_url"
+session_id=$(echo "$SESSION_CONTEXT" | grep -oP 'session_id=\K[0-9a-f-]+')
 ```
 
-This will output the issue link, next steps commands, and JSON metadata in a consistent format.
+**Method 2: Use current session (fallback)**
 
-## Important Notes
+If no SESSION_CONTEXT available, use a kit CLI command to determine current session:
 
-- **Fast Path**: No interactive questions, no enrichment, no semantic analysis
-- **Deterministic**: Uses session file parsing, not conversation context
-- **Raw Content**: Preserves plan exactly as found in ExitPlanMode
-- **Latest Plan**: Automatically finds most recent plan by timestamp
-- **Issue-First**: Creates GitHub issue directly (no disk files)
-- **Command Comparison**:
-  - `save-raw-plan`: Session files → Raw plan → GitHub issue (this command)
-  - `save-plan`: Conversation → Enriched plan → GitHub issue (interactive)
-- **Next Step**: Use `erk implement <issue>` to execute the plan
+```bash
+# This command finds the most recent session directory
+session_id=$(ls -t ~/.claude/projects/ | head -1)
+```
+
+**Validation:**
+
+Ensure session ID is a valid UUID format (8-4-4-4-12 hex digits).
+
+**Error handling:**
+
+If no session ID found:
+
+```
+❌ Error: Could not determine session ID
+
+Ensure you're running this command within an active Claude session.
+
+Session files are located in: ~/.claude/projects/
+```
+
+### Step 3: Launch Plan-Extractor Agent (Raw Mode)
+
+Use the Task tool to launch the agent in raw mode:
+
+**Task tool invocation:**
+
+```json
+{
+  "subagent_type": "plan-extractor",
+  "description": "Extract raw plan from session",
+  "prompt": "Extract the implementation plan from session files WITHOUT enrichment.\n\nInput:\n- Mode: raw\n- Session ID: [session_id]\n\nFind the session JSONL files at ~/.claude/projects/[session_id]/data/*.jsonl and extract the latest ExitPlanMode tool use content.\n\nExpected output: JSON with plan_title and plan_content (raw, no enrichment).",
+  "model": "haiku"
+}
+```
+
+**What the agent does:**
+
+1. Reads session JSONL files from `~/.claude/projects/<session_id>/data/*.jsonl`
+2. Finds latest ExitPlanMode tool use
+3. Extracts plan content
+4. Returns JSON (no enrichment, no questions)
+
+**Agent tool restrictions (same as enriched mode):**
+
+- ✅ Read - Can read session files
+- ✅ Bash - Can run git commands (read-only)
+- ✅ AskUserQuestion - Available but not used in raw mode
+- ❌ Edit - NO access
+- ❌ Write - NO access
+- ❌ Task - NO access
+
+**Error handling:**
+
+If agent returns error JSON:
+
+```
+❌ Error: [agent error message]
+
+Common causes:
+- No ExitPlanMode found in session files
+- Session files don't exist or are corrupted
+- Session ID is incorrect
+
+Try:
+- Ensure you used ExitPlanMode to present a plan
+- Check session files exist: ls ~/.claude/projects/[session_id]/data/
+- Use /erk:save-plan-v2 with conversation context instead
+```
+
+### Step 4: Parse Agent Response
+
+The agent returns JSON in this format:
+
+```json
+{
+  "success": true,
+  "mode": "raw",
+  "plan_title": "Add user authentication",
+  "plan_content": "## Overview\n\n...",
+  "enrichment": {
+    "guidance_applied": false,
+    "questions_asked": 0,
+    "context_extracted": false
+  }
+}
+```
+
+**Validate response:**
+
+- Check `success` field is true
+- Ensure `plan_title` and `plan_content` are present
+- Verify `plan_content` is non-empty
+- Confirm `mode` is "raw"
+
+**Error handling:**
+
+If `success` is false or fields missing:
+
+```
+❌ Error: Agent returned invalid response
+
+[Display agent response for debugging]
+```
+
+### Step 5: Save Plan to Temporary File
+
+Write plan content to a temporary file for kit CLI:
+
+```bash
+# Create temp file
+temp_plan=$(mktemp /tmp/erk-plan-XXXXXX.md)
+
+# Write plan content
+cat > "$temp_plan" <<'PLAN_EOF'
+[plan_content from agent JSON]
+PLAN_EOF
+```
+
+### Step 6: Create GitHub Issue via Kit CLI
+
+Call the kit CLI command to create the issue:
+
+```bash
+# Call kit CLI with plan file
+result=$(dot-agent run erk create-enriched-plan-from-context --plan-file "$temp_plan")
+
+# Clean up temp file
+rm "$temp_plan"
+
+# Parse JSON result
+echo "$result" | jq .
+```
+
+**Expected output:**
+
+```json
+{
+  "success": true,
+  "issue_number": 123,
+  "issue_url": "https://github.com/owner/repo/issues/123"
+}
+```
+
+**Error handling:**
+
+If command fails:
+
+```
+❌ Error: Failed to create GitHub issue
+
+[Display kit CLI error output]
+```
+
+### Step 7: Display Success Output
+
+Show the user the issue URL and copy-pastable commands:
+
+```
+✅ Raw plan saved to GitHub issue
+
+**Issue:** [issue_url]
+
+**Next steps:**
+
+View the plan:
+    gh issue view [issue_number]
+
+Implement directly:
+    erk implement [issue_number]
+
+Implement with auto-confirmation (yolo mode):
+    erk implement [issue_number] --yolo
+
+Implement and auto-submit PR (dangerous mode):
+    erk implement [issue_number] --dangerous
+
+**Note:** This plan was extracted raw from session files without enrichment.
+```
+
+**Formatting requirements:**
+
+- Use `✅` for success indicator
+- Bold `**Issue:**` and `**Next steps:**`
+- Show actual issue URL (clickable)
+- Show actual issue number in commands
+- Add note about raw extraction
+
+## Error Scenarios
+
+### No ExitPlanMode Found
+
+```
+❌ Error: No plan found in session files
+
+Details: No ExitPlanMode tool use found in session JSONL files
+
+Suggested action:
+  1. Ensure you used ExitPlanMode to present a plan in this session
+  2. Check session files: ls ~/.claude/projects/[session_id]/data/
+  3. Try /erk:save-plan-v2 with conversation context instead
+```
+
+### Session Files Not Found
+
+```
+❌ Error: Session files not accessible
+
+Session ID: [session_id]
+Expected location: ~/.claude/projects/[session_id]/data/*.jsonl
+
+Suggested action:
+  1. Verify session ID is correct
+  2. Check directory exists and has read permissions
+  3. Use /erk:save-plan-v2 with conversation context instead
+```
+
+### GitHub CLI Not Authenticated
+
+```
+❌ Error: GitHub CLI not authenticated
+
+To use this command, authenticate with GitHub:
+
+    gh auth login
+
+Then try again.
+```
+
+## Comparison with v1
+
+| Feature         | v1 (save-raw-plan)    | v2 (save-raw-plan-v2)            |
+| --------------- | --------------------- | -------------------------------- |
+| Enforcement     | Text warnings         | Structural (tool restrictions)   |
+| Agent           | Inline command logic  | Dedicated agent (raw mode)       |
+| Safety          | Behavioral compliance | Physically impossible to violate |
+| Session parsing | Kit CLI direct        | Agent delegation                 |
+| Bypass-safe     | ❌ No                 | ✅ Yes                           |
 
 ## Technical Details
 
-@../docs/session-file-location.md
+**Session File Location:**
 
-**Issue title extraction:**
+Plans are stored in Claude session files:
 
-- Extracts title from plan content (H1 → H2 → first line)
-- Converts to title case
-- Truncates to 100 characters if needed
-- Falls back to "Implementation Plan" if no clear title
+```
+~/.claude/projects/<session-id>/data/*.jsonl
+```
 
-**GitHub issue creation:**
+Each JSONL line is a message. The agent searches for:
 
-- Creates issue with `erk-plan` label automatically
-- Uses extracted title as issue title
-- Plan content becomes issue body
-- Returns issue URL for next steps
+```json
+{
+  "type": "tool_use",
+  "name": "ExitPlanMode",
+  "input": {
+    "plan": "[markdown plan content]"
+  }
+}
+```
+
+**Latest Plan Selection:**
+
+If multiple ExitPlanMode entries exist, the agent selects the most recent by file timestamp and line position.
+
+## Important Notes
+
+- **Fast Path**: No interactive questions, no enrichment
+- **Deterministic**: Session file parsing is repeatable
+- **Raw Content**: Preserves plan exactly as found
+- **Structural Safety**: Agent cannot edit files (tool restrictions)
+- **Bypass-Safe**: Works correctly even with bypass permissions
+- **Reuses Agent**: Same plan-extractor agent, just in raw mode
+- **Command Comparison**:
+  - `save-raw-plan-v2`: Session files → Raw plan → GitHub issue (this command)
+  - `save-plan-v2`: Conversation → Enriched plan → GitHub issue (interactive)
+
+## Development Notes
+
+**For maintainers:**
+
+This command demonstrates **mode-based agent reuse**:
+
+- Same agent (plan-extractor)
+- Different mode (raw vs enriched)
+- Different behavior (file extraction vs conversation parsing)
+- Same safety guarantees (tool restrictions)
+
+**Benefits:**
+
+- Single agent handles both workflows
+- Consistent JSON output format
+- Reusable orchestration pattern
+- Structural safety in both modes
+
+**Agent file:** `.claude/agents/erk/plan-extractor.md`

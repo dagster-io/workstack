@@ -180,7 +180,8 @@ def _execute_non_interactive_mode(
         result = subprocess.run(
             cmd_args,
             cwd=worktree_path,
-            # Don't capture - let output stream to terminal
+            stdin=subprocess.DEVNULL,  # Prevent interaction
+            # Don't capture stdout/stderr - let output stream to terminal
         )
 
         # Check exit code

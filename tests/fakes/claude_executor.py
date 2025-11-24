@@ -4,9 +4,10 @@ This fake enables testing Claude command execution without
 requiring the actual Claude CLI or using subprocess mocks.
 """
 
+from collections.abc import Iterator
 from pathlib import Path
 
-from erk.core.claude_executor import ClaudeExecutor, CommandResult
+from erk.core.claude_executor import ClaudeExecutor, CommandResult, StreamEvent
 
 
 class FakeClaudeExecutor(ClaudeExecutor):
@@ -64,6 +65,41 @@ class FakeClaudeExecutor(ClaudeExecutor):
     def is_claude_available(self) -> bool:
         """Return the availability configured at construction time."""
         return self._claude_available
+
+    def execute_command_streaming(
+        self,
+        command: str,
+        worktree_path: Path,
+        dangerous: bool,
+        verbose: bool = False,
+    ) -> Iterator[StreamEvent]:
+        """Track command execution and yield simulated streaming events.
+
+        This method records the call parameters for test assertions.
+        It does not execute any actual subprocess operations.
+
+        Args:
+            command: The slash command to execute
+            worktree_path: Path to worktree directory
+            dangerous: Whether to skip permission prompts
+            verbose: Whether to show raw output or filtered output
+
+        Yields:
+            StreamEvent objects simulating command execution
+
+        Raises:
+            RuntimeError: If command_should_fail was set to True
+        """
+        self._executed_commands.append((command, worktree_path, dangerous, verbose))
+
+        if self._command_should_fail:
+            yield StreamEvent("error", f"Claude command {command} failed (simulated failure)")
+            return
+
+        # Simulate some basic streaming events
+        yield StreamEvent("text", "Starting execution...")
+        yield StreamEvent("spinner_update", f"Running {command}...")
+        yield StreamEvent("text", "Execution complete")
 
     def execute_command(
         self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False

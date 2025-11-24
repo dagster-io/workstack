@@ -8,10 +8,25 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+
+
+@dataclass
+class StreamEvent:
+    """Event emitted during streaming execution.
+
+    Attributes:
+        event_type: Type of event ("text", "tool", "spinner_update", "pr_url")
+        content: The content of the event (text message, tool summary, spinner text, or PR URL)
+    """
+
+    event_type: str
+    content: str
 
 
 @dataclass
@@ -55,10 +70,48 @@ class ClaudeExecutor(ABC):
         ...
 
     @abstractmethod
+    def execute_command_streaming(
+        self,
+        command: str,
+        worktree_path: Path,
+        dangerous: bool,
+        verbose: bool = False,
+    ) -> Iterator[StreamEvent]:
+        """Execute Claude CLI command and yield StreamEvents in real-time.
+
+        Args:
+            command: The slash command to execute (e.g., "/erk:implement-plan")
+            worktree_path: Path to worktree directory to run command in
+            dangerous: Whether to skip permission prompts
+            verbose: Whether to show raw output (True) or filtered output (False)
+
+        Yields:
+            StreamEvent objects as they occur during execution
+
+        Example:
+            >>> executor = RealClaudeExecutor()
+            >>> for event in executor.execute_command_streaming(
+            ...     "/erk:implement-plan",
+            ...     Path("/repos/my-project"),
+            ...     dangerous=False
+            ... ):
+            ...     if event.event_type == "tool":
+            ...         print(f"Tool: {event.content}")
+        """
+        ...
+
     def execute_command(
-        self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False
+        self,
+        command: str,
+        worktree_path: Path,
+        dangerous: bool,
+        verbose: bool = False,
     ) -> CommandResult:
-        """Execute a Claude CLI slash command in non-interactive mode.
+        """Execute Claude CLI command and return final result (non-streaming).
+
+        This is a convenience method that collects all streaming events
+        and returns a final CommandResult. Use execute_command_streaming()
+        for real-time updates.
 
         Args:
             command: The slash command to execute (e.g., "/erk:implement-plan")
@@ -69,21 +122,41 @@ class ClaudeExecutor(ABC):
         Returns:
             CommandResult containing success status, PR URL, duration, and messages
 
-        Raises:
-            RuntimeError: If Claude CLI command fails (non-zero exit code)
-
         Example:
             >>> executor = RealClaudeExecutor()
             >>> result = executor.execute_command(
             ...     "/erk:implement-plan",
             ...     Path("/repos/my-project"),
-            ...     dangerous=False,
-            ...     verbose=False
+            ...     dangerous=False
             ... )
             >>> if result.success:
             ...     print(f"PR created: {result.pr_url}")
         """
-        ...
+        start_time = time.time()
+        filtered_messages: list[str] = []
+        pr_url: str | None = None
+        error_message: str | None = None
+        success = True
+
+        for event in self.execute_command_streaming(command, worktree_path, dangerous, verbose):
+            if event.event_type == "text":
+                filtered_messages.append(event.content)
+            elif event.event_type == "tool":
+                filtered_messages.append(event.content)
+            elif event.event_type == "pr_url":
+                pr_url = event.content
+            elif event.event_type == "error":
+                error_message = event.content
+                success = False
+
+        duration = time.time() - start_time
+        return CommandResult(
+            success=success,
+            pr_url=pr_url,
+            duration_seconds=duration,
+            error_message=error_message,
+            filtered_messages=filtered_messages,
+        )
 
     @abstractmethod
     def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:
@@ -120,21 +193,22 @@ class RealClaudeExecutor(ClaudeExecutor):
         """Check if Claude CLI is in PATH using shutil.which."""
         return shutil.which("claude") is not None
 
-    def execute_command(
-        self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False
-    ) -> CommandResult:
-        """Execute Claude CLI command via subprocess.
+    def execute_command_streaming(
+        self,
+        command: str,
+        worktree_path: Path,
+        dangerous: bool,
+        verbose: bool = False,
+    ) -> Iterator[StreamEvent]:
+        """Execute Claude CLI command and yield StreamEvents in real-time.
 
         Implementation details:
-        - Uses subprocess.run() with stdin=DEVNULL for non-interactive execution
+        - Uses subprocess.Popen() for streaming stdout line-by-line
         - Passes --permission-mode acceptEdits, --output-format stream-json
         - Optionally passes --dangerously-skip-permissions when dangerous=True
-        - In verbose mode: streams output to terminal (no capture)
-        - In filtered mode: captures and parses stream-json output
-        - Returns CommandResult with success status, PR URL, duration, and messages
+        - In verbose mode: streams output to terminal (no parsing, no events yielded)
+        - In filtered mode: parses stream-json and yields events in real-time
         """
-        start_time = time.time()
-
         cmd_args = [
             "claude",
             "--print",
@@ -149,101 +223,95 @@ class RealClaudeExecutor(ClaudeExecutor):
         cmd_args.append(command)
 
         if verbose:
-            # Verbose mode - stream to terminal, no parsing
+            # Verbose mode - stream to terminal, no parsing, no events
             result = subprocess.run(cmd_args, cwd=worktree_path, check=False)
-            duration = time.time() - start_time
 
             if result.returncode != 0:
                 error_msg = f"Claude command {command} failed with exit code {result.returncode}"
-                return CommandResult(
-                    success=False,
-                    pr_url=None,
-                    duration_seconds=duration,
-                    error_message=error_msg,
-                    filtered_messages=[],
-                )
+                yield StreamEvent("error", error_msg)
+            return
 
-            return CommandResult(
-                success=True,
-                pr_url=None,
-                duration_seconds=duration,
-                error_message=None,
-                filtered_messages=[],
-            )
-
-        # Filtered mode - capture output and parse stream-json
-        result = subprocess.run(
+        # Filtered mode - streaming with real-time parsing
+        process = subprocess.Popen(
             cmd_args,
             cwd=worktree_path,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            check=False,
+            bufsize=1,  # Line buffered
         )
-        duration = time.time() - start_time
 
-        # Parse stream-json output
-        filtered_messages: list[str] = []
-        pr_url: str | None = None
+        stderr_output: list[str] = []
 
-        if result.stdout:
-            for line in result.stdout.splitlines():
+        # Capture stderr in background thread
+        def capture_stderr() -> None:
+            if process.stderr:
+                for line in process.stderr:
+                    stderr_output.append(line)
+
+        stderr_thread = threading.Thread(target=capture_stderr, daemon=True)
+        stderr_thread.start()
+
+        # Process stdout line by line in real-time
+        if process.stdout:
+            for line in process.stdout:
                 if not line.strip():
                     continue
 
                 # Try to parse as JSON
-                parsed = self._parse_stream_json_line(line, worktree_path)
+                parsed = self._parse_stream_json_line(line, worktree_path, command)
                 if parsed is None:
                     continue
 
-                # Extract text content
+                # Yield text content
                 text_content = parsed.get("text_content")
                 if text_content is not None:
-                    filtered_messages.append(text_content)
+                    yield StreamEvent("text", text_content)
 
-                # Extract tool summaries
+                # Yield tool summaries
                 tool_summary = parsed.get("tool_summary")
                 if tool_summary is not None:
-                    filtered_messages.append(tool_summary)
+                    yield StreamEvent("tool", tool_summary)
 
-                # Extract PR URL
-                if parsed.get("pr_url"):
-                    pr_url = parsed["pr_url"]
+                # Yield spinner updates
+                spinner_text = parsed.get("spinner_update")
+                if spinner_text is not None:
+                    yield StreamEvent("spinner_update", spinner_text)
 
-        if result.returncode != 0:
-            error_msg = f"Claude command {command} failed with exit code {result.returncode}"
-            if result.stderr:
-                error_msg += f"\n{result.stderr}"
+                # Yield PR URL
+                pr_url_value = parsed.get("pr_url")
+                if pr_url_value is not None:
+                    yield StreamEvent("pr_url", pr_url_value)
 
-            return CommandResult(
-                success=False,
-                pr_url=pr_url,
-                duration_seconds=duration,
-                error_message=error_msg,
-                filtered_messages=filtered_messages,
-            )
+        # Wait for process to complete
+        returncode = process.wait()
 
-        return CommandResult(
-            success=True,
-            pr_url=pr_url,
-            duration_seconds=duration,
-            error_message=None,
-            filtered_messages=filtered_messages,
-        )
+        # Wait for stderr thread to finish
+        stderr_thread.join(timeout=1.0)
+
+        if returncode != 0:
+            error_msg = f"Claude command {command} failed with exit code {returncode}"
+            if stderr_output:
+                error_msg += "\n" + "".join(stderr_output)
+            yield StreamEvent("error", error_msg)
 
     def _parse_stream_json_line(
-        self, line: str, worktree_path: Path
+        self, line: str, worktree_path: Path, command: str
     ) -> dict[str, str | None] | None:
         """Parse a single stream-json line and extract relevant information.
 
         Args:
             line: JSON line from stream-json output
             worktree_path: Path to worktree for relativizing paths
+            command: The slash command being executed
 
         Returns:
-            Dict with text_content, tool_summary, and pr_url keys, or None if not JSON
+            Dict with text_content, tool_summary, spinner_update, and pr_url keys,
+            or None if not JSON
         """
         # Import here to avoid circular dependency
         from erk.core.output_filter import (
+            determine_spinner_status,
             extract_pr_url,
             extract_text_content,
             summarize_tool_use,
@@ -268,6 +336,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         result: dict[str, str | None] = {
             "text_content": None,
             "tool_summary": None,
+            "spinner_update": None,
             "pr_url": None,
         }
 
@@ -277,7 +346,7 @@ class RealClaudeExecutor(ClaudeExecutor):
             if text:
                 result["text_content"] = text
 
-            # Extract tool summaries
+            # Extract tool summaries and spinner updates
             content = data.get("content", [])
             if isinstance(content, list):
                 for item in content:
@@ -285,7 +354,11 @@ class RealClaudeExecutor(ClaudeExecutor):
                         summary = summarize_tool_use(item, worktree_path)
                         if summary:
                             result["tool_summary"] = summary
-                            break
+
+                        # Generate spinner update for all tools (even suppressible ones)
+                        spinner_text = determine_spinner_status(item, command, worktree_path)
+                        result["spinner_update"] = spinner_text
+                        break
 
         # Extract PR URL from tool results
         if data.get("type") == "user_message":

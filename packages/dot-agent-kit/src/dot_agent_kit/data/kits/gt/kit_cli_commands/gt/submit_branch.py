@@ -35,6 +35,7 @@ Error Types:
     - squash_failed: Failed to squash commits
     - amend_failed: Failed to amend commit
     - submit_failed: Failed to submit branch (generic)
+    - submit_timeout: Submit command timed out
     - submit_merged_parent: Parent branches merged but not in main trunk
     - submit_diverged: Branch has diverged from remote
     - pr_update_failed: Failed to update PR metadata
@@ -82,6 +83,7 @@ PreAnalysisErrorType = Literal[
 PostAnalysisErrorType = Literal[
     "amend_failed",
     "submit_failed",
+    "submit_timeout",
     "submit_merged_parent",
     "submit_diverged",
     "submit_conflict",
@@ -440,6 +442,22 @@ def execute_post_analysis(
                 },
             )
 
+        # Check for timeout
+        if "timed out after 120 seconds" in result.stderr:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_timeout",
+                message=(
+                    "gt submit timed out after 120 seconds. "
+                    "Check network connectivity and try again."
+                ),
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
+
         # Generic submit failure
         return PostAnalysisError(
             success=False,
@@ -457,12 +475,20 @@ def execute_post_analysis(
     max_retries = 5
     retry_delays = [0.5, 1.0, 2.0, 4.0, 8.0]
 
+    click.echo("⏳ Waiting for PR info from GitHub API...", err=True)
+
     for attempt in range(max_retries):
+        if attempt > 0:  # Don't print on first attempt
+            click.echo(f"   Attempt {attempt + 1}/{max_retries}...", err=True)
         pr_info = ops.github().get_pr_info()
         if pr_info is not None:
+            click.echo("✓ PR info retrieved", err=True)
             break
         if attempt < max_retries - 1:
             time.sleep(retry_delays[attempt])
+
+    if pr_info is None:
+        click.echo("❌ Failed to get PR info after all retries", err=True)
 
     # Step 5: Update PR metadata if PR exists
     pr_number = None
@@ -478,14 +504,19 @@ def execute_post_analysis(
             graphite_url = graphite_url_result
 
         if not ops.github().update_pr_metadata(pr_title, pr_body):
-            return PostAnalysisError(
-                success=False,
-                error_type="pr_update_failed",
-                message=f"Submitted branch but failed to update PR #{pr_number} metadata",
-                details={"branch_name": branch_name, "pr_number": str(pr_number)},
+            click.echo(
+                ("⚠️  Warning: Failed to update PR metadata (possible timeout), but PR was created"),
+                err=True,
             )
-
-        message = f"Successfully submitted branch: {branch_name}\nUpdated PR #{pr_number}: {pr_url}"
+            message = (
+                f"Successfully submitted branch: {branch_name}\n"
+                f"Created PR #{pr_number}: {pr_url}\n"
+                "⚠️  Warning: Failed to update PR metadata (possible timeout)"
+            )
+        else:
+            message = (
+                f"Successfully submitted branch: {branch_name}\nUpdated PR #{pr_number}: {pr_url}"
+            )
     else:
         message = f"Successfully submitted branch: {branch_name}\nPR created (number pending)"
 

@@ -12,6 +12,7 @@ Test organization:
 - TestRealGtKitOps: Composite operations (3 accessor methods)
 """
 
+import subprocess
 from unittest.mock import Mock, patch
 
 from erk.data.kits.gt.kit_cli_commands.gt.ops import CommandResult
@@ -250,6 +251,7 @@ class TestRealGraphiteGtKitOps:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=120,
             )
 
             # Verify return type matches interface contract
@@ -275,7 +277,23 @@ class TestRealGraphiteGtKitOps:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=120,
             )
+
+    def test_submit_timeout(self) -> None:
+        """Test submit handles TimeoutExpired exception correctly."""
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd=["gt", "submit"], timeout=120),
+        ):
+            ops = RealGraphiteGtKit()
+            result = ops.submit(publish=True, restack=True)
+
+            # Verify error is handled gracefully
+            assert isinstance(result, CommandResult)
+            assert result.success is False
+            assert "timed out after 120 seconds" in result.stderr
+            assert result.stdout == ""
 
     def test_restack(self) -> None:
         """Test restack returns bool and calls correct command."""
@@ -369,6 +387,7 @@ class TestRealGitHubGtKitOps:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=10,
             )
 
             # Verify return type matches interface contract
@@ -389,6 +408,18 @@ class TestRealGitHubGtKitOps:
         ):
             ops = RealGitHubGtKit()
             result = ops.get_pr_info()
+            assert result is None
+
+    def test_get_pr_info_timeout(self) -> None:
+        """Test get_pr_info handles TimeoutExpired exception correctly."""
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd=["gh", "pr", "view"], timeout=10),
+        ):
+            ops = RealGitHubGtKit()
+            result = ops.get_pr_info()
+
+            # Verify timeout returns None (same as PR not found)
             assert result is None
 
     def test_get_pr_state(self) -> None:
@@ -412,6 +443,7 @@ class TestRealGitHubGtKitOps:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=10,
             )
 
             # Verify return type matches interface contract
@@ -452,6 +484,7 @@ class TestRealGitHubGtKitOps:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=30,
             )
 
             # Verify return type matches interface contract
@@ -466,6 +499,18 @@ class TestRealGitHubGtKitOps:
         ):
             ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Title", "Body")
+            assert result is False
+
+    def test_update_pr_metadata_timeout(self) -> None:
+        """Test update_pr_metadata handles TimeoutExpired exception correctly."""
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd=["gh", "pr", "edit"], timeout=30),
+        ):
+            ops = RealGitHubGtKit()
+            result = ops.update_pr_metadata("Test Title", "Test Body")
+
+            # Verify timeout returns False (indicates failure)
             assert result is False
 
     def test_merge_pr(self) -> None:

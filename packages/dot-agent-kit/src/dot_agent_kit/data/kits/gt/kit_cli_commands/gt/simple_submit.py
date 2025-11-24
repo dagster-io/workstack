@@ -60,86 +60,33 @@ def execute_simple_submit(
     if ops is None:
         ops = RealGtKit()
 
-    # 1. Check for uncommitted changes and commit if any
-    if verbose:
-        click.echo("Debug: Checking for uncommitted changes...", err=True)
-    if ops.git().has_uncommitted_changes():
-        if verbose:
-            click.echo("Debug: Found uncommitted changes, staging...", err=True)
-        if not ops.git().add_all():
-            if verbose:
-                click.echo("Debug: Failed to stage changes", err=True)
-            return {"success": False, "error": "Failed to stage changes"}
+    logger = DebugLogger(verbose)
 
-        commit_message = description or "WIP: Prepare for submission"
-        if verbose:
-            click.echo(f"Debug: Creating commit with message: {commit_message!r}", err=True)
-        if not ops.git().commit(commit_message):
-            if verbose:
-                click.echo("Debug: Failed to commit changes", err=True)
-            return {"success": False, "error": "Failed to commit changes"}
-        if verbose:
-            click.echo("Debug: Successfully committed changes", err=True)
-    else:
-        if verbose:
-            click.echo("Debug: No uncommitted changes found", err=True)
+    # Commit any uncommitted changes
+    error = _commit_uncommitted_changes(ops, logger, description)
+    if error is not None:
+        return error
 
-    # 2. Restack to ensure clean state
-    if verbose:
-        click.echo("Debug: Restacking branch...", err=True)
-    result = ops.graphite().restack()
-    if not result:
-        if verbose:
-            click.echo("Debug: Restack failed", err=True)
-        return {"success": False, "error": "Failed to restack branch"}
-    if verbose:
-        click.echo("Debug: Restack successful", err=True)
+    # Restack branch
+    error = _restack_branch(ops, logger)
+    if error is not None:
+        return error
 
-    # 3. Get current branch and parent
-    if verbose:
-        click.echo("Debug: Getting current branch name...", err=True)
-    branch = ops.git().get_current_branch()
-    if not branch:
-        if verbose:
-            click.echo("Debug: Could not determine current branch", err=True)
-        return {"success": False, "error": "Could not determine current branch"}
-    if verbose:
-        click.echo(f"Debug: Current branch = {branch}", err=True)
+    # Get branch info
+    result = _get_branch_info(ops, logger)
+    if result[0] is None:
+        return result[1]
 
-    if verbose:
-        click.echo("Debug: Getting parent branch...", err=True)
-    parent = ops.graphite().get_parent_branch()
-    if not parent:
-        if verbose:
-            click.echo("Debug: Could not determine parent branch", err=True)
-        return {"success": False, "error": "Could not determine parent branch"}
-    if verbose:
-        click.echo(f"Debug: Parent branch = {parent}", err=True)
+    branch, parent = result
 
-    # 4. Get diff for AI analysis
-    if verbose:
-        click.echo("Debug: Getting diff to parent...", err=True)
+    # Get diff for AI analysis
+    logger.log("Getting diff to parent...")
     diff = ops.git().get_diff_to_parent(parent)
-    if verbose:
-        click.echo(f"Debug: Diff length = {len(diff)} bytes", err=True)
+    logger.log(f"Diff length = {len(diff)} bytes")
 
-    # 5. Check for issue reference in .impl/issue.json
-    issue_number: int | None = None
+    # Read issue reference if exists
     impl_dir = impl_dir or Path.cwd() / ".impl"
-    if has_issue_reference(impl_dir):
-        if verbose:
-            click.echo("Debug: Found .impl/issue.json, reading issue reference...", err=True)
-        issue_ref = read_issue_reference(impl_dir)
-        if issue_ref is not None:
-            issue_number = issue_ref.issue_number
-            if verbose:
-                click.echo(f"Debug: Issue reference = #{issue_number}", err=True)
-        else:
-            if verbose:
-                click.echo("Debug: Failed to read issue reference", err=True)
-    else:
-        if verbose:
-            click.echo("Debug: No .impl/issue.json found", err=True)
+    issue_number = _read_issue_reference_if_exists(impl_dir, logger)
 
     return {
         "success": True,
@@ -148,6 +95,88 @@ def execute_simple_submit(
         "parent": parent,
         "issue_number": issue_number,
     }
+
+
+def _commit_uncommitted_changes(
+    ops: GtKit, logger: DebugLogger, description: str | None
+) -> dict | None:
+    """Commit any uncommitted changes.
+
+    Returns None if successful, error dict if failed.
+    """
+    logger.log("Checking for uncommitted changes...")
+    if not ops.git().has_uncommitted_changes():
+        logger.log("No uncommitted changes found")
+        return None
+
+    logger.log("Found uncommitted changes, staging...")
+    if not ops.git().add_all():
+        logger.log("Failed to stage changes")
+        return {"success": False, "error": "Failed to stage changes"}
+
+    commit_message = description or "WIP: Prepare for submission"
+    logger.log(f"Creating commit with message: {commit_message!r}")
+    if not ops.git().commit(commit_message):
+        logger.log("Failed to commit changes")
+        return {"success": False, "error": "Failed to commit changes"}
+
+    logger.log("Successfully committed changes")
+    return None
+
+
+def _restack_branch(ops: GtKit, logger: DebugLogger) -> dict | None:
+    """Restack branch to ensure clean state.
+
+    Returns None if successful, error dict if failed.
+    """
+    logger.log("Restacking branch...")
+    result = ops.graphite().restack()
+    if not result:
+        logger.log("Restack failed")
+        return {"success": False, "error": "Failed to restack branch"}
+    logger.log("Restack successful")
+    return None
+
+
+def _get_branch_info(ops: GtKit, logger: DebugLogger) -> tuple[str, str] | tuple[None, dict]:
+    """Get current branch and parent branch.
+
+    Returns (branch, parent) tuple on success, (None, error_dict) on failure.
+    """
+    logger.log("Getting current branch name...")
+    branch = ops.git().get_current_branch()
+    if not branch:
+        logger.log("Could not determine current branch")
+        return None, {"success": False, "error": "Could not determine current branch"}
+    logger.log(f"Current branch = {branch}")
+
+    logger.log("Getting parent branch...")
+    parent = ops.graphite().get_parent_branch()
+    if not parent:
+        logger.log("Could not determine parent branch")
+        return None, {"success": False, "error": "Could not determine parent branch"}
+    logger.log(f"Parent branch = {parent}")
+
+    return branch, parent
+
+
+def _read_issue_reference_if_exists(impl_dir: Path, logger: DebugLogger) -> int | None:
+    """Read issue reference from .impl/issue.json if it exists.
+
+    Returns issue number if found, None otherwise.
+    """
+    if not has_issue_reference(impl_dir):
+        logger.log("No .impl/issue.json found")
+        return None
+
+    logger.log("Found .impl/issue.json, reading issue reference...")
+    issue_ref = read_issue_reference(impl_dir)
+    if issue_ref is None:
+        logger.log("Failed to read issue reference")
+        return None
+
+    logger.log(f"Issue reference = #{issue_ref.issue_number}")
+    return issue_ref.issue_number
 
 
 def _stage_uncommitted_changes(ops: GtKit, logger: DebugLogger) -> dict | None:

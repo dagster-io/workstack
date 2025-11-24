@@ -443,7 +443,7 @@ Next steps:
 View Issue: gh issue view <number> --web
 Interactive Execution: erk implement <number>
 Dangerous Interactive Execution: erk implement <number> --dangerous
-Yolo One Shot: erk implement <number> --dangerous --submit --no-interactive
+Yolo One Shot: erk implement <number> --yolo
 
 ---
 

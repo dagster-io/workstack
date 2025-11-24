@@ -175,6 +175,22 @@ class RealGitGtKit(GitGtKit):
 class RealGraphiteGtKit(GraphiteGtKit):
     """Real Graphite operations using subprocess."""
 
+    def _run_with_timeout(
+        self,
+        cmd: list[str],
+        timeout: int,
+        **kwargs,
+    ) -> subprocess.CompletedProcess[str] | None:
+        """Run subprocess command with timeout handling.
+
+        Returns CompletedProcess on success or timeout <= duration, None on timeout.
+        This encapsulates TimeoutExpired exception handling at the subprocess boundary.
+        """
+        try:
+            return subprocess.run(cmd, timeout=timeout, **kwargs)
+        except subprocess.TimeoutExpired:
+            return None
+
     def get_parent_branch(self) -> str | None:
         """Get the parent branch using gt parent."""
         result = subprocess.run(
@@ -227,19 +243,15 @@ class RealGraphiteGtKit(GraphiteGtKit):
         if restack:
             args.append("--restack")
 
-        try:
-            result = subprocess.run(
-                args,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=120,
-            )
+        result = self._run_with_timeout(
+            args,
+            timeout=120,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
-            return CommandResult(
-                success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
-            )
-        except subprocess.TimeoutExpired:
+        if result is None:
             return CommandResult(
                 success=False,
                 stdout="",
@@ -248,6 +260,10 @@ class RealGraphiteGtKit(GraphiteGtKit):
                     "Check network connectivity and try again."
                 ),
             )
+
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
 
     def restack(self) -> bool:
         """Run gt restack in no-interactive mode."""
@@ -274,60 +290,68 @@ class RealGraphiteGtKit(GraphiteGtKit):
 class RealGitHubGtKit(GitHubGtKit):
     """Real GitHub operations using subprocess."""
 
+    def _run_with_timeout(
+        self,
+        cmd: list[str],
+        timeout: int,
+        **kwargs,
+    ) -> subprocess.CompletedProcess[str] | None:
+        """Run subprocess command with timeout handling.
+
+        Returns CompletedProcess on success or timeout <= duration, None on timeout.
+        This encapsulates TimeoutExpired exception handling at the subprocess boundary.
+        """
+        try:
+            return subprocess.run(cmd, timeout=timeout, **kwargs)
+        except subprocess.TimeoutExpired:
+            return None
+
     def get_pr_info(self) -> tuple[int, str] | None:
         """Get PR number and URL using gh pr view."""
-        try:
-            result = subprocess.run(
-                ["gh", "pr", "view", "--json", "number,url"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
+        result = self._run_with_timeout(
+            ["gh", "pr", "view", "--json", "number,url"],
+            timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
-            if result.returncode != 0:
-                return None
-
-            data = json.loads(result.stdout)
-            return (data["number"], data["url"])
-        except subprocess.TimeoutExpired:
-            # Return None to match the same behavior as when PR not found
+        if result is None or result.returncode != 0:
             return None
+
+        data = json.loads(result.stdout)
+        return (data["number"], data["url"])
 
     def get_pr_state(self) -> tuple[int, str] | None:
         """Get PR number and state using gh pr view."""
-        try:
-            result = subprocess.run(
-                ["gh", "pr", "view", "--json", "state,number"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
+        result = self._run_with_timeout(
+            ["gh", "pr", "view", "--json", "state,number"],
+            timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
-            if result.returncode != 0:
-                return None
-
-            data = json.loads(result.stdout)
-            return (data["number"], data["state"])
-        except subprocess.TimeoutExpired:
-            # Return None to match the same behavior as when PR not found
+        if result is None or result.returncode != 0:
             return None
+
+        data = json.loads(result.stdout)
+        return (data["number"], data["state"])
 
     def update_pr_metadata(self, title: str, body: str) -> bool:
         """Update PR title and body using gh pr edit."""
-        try:
-            result = subprocess.run(
-                ["gh", "pr", "edit", "--title", title, "--body", body],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=30,
-            )
-            return result.returncode == 0
-        except subprocess.TimeoutExpired:
-            # Return False to indicate failure
+        result = self._run_with_timeout(
+            ["gh", "pr", "edit", "--title", title, "--body", body],
+            timeout=30,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result is None:
             return False
+
+        return result.returncode == 0
 
     def mark_pr_ready(self) -> bool:
         """Mark PR as ready for review using gh pr ready."""
@@ -351,26 +375,22 @@ class RealGitHubGtKit(GitHubGtKit):
 
     def get_graphite_pr_url(self, pr_number: int) -> str | None:
         """Get Graphite PR URL using gh repo view."""
-        try:
-            result = subprocess.run(
-                ["gh", "repo", "view", "--json", "owner,name"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=10,
-            )
+        result = self._run_with_timeout(
+            ["gh", "repo", "view", "--json", "owner,name"],
+            timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
-            if result.returncode != 0:
-                return None
-
-            data = json.loads(result.stdout)
-            owner = data["owner"]["login"]
-            repo = data["name"]
-
-            return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
-        except subprocess.TimeoutExpired:
-            # Return None to indicate failure
+        if result is None or result.returncode != 0:
             return None
+
+        data = json.loads(result.stdout)
+        owner = data["owner"]["login"]
+        repo = data["name"]
+
+        return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
 
 
 class RealGtKit(GtKit):

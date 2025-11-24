@@ -732,6 +732,12 @@ def _implement_from_file(
     hidden=True,
     help="Output activation script for shell integration",
 )
+@click.option(
+    "--yolo",
+    is_flag=True,
+    default=False,
+    help="Equivalent to --dangerous --submit --no-interactive (full automation)",
+)
 @click.pass_obj
 def implement(
     ctx: ErkContext,
@@ -742,6 +748,7 @@ def implement(
     dangerous: bool,
     no_interactive: bool,
     script: bool,
+    yolo: bool,
 ) -> None:
     """Create worktree from GitHub issue or plan file and execute implementation.
 
@@ -777,6 +784,10 @@ def implement(
       erk implement 123 --no-interactive --submit
 
     \b
+      # YOLO mode - full automation (dangerous + submit + no-interactive)
+      erk implement 123 --yolo
+
+    \b
       # Shell integration
       source <(erk implement 123 --script)
 
@@ -784,6 +795,12 @@ def implement(
       # From plan file
       erk implement ./my-feature-plan.md
     """
+    # Handle --yolo flag (shorthand for dangerous + submit + no-interactive)
+    if yolo:
+        dangerous = True
+        submit = True
+        no_interactive = True
+
     # Validate flag combinations
     _validate_flags(submit, no_interactive, script)
 

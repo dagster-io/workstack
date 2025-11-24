@@ -1213,3 +1213,90 @@ def test_dry_run_shows_command_sequence() -> None:
         assert "/erk:implement-plan" in result.output
         assert "/fast-ci" in result.output
         assert "/gt:simple-submit" in result.output
+
+
+# YOLO Flag Tests
+
+
+def test_yolo_flag_sets_all_flags() -> None:
+    """Verify --yolo flag is equivalent to --dangerous --submit --no-interactive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanStore(plans={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
+
+        result = runner.invoke(implement, ["#42", "--yolo"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify three command executions (submit mode)
+        assert len(executor.executed_commands) == 3
+        commands = [cmd for cmd, _, dangerous in executor.executed_commands]
+        assert commands[0] == "/erk:implement-plan"
+        assert commands[1] == "/fast-ci"
+        assert commands[2] == "/gt:simple-submit"
+
+        # Verify dangerous flag was set for all commands
+        for _, _, dangerous in executor.executed_commands:
+            assert dangerous is True
+
+
+def test_yolo_flag_in_dry_run() -> None:
+    """Verify --yolo flag works with --dry-run."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
+
+        result = runner.invoke(implement, ["#42", "--yolo", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Dry-run mode" in result.output
+
+        # Verify execution mode shown as non-interactive
+        assert "Execution mode: non-interactive" in result.output
+
+        # Verify all three commands shown with dangerous flag
+        assert result.output.count("--dangerously-skip-permissions") == 3
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:simple-submit" in result.output
+
+        # Verify no worktree was created
+        assert len(git.added_worktrees) == 0
+
+
+def test_yolo_flag_conflicts_with_script() -> None:
+    """Verify --yolo and --script are mutually exclusive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
+
+        # --yolo sets --no-interactive, which conflicts with --script
+        result = runner.invoke(implement, ["#42", "--yolo", "--script"], obj=ctx)
+
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output

@@ -7,6 +7,8 @@ from pathlib import Path
 import click
 from erk_shared.github.issues import GitHubIssues
 from erk_shared.impl_folder import read_issue_reference
+from rich.console import Console
+from rich.table import Table
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -133,7 +135,7 @@ def _list_plans_impl(
         user_output("No plans found matching the criteria.")
         return
 
-    # Display results
+    # Display results header
     user_output(f"\nFound {len(plans)} plan(s):\n")
 
     # Batch fetch all issue comments for worktree status
@@ -163,25 +165,30 @@ def _list_plans_impl(
                 if issue_ref.issue_number not in worktree_by_issue:
                     worktree_by_issue[issue_ref.issue_number] = worktree.path.name
 
+    # Create Rich table with columns
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Plan", style="cyan", no_wrap=True)
+    table.add_column("State", no_wrap=True)
+    table.add_column("Title", no_wrap=True)
+    table.add_column("Worktree", style="yellow", no_wrap=True)
+
+    # Populate table rows
     for plan in plans:
+        # Format issue number
+        issue_id = f"#{plan.plan_identifier}"
+
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"
-        state_str = click.style(plan.state.value, fg=state_color)
+        state_str = f"[{state_color}]{plan.state.value}[/{state_color}]"
 
-        # Format identifier
-        id_str = click.style(f"#{plan.plan_identifier}", fg="cyan")
-
-        # Format labels
-        labels_str = ""
-        if plan.labels:
-            labels_str = " " + " ".join(
-                click.style(f"[{label}]", fg="bright_magenta") for label in plan.labels
-            )
+        # Truncate title to 50 characters with ellipsis
+        title = plan.title
+        if len(title) > 50:
+            title = title[:47] + "..."
 
         # Query worktree status - check local .impl/issue.json first, then GitHub comments
-        worktree_str = ""
         issue_number = plan.metadata.get("number")
-        worktree_name = None
+        worktree_name = ""
 
         # Check local mapping first
         if isinstance(issue_number, int) and issue_number in worktree_by_issue:
@@ -190,16 +197,18 @@ def _list_plans_impl(
         elif isinstance(issue_number, int) and issue_number in all_comments:
             comments = all_comments[issue_number]
             # Parse worktree metadata from comments
-            worktree_name = _parse_worktree_from_comments(comments)
+            parsed_name = _parse_worktree_from_comments(comments)
+            if parsed_name:
+                worktree_name = parsed_name
 
-        if worktree_name:
-            worktree_str = f" {click.style(worktree_name, fg='yellow')}"
+        # Add row to table
+        table.add_row(issue_id, state_str, title, worktree_name)
 
-        # Build line
-        line = f"{id_str} ({state_str}){labels_str} {plan.title}{worktree_str}"
-        user_output(line)
-
-    user_output("")
+    # Output table to stderr (consistent with user_output convention)
+    # Use width=200 to ensure proper display without truncation
+    console = Console(stderr=True, width=200)
+    console.print(table)
+    console.print()  # Add blank line after table
 
 
 @click.command("list")

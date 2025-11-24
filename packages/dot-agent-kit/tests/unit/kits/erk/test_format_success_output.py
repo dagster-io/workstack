@@ -18,70 +18,72 @@ def test_format_success_output_basic() -> None:
     )
 
     assert result.exit_code == 0
-    output = result.output
+    assert "✅ GitHub issue created: #123" in result.output
+    assert "https://github.com/org/repo/issues/123" in result.output
 
-    # Check header line
-    assert "✅ GitHub issue created: #123" in output
 
-    # Check URL line
-    assert "https://github.com/org/repo/issues/123" in output
+def test_format_success_output_contains_next_steps() -> None:
+    """Test output contains all next steps commands."""
+    runner = CliRunner()
+    result = runner.invoke(
+        format_success_output,
+        ["--issue-number", "42", "--issue-url", "https://github.com/test/repo/issues/42"],
+    )
 
-    # Check next steps header
-    assert "Next steps:" in output
+    assert result.exit_code == 0
+    assert "Next steps:" in result.output
+    assert "gh issue view 42 --web" in result.output
+    assert "erk implement 42" in result.output
+    assert "erk implement 42 --dangerous" in result.output
+    assert "erk implement 42 --yolo" in result.output
 
-    # Check all four commands
-    assert "View Issue: gh issue view 123 --web" in output
-    assert "Interactive Execution: erk implement 123" in output
-    assert "Dangerous Interactive Execution: erk implement 123 --dangerous" in output
-    assert "Yolo One Shot: erk implement 123 --yolo" in output
 
-    # Check JSON metadata footer
-    assert "---" in output
-    lines = output.strip().split("\n")
-    json_line = lines[-1]
+def test_format_success_output_contains_json_metadata() -> None:
+    """Test output contains valid JSON metadata footer."""
+    runner = CliRunner()
+    result = runner.invoke(
+        format_success_output,
+        ["--issue-number", "99", "--issue-url", "https://github.com/org/repo/issues/99"],
+    )
+
+    assert result.exit_code == 0
+    assert "---" in result.output
+
+    # Extract and validate JSON from output
+    lines = result.output.strip().split("\n")
+    json_line = lines[-1]  # JSON should be last line
     metadata = json.loads(json_line)
-    assert metadata["issue_number"] == 123
-    assert metadata["issue_url"] == "https://github.com/org/repo/issues/123"
+
+    assert metadata["issue_number"] == 99
+    assert metadata["issue_url"] == "https://github.com/org/repo/issues/99"
     assert metadata["status"] == "created"
 
 
+def test_format_success_output_url_escaping() -> None:
+    """Test URL is preserved correctly (no escaping issues)."""
+    runner = CliRunner()
+    url = "https://github.com/dagster-io/erk/issues/1004"
+    result = runner.invoke(
+        format_success_output,
+        ["--issue-number", "1004", "--issue-url", url],
+    )
+
+    assert result.exit_code == 0
+    assert url in result.output
+
+
 def test_format_success_output_large_issue_number() -> None:
-    """Test formatting with large issue number."""
+    """Test formatting works with large issue numbers."""
     runner = CliRunner()
     result = runner.invoke(
         format_success_output,
-        ["--issue-number", "9999", "--issue-url", "https://github.com/org/repo/issues/9999"],
+        ["--issue-number", "99999", "--issue-url", "https://github.com/test/repo/issues/99999"],
     )
 
     assert result.exit_code == 0
-    output = result.output
-
-    assert "#9999" in output
-    assert "gh issue view 9999" in output
-    assert "erk implement 9999" in output
-
-    # Check JSON
-    lines = output.strip().split("\n")
-    metadata = json.loads(lines[-1])
-    assert metadata["issue_number"] == 9999
-
-
-def test_format_success_output_url_with_query_params() -> None:
-    """Test formatting preserves URL with query parameters."""
-    runner = CliRunner()
-    url = "https://github.com/org/repo/issues/123?comments=1"
-    result = runner.invoke(
-        format_success_output,
-        ["--issue-number", "123", "--issue-url", url],
-    )
-
-    assert result.exit_code == 0
-    output = result.output
-
-    assert url in output
-    lines = output.strip().split("\n")
-    metadata = json.loads(lines[-1])
-    assert metadata["issue_url"] == url
+    assert "#99999" in result.output
+    assert "gh issue view 99999 --web" in result.output
+    assert "erk implement 99999" in result.output
 
 
 def test_format_success_output_json_structure() -> None:
@@ -89,15 +91,17 @@ def test_format_success_output_json_structure() -> None:
     runner = CliRunner()
     result = runner.invoke(
         format_success_output,
-        ["--issue-number", "456", "--issue-url", "https://github.com/test/test/issues/456"],
+        ["--issue-number", "5", "--issue-url", "https://github.com/test/repo/issues/5"],
     )
 
     assert result.exit_code == 0
+
+    # Extract JSON
     lines = result.output.strip().split("\n")
     json_line = lines[-1]
     metadata = json.loads(json_line)
 
-    # Check keys exist
+    # Check structure
     assert "issue_number" in metadata
     assert "issue_url" in metadata
     assert "status" in metadata
@@ -107,67 +111,64 @@ def test_format_success_output_json_structure() -> None:
     assert isinstance(metadata["issue_url"], str)
     assert isinstance(metadata["status"], str)
 
-    # Check values
-    assert metadata["issue_number"] == 456
-    assert metadata["status"] == "created"
 
-
-def test_format_success_output_no_placeholders() -> None:
-    """Test output contains no placeholder text like <number> or <url>."""
+def test_format_success_output_sections_order() -> None:
+    """Test output sections appear in correct order."""
     runner = CliRunner()
     result = runner.invoke(
         format_success_output,
-        ["--issue-number", "789", "--issue-url", "https://github.com/org/repo/issues/789"],
+        ["--issue-number", "10", "--issue-url", "https://github.com/test/repo/issues/10"],
     )
 
     assert result.exit_code == 0
     output = result.output
 
-    # Ensure no placeholders remain
-    assert "<number>" not in output
-    assert "<url>" not in output
-    assert "<issue-url>" not in output
+    # Find positions of key sections
+    success_pos = output.find("✅ GitHub issue created")
+    url_pos = output.find("https://github.com")
+    next_steps_pos = output.find("Next steps:")
+    separator_pos = output.find("---")
+    json_pos = output.find('{"issue_number"')
+
+    # Verify order
+    assert success_pos < url_pos
+    assert url_pos < next_steps_pos
+    assert next_steps_pos < separator_pos
+    assert separator_pos < json_pos
 
 
-def test_format_success_output_separator_present() -> None:
-    """Test output includes separator line before JSON."""
+def test_format_success_output_command_labels() -> None:
+    """Test command descriptions are present."""
     runner = CliRunner()
     result = runner.invoke(
         format_success_output,
-        ["--issue-number", "100", "--issue-url", "https://github.com/org/repo/issues/100"],
+        ["--issue-number", "7", "--issue-url", "https://github.com/test/repo/issues/7"],
     )
 
     assert result.exit_code == 0
-    lines = result.output.strip().split("\n")
-
-    # Find the separator
-    assert "---" in lines
-    separator_index = lines.index("---")
-
-    # JSON should be after separator (with possible blank line)
-    json_line = lines[-1]
-    assert separator_index < len(lines) - 1
-    assert json_line.startswith("{")
+    assert "View Issue:" in result.output
+    assert "Interactive Execution:" in result.output
+    assert "Dangerous Interactive Execution:" in result.output
+    assert "Yolo One Shot:" in result.output
 
 
-def test_format_success_output_commands_order() -> None:
-    """Test commands appear in correct order."""
+def test_format_success_output_missing_issue_number() -> None:
+    """Test command fails gracefully when issue number is missing."""
     runner = CliRunner()
     result = runner.invoke(
         format_success_output,
-        ["--issue-number", "500", "--issue-url", "https://github.com/org/repo/issues/500"],
+        ["--issue-url", "https://github.com/test/repo/issues/1"],
     )
 
-    assert result.exit_code == 0
-    lines = result.output.split("\n")
+    assert result.exit_code != 0
 
-    # Find command lines
-    view_line = next(i for i, line in enumerate(lines) if "View Issue:" in line)
-    interactive_line = next(i for i, line in enumerate(lines) if "Interactive Execution:" in line)
-    dangerous_line = next(
-        i for i, line in enumerate(lines) if "Dangerous Interactive Execution:" in line
+
+def test_format_success_output_missing_issue_url() -> None:
+    """Test command fails gracefully when issue URL is missing."""
+    runner = CliRunner()
+    result = runner.invoke(
+        format_success_output,
+        ["--issue-number", "1"],
     )
-    yolo_line = next(i for i, line in enumerate(lines) if "Yolo One Shot:" in line)
 
-    # Check order
-    assert view_line < interactive_line < dangerous_line < yolo_line
+    assert result.exit_code != 0

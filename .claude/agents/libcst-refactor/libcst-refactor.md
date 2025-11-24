@@ -1,7 +1,7 @@
 ---
 name: libcst-refactor
 description: Specialized agent for systematic Python refactoring using LibCST. Use for batch operations across multiple files (migrate function calls, rename functions/variables, update imports, replace type syntax, add/remove decorators). Handles large-scale codebase transformations efficiently.
-model: sonnet
+model: opus
 color: cyan
 tools: Read, Write, Bash, Grep, Glob, Task
 ---

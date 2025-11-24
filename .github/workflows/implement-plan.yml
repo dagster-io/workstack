@@ -60,7 +60,7 @@ jobs:
           uv tool install --from . --with ./packages/erk-shared --with ./packages/dot-agent-kit erk
 
           # Install Claude Code
-          npm install -g @anthropic-ai/claude-code
+          curl -fsSL https://claude.ai/install.sh | bash
 
           # Install Prettier
           npm install -g prettier

@@ -15,6 +15,7 @@ Triggers an immediate status line refresh by generating conversation activity.
 ## When to Use
 
 Use this command after external changes that affect the status line:
+
 - Git operations (branch switches, commits)
 - Worktree switches
 - External file modifications

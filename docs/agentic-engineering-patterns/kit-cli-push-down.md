@@ -210,9 +210,107 @@ When creating a kit CLI push down command:
 - **Structured Output**: Dataclasses ensure consistent JSON schemas
 - **Error Boundaries**: Kit CLI returns errors as data, not exceptions
 
+## Example: Plan Extraction from Session Logs
+
+### Before (Agent Searches Conversation)
+
+**Problems**:
+
+- Agent searches entire conversation for plan boundaries
+- High token usage for pattern matching
+- Ambiguous plan identification
+- No structured error handling
+
+**Agent markdown code**:
+
+```markdown
+Search conversation context for implementation plan. Plans typically appear after discussion and before the command invocation.
+```
+
+### After (Kit CLI Pre-Extraction)
+
+**Benefits**:
+
+- ExitPlanMode markers provide unambiguous identification
+- Mechanical JSON parsing done by kit CLI
+- Agent focuses on semantic enrichment only
+- Structured JSON errors with clear messages
+- Automatic session ID discovery from environment
+
+**Command orchestration** (`.claude/commands/erk/save-plan.md`):
+
+```bash
+# Extract plan from session logs using kit CLI
+plan_result=$(dot-agent run erk save-plan-from-session --extract-only --format json)
+
+# Parse result
+if echo "$plan_result" | jq -e '.success' > /dev/null; then
+    plan_content=$(echo "$plan_result" | jq -r '.plan_content')
+    plan_title=$(echo "$plan_result" | jq -r '.title')
+else
+    error_msg=$(echo "$plan_result" | jq -r '.error')
+    echo "❌ Error: Failed to extract plan from session logs"
+    echo "Details: $error_msg"
+    exit 1
+fi
+
+# Pass to agent for enrichment
+# Agent receives pre-extracted plan + conversation context
+```
+
+**Agent markdown invocation** (`.claude/agents/erk/plan-extractor.md`):
+
+```json
+{
+  "mode": "enriched",
+  "plan_content": "[pre-extracted plan from kit CLI]",
+  "guidance": "[optional user guidance]"
+}
+```
+
+**Kit CLI command** (`save_plan_from_session.py`):
+
+```python
+@click.command()
+@click.option("--extract-only", is_flag=True)
+def save_plan_from_session(session_id: str | None, extract_only: bool) -> None:
+    """Extract plan from Claude session logs."""
+    # Auto-discover session ID from SESSION_CONTEXT environment
+    if not session_id:
+        session_id = get_session_context()
+
+    # Extract plan from session files (searches for ExitPlanMode markers)
+    plan_text = get_latest_plan(str(Path.cwd()), session_id)
+
+    if not plan_text:
+        result = {"success": False, "error": "No plan found in Claude session files"}
+        click.echo(json.dumps(result))
+        raise SystemExit(1)
+
+    # Extract title
+    title = extract_title_from_plan(plan_text)
+
+    # Return plan content (no disk write in extract-only mode)
+    if extract_only:
+        result = {"success": True, "plan_content": plan_text, "title": title}
+        click.echo(json.dumps(result))
+        return
+
+    # ... (file saving logic for non-extract-only mode)
+```
+
+**Separation of concerns**:
+
+- **Kit CLI**: Mechanical operations (JSON parsing, file I/O, ExitPlanMode extraction)
+- **Agent**: Semantic operations (guidance application, context extraction, questions)
+
 ## References
 
 - Implementation: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/parse_issue_reference.py`
 - Tests: `packages/dot-agent-kit/tests/unit/kits/erk/test_parse_issue_reference.py`
 - Usage: `.claude/agents/erk/issue-wt-creator.md`
 - Kit CLI Documentation: `docs/agent/kit-cli-commands.md`
+- Plan Extraction Example:
+  - Kit CLI: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/save_plan_from_session.py`
+  - Agent: `.claude/agents/erk/plan-extractor.md`
+  - Command: `.claude/commands/erk/save-plan.md`

@@ -1,11 +1,21 @@
-"""Extract plan from Claude session and save to disk.
+"""Extract plan from Claude session and optionally save to disk.
 
 Usage:
-    dot-agent kit-command erk save-plan-from-session [--session-id SESSION_ID] [--format FORMAT]
+    # Extract and save to disk
+    dot-agent run erk save-plan-from-session [--session-id SESSION_ID] [--format FORMAT]
 
-This command combines plan extraction from Claude session files with saving
-to disk. It extracts the latest ExitPlanMode plan, generates a filename,
-and saves it to the repository root with minimal frontmatter.
+    # Extract only (no disk write)
+    dot-agent run erk save-plan-from-session --extract-only [--session-id ID] [--format FMT]
+
+This command extracts the latest ExitPlanMode plan from Claude session files.
+Without --extract-only, it saves to disk. With --extract-only, it returns
+the plan content in JSON without saving (useful for agent orchestration).
+
+Session ID Discovery:
+    1. Use explicit --session-id if provided
+    2. Otherwise discover from SESSION_CONTEXT environment (session_id=<uuid>)
+    3. Fall back to CLAUDE_SESSION_ID environment
+    4. If none found, searches all session files
 
 Output:
     --format json (default): JSON result on stdout
@@ -16,7 +26,7 @@ Error messages:
     --format display: Formatted error messages to stderr
 
 Exit Codes:
-    0: Success - plan saved
+    0: Success - plan extracted (and saved if not --extract-only)
     1: Error - no plan found, file exists, or other error
 """
 
@@ -28,7 +38,7 @@ import click
 from erk_shared.naming import generate_filename_from_title
 
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
-from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan
+from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan, get_session_context
 
 
 def _format_success_display(filename: str, title: str, file_path: Path) -> None:
@@ -54,7 +64,7 @@ def _format_error_display(error_message: str, details: str | None = None) -> Non
 @click.command(name="save-plan-from-session")
 @click.option(
     "--session-id",
-    help="Session ID to search within (optional, searches all sessions if not provided)",
+    help="Session ID to search (optional, auto-discovered from SESSION_CONTEXT or searches all)",
 )
 @click.option(
     "--format",
@@ -63,13 +73,23 @@ def _format_error_display(error_message: str, details: str | None = None) -> Non
     default="json",
     help="Output format: json (default) or display (formatted text)",
 )
-def save_plan_from_session(session_id: str | None, output_format: str) -> None:
+@click.option(
+    "--extract-only",
+    is_flag=True,
+    help="Extract plan without saving to disk (returns plan_content in JSON)",
+)
+def save_plan_from_session(session_id: str | None, output_format: str, extract_only: bool) -> None:
     """Extract plan from Claude session and save to disk.
 
     Combines plan extraction with file saving in a single operation.
+    With --extract-only, returns plan content without saving.
     """
     # Get current working directory
     cwd = Path.cwd()
+
+    # If session_id not provided, try to discover from environment
+    if not session_id:
+        session_id = get_session_context()
 
     # Step 1: Extract latest plan from session
     plan_text = get_latest_plan(str(cwd), session_id)
@@ -93,6 +113,21 @@ def save_plan_from_session(session_id: str | None, output_format: str) -> None:
 
     # Step 2: Extract title from plan
     title = extract_title_from_plan(plan_text)
+
+    # If extract-only mode, return plan content and exit
+    if extract_only:
+        if output_format == "display":
+            click.echo(f"📋 Title: {title}")
+            click.echo()
+            click.echo(plan_text)
+        else:
+            result = {
+                "success": True,
+                "plan_content": plan_text,
+                "title": title,
+            }
+            click.echo(json.dumps(result))
+        return
 
     # Step 3: Generate filename
     filename = generate_filename_from_title(title)

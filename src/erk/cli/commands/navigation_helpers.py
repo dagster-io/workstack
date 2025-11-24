@@ -46,18 +46,20 @@ def check_clean_working_tree(ctx: ErkContext) -> None:
 def verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
     """Verify that the branch's PR is merged on GitHub.
 
-    Raises SystemExit if PR not found or not merged.
+    Warns if no PR exists, raises SystemExit if PR exists but not merged.
     """
     pr_info = ctx.github.get_pr_status(repo_root, branch, debug=False)
 
     if pr_info.state == "NONE" or pr_info.pr_number is None:
+        # Warn but continue when no PR exists
         user_output(
-            click.style("Error: ", fg="red") + f"No pull request found for branch '{branch}'.\n"
-            "Cannot verify merge status."
+            click.style("Warning: ", fg="yellow") + f"No pull request found for branch '{branch}'.\n"
+            "Proceeding with deletion without PR verification."
         )
-        raise SystemExit(1)
+        return  # Allow deletion to proceed
 
     if pr_info.state != "MERGED":
+        # Keep error for unmerged PRs (safety mechanism remains)
         user_output(
             click.style("Error: ", fg="red")
             + f"Pull request for branch '{branch}' is not merged.\n"

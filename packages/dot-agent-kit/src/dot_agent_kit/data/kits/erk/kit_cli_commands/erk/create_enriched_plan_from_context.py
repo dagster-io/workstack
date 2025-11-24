@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 import click
+from erk_shared.github.metadata import format_plan_issue_body
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
@@ -81,6 +82,16 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
         result = github.create_issue(repo_root, title, body, ["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Format body with collapsible details and execution commands
+    formatted_body = format_plan_issue_body(plan.strip(), result.number)
+
+    # Update issue with formatted body
+    try:
+        github.update_issue_body(repo_root, result.number, formatted_body)
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to update issue body: {e}", err=True)
         raise SystemExit(1) from e
 
     # Output structured JSON

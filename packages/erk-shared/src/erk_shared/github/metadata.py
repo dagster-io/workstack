@@ -899,12 +899,14 @@ def format_execution_commands(issue_number: int) -> str:
     """
     return f"""## Execution Commands
 
-Copy and paste one of these commands to get started:
-
-**View in browser:**
+**Submit to Erk Queue:**
 ```bash
-gh issue view {issue_number} --web
+erk submit {issue_number}
 ```
+
+---
+
+### Local Execution
 
 **Standard mode (interactive):**
 ```bash

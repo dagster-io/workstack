@@ -198,3 +198,37 @@ def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
     assert title == "Feature Plan"
     # Body should contain plan content
     assert "- Step 1" in body
+
+
+def test_create_enriched_plan_formats_with_details_tags() -> None:
+    """Verify created issues have collapsible details tags."""
+    fake_gh = FakeGitHubIssues()
+    runner = CliRunner()
+
+    plan = "# Test Plan\n\n- Step 1\n- Step 2"
+
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
+
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh, repo_root=Path.cwd()),
+        )
+
+        assert result.exit_code == 0
+        output_json = json.loads(result.output)
+        issue_number = output_json["issue_number"]
+
+    # Get the updated issue body from fake storage
+    updated_issue = fake_gh.get_issue(Path.cwd(), issue_number)
+    updated_body = updated_issue.body
+
+    # Verify details tags are present
+    assert "<details>" in updated_body
+    assert "</details>" in updated_body
+    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in updated_body
+    assert "## Execution Commands" in updated_body
+    assert "Step 1" in updated_body
+    assert "Step 2" in updated_body

@@ -786,8 +786,7 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
         )
         expected_ci = "claude --permission-mode acceptEdits --dangerously-skip-permissions /fast-ci"
         expected_submit = (
-            "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            "/gt:simple-submit"
+            "claude --permission-mode acceptEdits --dangerously-skip-permissions /gt:simple-submit"
         )
         assert expected_implement in script_content
         assert expected_ci in script_content

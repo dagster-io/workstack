@@ -68,7 +68,7 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check no uncommitted changes in current worktree
-    has_uncommitted = ctx.git.has_uncommitted_changes(ctx.cwd)
+    has_uncommitted = ctx.git_ops.has_uncommitted_changes(ctx.cwd)
     logger.debug("  - Uncommitted changes: %s", has_uncommitted)
     if has_uncommitted:
         _emit(
@@ -86,7 +86,7 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check current branch not trunk
-    all_branches = ctx.graphite.get_all_branches(ctx.git, repo_root)
+    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
     is_on_trunk = current_branch in all_branches and all_branches[current_branch].is_trunk
     logger.debug("  - On trunk branch: %s", not is_on_trunk)
     if is_on_trunk:
@@ -128,13 +128,13 @@ def _validate_landing_preconditions(
     # Get current worktree path to exclude from conflict detection
     current_worktree_path: Path | None = None
     if current_branch:
-        current_worktree_path = ctx.git.find_worktree_for_branch(repo_root, current_branch)
+        current_worktree_path = ctx.git_ops.find_worktree_for_branch(repo_root, current_branch)
 
     logger.debug("  - Current worktree: %s", current_worktree_path)
     logger.debug("  - Checking worktree conflicts for %d branches", len(branches_to_land))
 
     for branch in branches_to_land:
-        worktree_path = ctx.git.is_branch_checked_out(repo_root, branch)
+        worktree_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
         # Only flag as conflict if checked out in a DIFFERENT worktree
         if worktree_path and worktree_path != current_worktree_path:
             worktree_conflicts.append((branch, worktree_path))
@@ -188,7 +188,7 @@ def _validate_branches_have_prs(
     valid_branches: list[BranchPR] = []
 
     for branch in branches:
-        pr_info = ctx.github.get_pr_status(repo_root, branch, debug=False)
+        pr_info = ctx.github_ops.get_pr_status(repo_root, branch, debug=False)
         logger.debug(
             "  - Branch %s: pr_number=%s, state=%s", branch, pr_info.pr_number, pr_info.state
         )
@@ -232,7 +232,7 @@ def _validate_pr_mergeability(
     conflicts: list[tuple[str, int]] = []
 
     for branch_pr in branches:
-        mergeability = ctx.github.get_pr_mergeability(repo_root, branch_pr.pr_number)
+        mergeability = ctx.github_ops.get_pr_mergeability(repo_root, branch_pr.pr_number)
         mergeable_status = mergeability.mergeable if mergeability else None
         logger.debug("  - PR #%s: mergeable=%s", branch_pr.pr_number, mergeable_status)
 

@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -489,6 +490,9 @@ query {{
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
+        # Record trigger time right before calling gh workflow run
+        trigger_time = datetime.now(UTC)
+
         run_subprocess_with_context(
             cmd,
             operation_context=f"trigger workflow '{workflow}'",
@@ -500,7 +504,8 @@ query {{
         # Retry logic handles race condition where GitHub hasn't created run yet
         max_attempts = 5
         for attempt in range(max_attempts):
-            # Query for recent runs with status and conclusion to filter skipped/cancelled
+            # Query for recent runs with status, conclusion, and createdAt
+            # to match newly triggered run
             runs_cmd = [
                 "gh",
                 "run",
@@ -508,7 +513,7 @@ query {{
                 "--workflow",
                 workflow,
                 "--json",
-                "databaseId,status,conclusion",
+                "databaseId,status,conclusion,createdAt",
                 "--limit",
                 "10",
             ]
@@ -528,21 +533,34 @@ query {{
                 )
                 raise RuntimeError(msg)
 
-            # Filter out skipped and cancelled runs
+            # Find newly triggered run by matching timestamp and filtering skipped/cancelled
             for run in runs_data:
                 conclusion = run.get("conclusion")
-                if conclusion not in ("skipped", "cancelled"):
-                    run_id = run["databaseId"]
-                    return str(run_id)
+                if conclusion in ("skipped", "cancelled"):
+                    continue
+
+                # Parse the createdAt timestamp
+                created_at_str = run.get("createdAt")
+                if created_at_str:
+                    # GitHub returns ISO 8601 timestamps with 'Z' suffix
+                    created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                    # Check if this run was created after our trigger
+                    # (with 2-second tolerance for clock skew)
+                    if created_at >= trigger_time.replace(microsecond=0) - timedelta(seconds=2):
+                        run_id = run["databaseId"]
+                        return str(run_id)
 
             # No valid run found, retry if attempts remaining
             if attempt < max_attempts - 1:
                 self._time.sleep(1)
 
         # All attempts exhausted without finding valid run
+        trigger_iso = trigger_time.isoformat()
         msg = (
-            "GitHub workflow triggered but could not find active run ID. "
-            "All recent runs were skipped or cancelled."
+            f"GitHub workflow triggered but could not find active run ID "
+            f"created after {trigger_iso}. "
+            "This may indicate GitHub API eventual consistency delay "
+            "or all recent runs were skipped/cancelled."
         )
         raise RuntimeError(msg)
 

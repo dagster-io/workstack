@@ -650,9 +650,7 @@ query {{
             # gh not installed, not authenticated, or parsing failed
             return {}
 
-    def _build_issue_pr_linkage_query(
-        self, issue_numbers: list[int], owner: str, repo: str
-    ) -> str:
+    def _build_issue_pr_linkage_query(self, issue_numbers: list[int], owner: str, repo: str) -> str:
         """Build GraphQL query to fetch PRs linked to issues.
 
         Args:

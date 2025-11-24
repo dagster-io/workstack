@@ -67,6 +67,12 @@ class PrintingGitHub(PrintingBase, GitHub):
         """Get run logs (read-only, no printing)."""
         return self._wrapped.get_run_logs(repo_root, run_id)
 
+    def get_prs_linked_to_issues(
+        self, repo_root: Path, issue_numbers: list[int]
+    ) -> dict[int, list[PullRequestInfo]]:
+        """Get PRs linked to issues (read-only, no printing)."""
+        return self._wrapped.get_prs_linked_to_issues(repo_root, issue_numbers)
+
     # Operations that need printing
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:

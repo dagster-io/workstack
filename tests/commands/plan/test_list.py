@@ -1077,7 +1077,6 @@ def test_list_plans_action_filter_no_matches() -> None:
 def test_list_plans_pr_column_open_pr() -> None:
     """Test PR column displays open PR with 👀 emoji."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
@@ -1124,7 +1123,6 @@ def test_list_plans_pr_column_open_pr() -> None:
 def test_list_plans_pr_column_draft_pr() -> None:
     """Test PR column displays draft PR with 🚧 emoji."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
@@ -1171,7 +1169,6 @@ def test_list_plans_pr_column_draft_pr() -> None:
 def test_list_plans_pr_column_merged_pr() -> None:
     """Test PR column displays merged PR with 🎉 emoji."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
@@ -1218,7 +1215,6 @@ def test_list_plans_pr_column_merged_pr() -> None:
 def test_list_plans_pr_column_closed_pr() -> None:
     """Test PR column displays closed PR with ⛔ emoji."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
@@ -1265,7 +1261,6 @@ def test_list_plans_pr_column_closed_pr() -> None:
 def test_list_plans_pr_column_with_conflicts() -> None:
     """Test PR column shows conflict indicator 💥 for open/draft PRs with conflicts."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
@@ -1311,7 +1306,6 @@ def test_list_plans_pr_column_with_conflicts() -> None:
 def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
     """Test PR column shows most recent open PR when multiple PRs exist."""
     from erk_shared.github.types import PullRequestInfo
-
     from src.erk.core.github.fake import FakeGitHub
 
     # Arrange

@@ -162,11 +162,7 @@ class TestExecuteSimpleSubmit:
 
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
-        # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
-        with patch(patch_path) as mock_cwd:
-            mock_cwd.return_value = tmp_path
-            result = execute_simple_submit(ops=ops)
+        result = execute_simple_submit(ops=ops, impl_dir=impl_dir)
 
         assert result["success"] is True
         assert result["issue_number"] == 123
@@ -175,11 +171,7 @@ class TestExecuteSimpleSubmit:
         """Test prepare phase returns None for issue_number when no .impl/issue.json."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
-        # Mock Path.cwd() to return temp directory without .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
-        with patch(patch_path) as mock_cwd:
-            mock_cwd.return_value = tmp_path
-            result = execute_simple_submit(ops=ops)
+        result = execute_simple_submit(ops=ops, impl_dir=tmp_path / ".impl")
 
         assert result["success"] is True
         assert result["issue_number"] is None

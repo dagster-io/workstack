@@ -36,7 +36,10 @@ class DebugLogger:
 
 
 def execute_simple_submit(
-    description: str | None = None, verbose: bool = False, ops: GtKit | None = None
+    description: str | None = None,
+    verbose: bool = False,
+    ops: GtKit | None = None,
+    impl_dir: Path | None = None,
 ) -> dict:
     """Execute the simplified submit preparation phase.
 
@@ -44,6 +47,7 @@ def execute_simple_submit(
         description: Optional description for the commit
         verbose: Show detailed diagnostic output
         ops: Optional GtKit instance for dependency injection
+        impl_dir: Optional path to .impl directory (defaults to Path.cwd() / ".impl")
 
     Returns:
         JSON dict with:
@@ -121,7 +125,7 @@ def execute_simple_submit(
 
     # 5. Check for issue reference in .impl/issue.json
     issue_number: int | None = None
-    impl_dir = Path.cwd() / ".impl"
+    impl_dir = impl_dir or Path.cwd() / ".impl"
     if has_issue_reference(impl_dir):
         if verbose:
             click.echo("Debug: Found .impl/issue.json, reading issue reference...", err=True)

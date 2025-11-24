@@ -334,3 +334,75 @@ def test_list_plans_passes_limit_to_interface() -> None:
 
     # Should only return 1 result (not slice in Python)
     assert len(results) == 1
+
+
+def test_close_plan_with_issue_number() -> None:
+    """Test closing a plan with issue number."""
+    issue = create_test_issue(
+        number=42,
+        title="Test Issue",
+        body="Test body",
+    )
+    fake_github = FakeGitHubIssues(issues={42: issue})
+    store = GitHubPlanStore(fake_github)
+
+    store.close_plan(Path("/fake/repo"), "42")
+
+    # Verify issue was closed
+    assert 42 in fake_github.closed_issues
+    # Verify comment was added
+    assert len(fake_github.added_comments) == 1
+    assert fake_github.added_comments[0] == (42, "Plan completed via erk plan close")
+
+
+def test_close_plan_with_github_url() -> None:
+    """Test closing a plan with GitHub URL."""
+    issue = create_test_issue(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+    )
+    fake_github = FakeGitHubIssues(issues={123: issue})
+    store = GitHubPlanStore(fake_github)
+
+    store.close_plan(Path("/fake/repo"), "https://github.com/org/repo/issues/123")
+
+    # Verify issue was closed
+    assert 123 in fake_github.closed_issues
+    # Verify comment was added
+    assert len(fake_github.added_comments) == 1
+    assert fake_github.added_comments[0] == (123, "Plan completed via erk plan close")
+
+
+def test_close_plan_with_trailing_slash() -> None:
+    """Test closing a plan with GitHub URL with trailing slash."""
+    issue = create_test_issue(
+        number=456,
+        title="Test Issue",
+        body="Test body",
+    )
+    fake_github = FakeGitHubIssues(issues={456: issue})
+    store = GitHubPlanStore(fake_github)
+
+    store.close_plan(Path("/fake/repo"), "https://github.com/org/repo/issues/456/")
+
+    # Verify issue was closed
+    assert 456 in fake_github.closed_issues
+
+
+def test_close_plan_invalid_identifier() -> None:
+    """Test error handling for invalid identifier."""
+    fake_github = FakeGitHubIssues(issues={})
+    store = GitHubPlanStore(fake_github)
+
+    with pytest.raises(RuntimeError, match="Invalid identifier format"):
+        store.close_plan(Path("/fake/repo"), "not-a-number")
+
+
+def test_close_plan_not_found() -> None:
+    """Test error handling when issue doesn't exist."""
+    fake_github = FakeGitHubIssues(issues={})
+    store = GitHubPlanStore(fake_github)
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        store.close_plan(Path("/fake/repo"), "999")

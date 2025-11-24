@@ -54,3 +54,16 @@ class PlanStore(ABC):
             Provider name (e.g., "github", "gitlab", "linear")
         """
         ...
+
+    @abstractmethod
+    def close_plan(self, repo_root: Path, identifier: str) -> None:
+        """Close a plan by its identifier (issue number or GitHub URL).
+
+        Args:
+            repo_root: Repository root directory
+            identifier: Plan identifier (issue number like "123" or GitHub URL)
+
+        Raises:
+            RuntimeError: If provider fails, plan not found, or invalid identifier
+        """
+        ...

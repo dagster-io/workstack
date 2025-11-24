@@ -204,6 +204,19 @@ class GitHubIssues(ABC):
         """
         ...
 
+    @abstractmethod
+    def close_issue(self, repo_root: Path, number: int) -> None:
+        """Close a GitHub issue.
+
+        Args:
+            repo_root: Repository root directory
+            number: Issue number to close
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
 
 class RealGitHubIssues(GitHubIssues):
     """Production implementation using gh CLI.
@@ -440,6 +453,15 @@ class RealGitHubIssues(GitHubIssues):
         cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
         execute_gh_command(cmd, repo_root)
 
+    def close_issue(self, repo_root: Path, number: int) -> None:
+        """Close issue using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        """
+        cmd = ["gh", "issue", "close", str(number)]
+        execute_gh_command(cmd, repo_root)
+
 
 class FakeGitHubIssues(GitHubIssues):
     """In-memory fake implementation for testing.
@@ -470,6 +492,7 @@ class FakeGitHubIssues(GitHubIssues):
         self._created_issues: list[tuple[str, str, list[str]]] = []
         self._added_comments: list[tuple[int, str]] = []
         self._created_labels: list[tuple[str, str, str]] = []
+        self._closed_issues: list[int] = []
 
     @property
     def created_issues(self) -> list[tuple[str, str, list[str]]]:
@@ -494,6 +517,14 @@ class FakeGitHubIssues(GitHubIssues):
         Returns list of (label, description, color) tuples.
         """
         return self._created_labels
+
+    @property
+    def closed_issues(self) -> list[int]:
+        """Read-only access to closed issues for test assertions.
+
+        Returns list of issue numbers that were closed.
+        """
+        return self._closed_issues
 
     @property
     def labels(self) -> set[str]:
@@ -660,6 +691,31 @@ class FakeGitHubIssues(GitHubIssues):
                 updated_at=current_issue.updated_at,
             )
 
+    def close_issue(self, repo_root: Path, number: int) -> None:
+        """Close issue in fake storage.
+
+        Raises:
+            RuntimeError: If issue number not found (simulates gh CLI error)
+        """
+        if number not in self._issues:
+            msg = f"Issue #{number} not found"
+            raise RuntimeError(msg)
+
+        # Update issue state to closed
+        current_issue = self._issues[number]
+        self._issues[number] = IssueInfo(
+            number=current_issue.number,
+            title=current_issue.title,
+            body=current_issue.body,
+            state="closed",
+            url=current_issue.url,
+            labels=current_issue.labels,
+            assignees=current_issue.assignees,
+            created_at=current_issue.created_at,
+            updated_at=current_issue.updated_at,
+        )
+        self._closed_issues.append(number)
+
 
 class DryRunGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
@@ -732,4 +788,8 @@ class DryRunGitHubIssues(GitHubIssues):
 
     def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
         """No-op for ensuring label in dry-run mode (idempotent)."""
+        pass
+
+    def close_issue(self, repo_root: Path, number: int) -> None:
+        """No-op for closing issue in dry-run mode."""
         pass

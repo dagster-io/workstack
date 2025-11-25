@@ -17,7 +17,7 @@ jobs:
         id: check
         uses: ./.github/actions/check-worker-impl
 
-  test:
+  unit-tests:
     needs: check-submission
     if: needs.check-submission.outputs.skip == 'false'
     runs-on: ubuntu-latest
@@ -32,5 +32,23 @@ jobs:
         run: uv sync
       - name: Install Graphite CLI
         run: npm install -g @withgraphite/graphite-cli
-      - name: Run tests
+      - name: Run unit tests
         run: make test
+
+  integration-tests:
+    needs: check-submission
+    if: needs.check-submission.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv sync
+      - name: Install Graphite CLI
+        run: npm install -g @withgraphite/graphite-cli
+      - name: Run integration tests
+        run: make test-integration

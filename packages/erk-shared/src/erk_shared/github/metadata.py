@@ -1403,3 +1403,18 @@ def extract_plan_header_dispatch_info(
     dispatched_at = block.data.get("last_dispatched_at")
 
     return (run_id, dispatched_at)
+
+
+def extract_plan_header_created_by(issue_body: str) -> str | None:
+    """Extract created_by field from plan-header block.
+
+    Args:
+        issue_body: Issue body containing plan-header block
+
+    Returns:
+        GitHub username of plan creator, or None if not found
+    """
+    block = find_metadata_block(issue_body, "plan-header")
+    if block is None:
+        return None
+    return block.data.get("created_by")

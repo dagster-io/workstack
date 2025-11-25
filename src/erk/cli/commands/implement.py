@@ -160,72 +160,20 @@ def _execute_non_interactive_mode(
 
     from rich.console import Console
 
+    from erk.cli.claude_helpers import execute_streaming_commands
     from erk.cli.output import format_implement_summary
-    from erk.core.claude_executor import CommandResult
-
-    # Verify Claude is available
-    if not executor.is_claude_available():
-        raise click.ClickException(
-            "Claude CLI not found\nInstall from: https://claude.com/download"
-        )
 
     console = Console()
     total_start = time.time()
-    all_results: list[CommandResult] = []
 
-    for cmd in commands:
-        if verbose:
-            # Verbose mode - simple output, no spinner
-            click.echo(f"Running {cmd}...", err=True)
-            result = executor.execute_command(cmd, worktree_path, dangerous, verbose=True)
-        else:
-            # Filtered mode - streaming with dynamic spinner updates
-            with console.status(f"Running {cmd}...", spinner="dots") as status:
-                start_time = time.time()
-                filtered_messages: list[str] = []
-                pr_url: str | None = None
-                error_message: str | None = None
-                success = True
-
-                # Stream events in real-time
-                for event in executor.execute_command_streaming(
-                    cmd, worktree_path, dangerous, verbose=False
-                ):
-                    if event.event_type == "text":
-                        console.print(event.content)
-                        filtered_messages.append(event.content)
-                    elif event.event_type == "tool":
-                        console.print(event.content)
-                        filtered_messages.append(event.content)
-                    elif event.event_type == "spinner_update":
-                        # Update spinner text dynamically
-                        status.update(event.content)
-                    elif event.event_type == "pr_url":
-                        pr_url = event.content
-                    elif event.event_type == "error":
-                        error_message = event.content
-                        success = False
-
-                duration = time.time() - start_time
-
-                # Update spinner to final status
-                final_status = "✅ Complete" if success else "❌ Failed"
-                status.update(final_status)
-
-                # Create result for summary
-                result = CommandResult(
-                    success=success,
-                    pr_url=pr_url,
-                    duration_seconds=duration,
-                    error_message=error_message,
-                    filtered_messages=filtered_messages,
-                )
-
-        all_results.append(result)
-
-        # Stop on first failure
-        if not result.success:
-            break
+    # Execute all commands with streaming (stops on first failure)
+    all_results = execute_streaming_commands(
+        executor=executor,
+        commands=commands,
+        worktree_path=worktree_path,
+        dangerous=dangerous,
+        verbose=verbose,
+    )
 
     # Show final summary (unless verbose mode)
     if not verbose:

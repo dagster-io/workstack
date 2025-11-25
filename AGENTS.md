@@ -34,6 +34,7 @@
 | Create kit CLI commands                          | → [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                     |
 | Delegate to agents from commands                 | → [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md)     |
 | Work with session logs (~/.claude/projects/)     | → [docs/agent/claude-code-session-layout.md](docs/agent/claude-code-session-layout.md) |
+| Invoke Claude CLI programmatically               | → [docs/agent/claude-cli-execution.md](docs/agent/claude-cli-execution.md)             |
 | Create hooks                                     | → [docs/agent/hooks.md](docs/agent/hooks.md)                                           |
 | Understand project terms                         | → [docs/agent/glossary.md](docs/agent/glossary.md)                                     |
 | Navigate documentation                           | → [docs/agent/guide.md](docs/agent/guide.md)                                           |

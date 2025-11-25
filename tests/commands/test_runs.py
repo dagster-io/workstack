@@ -2,9 +2,9 @@
 
 This file focuses on CLI-specific concerns for the runs command:
 - Command execution and exit codes
-- Output formatting and display (status indicators, colors)
-- Grouping by branch (most recent per branch)
-- Error handling and empty state messages
+- Output formatting and display (status indicators, Rich table)
+- Run-centric view with plan/PR linkage
+- display_title parsing for issue number extraction
 
 The integration layer (list_workflow_runs) is tested in:
 - tests/unit/fakes/test_fake_github.py - Fake infrastructure tests
@@ -13,16 +13,67 @@ The integration layer (list_workflow_runs) is tested in:
 This file trusts that unit layer and only tests CLI integration.
 """
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
-from erk_shared.github.types import WorkflowRun
+from erk_shared.github.issues.fake import FakeGitHubIssues
+from erk_shared.github.issues.types import IssueInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 
-from erk.cli.commands.runs import runs_cmd
+from erk.cli.commands.runs import _extract_issue_number, runs_cmd
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
 from tests.fakes.context import create_test_context
+
+# ============================================================================
+# Unit tests for _extract_issue_number helper
+# ============================================================================
+
+
+def test_extract_issue_number_new_format() -> None:
+    """Test parsing new format: '123:abc456' → 123."""
+    assert _extract_issue_number("123:abc456") == 123
+    assert _extract_issue_number("1:x") == 1
+    assert _extract_issue_number("999:distinct-id-here") == 999
+
+
+def test_extract_issue_number_old_format_returns_none() -> None:
+    """Test old format: 'Issue title [abc123]' → None."""
+    # Old format has title first, then distinct_id in brackets
+    assert _extract_issue_number("Add user authentication [abc123]") is None
+    assert _extract_issue_number("Fix bug in parser [xyz789]") is None
+
+
+def test_extract_issue_number_with_colon_in_title_returns_none() -> None:
+    """Test titles with colons but non-numeric prefix → None."""
+    # These look like they have colons but the prefix isn't a number
+    assert _extract_issue_number("Feature: Add caching [abc]") is None
+    assert _extract_issue_number("Bug fix: memory leak [xyz]") is None
+
+
+def test_extract_issue_number_none_or_empty() -> None:
+    """Test None or empty string → None."""
+    assert _extract_issue_number(None) is None
+    assert _extract_issue_number("") is None
+
+
+def test_extract_issue_number_no_colon() -> None:
+    """Test string without colon → None."""
+    assert _extract_issue_number("no colon here") is None
+    assert _extract_issue_number("12345") is None
+
+
+def test_extract_issue_number_whitespace() -> None:
+    """Test handling of whitespace."""
+    assert _extract_issue_number(" 123:abc") == 123
+    assert _extract_issue_number("123 :abc") == 123
+
+
+# ============================================================================
+# CLI tests for runs command
+# ============================================================================
 
 
 def test_runs_cmd_empty_state(tmp_path: Path) -> None:
@@ -49,8 +100,8 @@ def test_runs_cmd_empty_state(tmp_path: Path) -> None:
     assert "No workflow runs found" in result.output
 
 
-def test_runs_cmd_single_success_run(tmp_path: Path) -> None:
-    """Test runs command displays single successful run."""
+def test_runs_cmd_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
+    """Test runs command displays single successful run with plan linkage."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -60,6 +111,8 @@ def test_runs_cmd_single_success_run(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: repo_root / ".git"},
     )
+
+    now = datetime.now(UTC)
     workflow_runs = [
         WorkflowRun(
             run_id="1234567890",
@@ -67,10 +120,30 @@ def test_runs_cmd_single_success_run(tmp_path: Path) -> None:
             conclusion="success",
             branch="feat-1",
             head_sha="abc123",
+            display_title="142:abc456",  # New format: issue_number:distinct_id
         ),
     ]
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    # Create issue for linkage
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Add user authentication with OAuth2",
+            body="Plan content",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
 
     runner = CliRunner()
 
@@ -79,14 +152,18 @@ def test_runs_cmd_single_success_run(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "Plan Implementation Runs:" in result.output
-    assert "feat-1" in result.output
-    assert "success" in result.output
+    # Check for Rich table output - run_id should appear
     assert "1234567890" in result.output
+    # Check for issue linkage
+    assert "#142" in result.output
+    # Check for title (or truncated version)
+    assert "Add user authentication" in result.output
+    # Success status indicator
+    assert "Success" in result.output or "✅" in result.output
 
 
-def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
-    """Test runs command displays multiple runs from different branches."""
+def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
+    """Test runs command displays multiple runs with different statuses."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -96,6 +173,8 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: repo_root / ".git"},
     )
+
+    now = datetime.now(UTC)
     workflow_runs = [
         WorkflowRun(
             run_id="123",
@@ -103,6 +182,7 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
             conclusion="success",
             branch="feat-1",
             head_sha="abc123",
+            display_title="142:abc",
         ),
         WorkflowRun(
             run_id="456",
@@ -110,6 +190,7 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
             conclusion="failure",
             branch="feat-2",
             head_sha="def456",
+            display_title="143:def",
         ),
         WorkflowRun(
             run_id="789",
@@ -117,10 +198,52 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
             conclusion=None,
             branch="feat-3",
             head_sha="ghi789",
+            display_title="144:ghi",
         ),
     ]
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    # Create issues for linkage
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Feature one",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        143: IssueInfo(
+            number=143,
+            title="Feature two",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/143",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        144: IssueInfo(
+            number=144,
+            title="Feature three",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/144",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
 
     runner = CliRunner()
 
@@ -129,16 +252,18 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "feat-1" in result.output
-    assert "feat-2" in result.output
-    assert "feat-3" in result.output
-    assert "success" in result.output
-    assert "failure" in result.output
-    assert "in_progress" in result.output
+    # All run IDs should appear
+    assert "123" in result.output
+    assert "456" in result.output
+    assert "789" in result.output
+    # All issue numbers should appear
+    assert "#142" in result.output
+    assert "#143" in result.output
+    assert "#144" in result.output
 
 
-def test_runs_cmd_groups_by_branch_keeps_latest(tmp_path: Path) -> None:
-    """Test runs command groups by branch and keeps most recent."""
+def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
+    """Test runs command handles runs without valid issue linkage (old format)."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -148,63 +273,24 @@ def test_runs_cmd_groups_by_branch_keeps_latest(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: repo_root / ".git"},
     )
-    # Multiple runs for same branch - first one should be shown (most recent)
-    workflow_runs = [
-        WorkflowRun(
-            run_id="newer-run",
-            status="completed",
-            conclusion="success",
-            branch="feat-1",
-            head_sha="new123",
-        ),
-        WorkflowRun(
-            run_id="older-run",
-            status="completed",
-            conclusion="failure",
-            branch="feat-1",
-            head_sha="old456",
-        ),
-    ]
-    github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
 
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
-
-    # Assert
-    assert result.exit_code == 0
-    # Should show newer run, not older
-    assert "newer-run" in result.output
-    assert "older-run" not in result.output
-    assert "success" in result.output
-    # Should NOT show failure from older run
-    assert result.output.count("failure") == 0
-
-
-def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
-    """Test runs command displays cancelled status correctly."""
-    # Arrange
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    git_ops = FakeGit(
-        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
-        current_branches={repo_root: "main"},
-        git_common_dirs={repo_root: repo_root / ".git"},
-    )
     workflow_runs = [
         WorkflowRun(
             run_id="123",
             status="completed",
-            conclusion="cancelled",
+            conclusion="success",
             branch="feat-1",
             head_sha="abc123",
+            # Old format - no issue linkage possible
+            display_title="Add user authentication [abc123]",
         ),
     ]
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+    issues_ops = FakeGitHubIssues(issues={})
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
 
     runner = CliRunner()
 
@@ -213,7 +299,84 @@ def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "cancelled" in result.output
+    # Run ID should still appear
+    assert "123" in result.output
+    # Should show "-" for plan/title columns since no linkage
+    # The Rich table will show dashes for missing data
+
+
+def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:
+    """Test runs command displays PR information when linked."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",
+        ),
+    ]
+
+    # PR linked to issue 142
+    pr_info = PullRequestInfo(
+        number=201,
+        state="OPEN",
+        url="https://github.com/owner/repo/pull/201",
+        is_draft=False,
+        title="Add user auth",
+        checks_passing=True,
+        owner="owner",
+        repo="repo",
+        has_conflicts=False,
+    )
+
+    github_ops = FakeGitHub(
+        workflow_runs=workflow_runs,
+        pr_issue_linkages={142: [pr_info]},
+    )
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Add user authentication",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # PR number should appear
+    assert "#201" in result.output
+    # Checks emoji should appear (✅ for passing)
+    assert "✅" in result.output
 
 
 def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
@@ -227,6 +390,8 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: repo_root / ".git"},
     )
+
+    now = datetime.now(UTC)
     workflow_runs = [
         WorkflowRun(
             run_id="123",
@@ -234,10 +399,29 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
             conclusion=None,
             branch="feat-1",
             head_sha="abc123",
+            display_title="142:abc",
         ),
     ]
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Queued feature",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
 
     runner = CliRunner()
 
@@ -246,11 +430,12 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "queued" in result.output
+    # Queued status indicator
+    assert "Queued" in result.output or "⧗" in result.output
 
 
-def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
-    """Test runs command shows help text at the end."""
+def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
+    """Test runs command displays cancelled status correctly."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -260,17 +445,38 @@ def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: repo_root / ".git"},
     )
+
+    now = datetime.now(UTC)
     workflow_runs = [
         WorkflowRun(
             run_id="123",
             status="completed",
-            conclusion="success",
+            conclusion="cancelled",
             branch="feat-1",
             head_sha="abc123",
+            display_title="142:abc",
         ),
     ]
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Cancelled feature",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
 
     runner = CliRunner()
 
@@ -279,7 +485,77 @@ def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "View details: gh run view" in result.output
+    # Cancelled status indicator
+    assert "Cancelled" in result.output or "⛔" in result.output
+
+
+def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
+    """Test runs command truncates titles longer than 50 characters."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    long_title = (
+        "This is a very long title that exceeds fifty characters "
+        "and should be truncated with ellipsis"
+    )
+
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title=long_title,
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(
+        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
+    )
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # Full title should NOT appear (it's too long)
+    assert long_title not in result.output
+    # Truncated version should appear with ellipsis
+    assert "..." in result.output
+    # Start of title should appear
+    assert "This is a very long" in result.output
+
+
+# ============================================================================
+# Tests for logs subcommand (unchanged from original)
+# ============================================================================
 
 
 def test_runs_logs_explicit_run_id(tmp_path: Path) -> None:

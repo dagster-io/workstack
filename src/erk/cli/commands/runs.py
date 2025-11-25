@@ -1,10 +1,15 @@
 """Runs command implementation."""
 
 import click
+from erk_shared.github.emoji import get_checks_status_emoji
 from erk_shared.output.output import user_output
+from rich.console import Console
+from rich.table import Table
 
+from erk.cli.commands.plan.list_cmd import format_pr_cell, select_display_pr
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
+from erk.core.display_utils import format_workflow_outcome, format_workflow_run_id
 
 
 @click.group("runs", invoke_without_command=True)
@@ -16,66 +21,138 @@ def runs_cmd(click_ctx: click.Context) -> None:
         _list_runs(click_ctx)
 
 
+def _extract_issue_number(display_title: str | None) -> int | None:
+    """Extract issue number from display_title format '123:abc456'.
+
+    Handles:
+    - New format: "123:abc456" → 123
+    - Old format: "Issue title [abc123]" → None (no colon at start)
+    - None or empty → None
+    """
+    if not display_title or ":" not in display_title:
+        return None
+    parts = display_title.split(":", 1)
+    # Validate that the first part is a number
+    first_part = parts[0].strip()
+    if not first_part.isdigit():
+        return None
+    return int(first_part)
+
+
 def _list_runs(click_ctx: click.Context) -> None:
-    """List workflow runs (default behavior for runs command)."""
+    """List workflow runs in a run-centric table view."""
     ctx: ErkContext = click_ctx.obj
 
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
-    # Query workflow runs
-    runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml")
-
-    # Group by branch (keep most recent per branch)
-    branch_to_latest: dict[str, tuple[str, str, str | None]] = {}
-
-    for run in runs:
-        if run.branch not in branch_to_latest:
-            branch_to_latest[run.branch] = (run.run_id, run.status, run.conclusion)
+    # 1. Fetch workflow runs from dispatch-erk-queue.yml
+    runs = ctx.github.list_workflow_runs(repo.root, "dispatch-erk-queue.yml")
 
     # Handle empty state
-    if not branch_to_latest:
-        user_output("No workflow runs found for implement-plan.yml")
+    if not runs:
+        user_output("No workflow runs found")
         return
 
-    # Display results
-    user_output("Plan Implementation Runs:\n")
+    # 2. Extract issue numbers from display_title (format: "123:abc456")
+    issue_numbers: list[int] = []
+    for run in runs:
+        issue_num = _extract_issue_number(run.display_title)
+        if issue_num is not None:
+            issue_numbers.append(issue_num)
 
-    for branch, (run_id, status, conclusion) in branch_to_latest.items():
-        # Format status indicator with color
-        if status == "completed":
-            if conclusion == "success":
-                indicator = click.style("✓", fg="green")
-                status_text = click.style("success", fg="green")
-            elif conclusion == "failure":
-                indicator = click.style("✗", fg="red")
-                status_text = click.style("failure", fg="red")
-            elif conclusion == "cancelled":
-                indicator = click.style("⭕", fg="bright_black")
-                status_text = click.style("cancelled", fg="bright_black")
+    # 3. Fetch issues for titles (using issues interface)
+    issues = ctx.issues.list_issues(repo.root, labels=["erk-plan"])
+    issue_map = {issue.number: issue for issue in issues}
+
+    # 4. Batch fetch PRs linked to issues
+    pr_linkages: dict[int, list] = {}
+    if issue_numbers:
+        pr_linkages = ctx.github.get_prs_linked_to_issues(repo.root, issue_numbers)
+
+    # Determine use_graphite for URL selection
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
+    # 5. Build table
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("run-id", style="cyan", no_wrap=True)
+    table.add_column("status", no_wrap=True, width=14)
+    table.add_column("plan", no_wrap=True)
+    table.add_column("title", no_wrap=True)
+    table.add_column("pr", no_wrap=True)
+    table.add_column("chks", no_wrap=True)
+
+    # Build repo URL for links
+    # Extract owner/repo from issue URL if available, otherwise use git remote
+    owner, repo_name = None, None
+    if issues and issues[0].url:
+        # Parse from URL like https://github.com/owner/repo/issues/123
+        parts = issues[0].url.split("/")
+        if len(parts) >= 5:
+            owner = parts[-4]
+            repo_name = parts[-3]
+
+    for run in runs:
+        issue_num = _extract_issue_number(run.display_title)
+
+        # Format run-id with link
+        workflow_url = None
+        if owner and repo_name:
+            workflow_url = f"https://github.com/{owner}/{repo_name}/actions/runs/{run.run_id}"
+        run_id_cell = format_workflow_run_id(run, workflow_url)
+
+        # Format status
+        status_cell = format_workflow_outcome(run)
+
+        # Format plan column
+        plan_cell = "-"
+        title_cell = "-"
+        if issue_num is not None:
+            issue_url = None
+            if owner and repo_name:
+                issue_url = f"https://github.com/{owner}/{repo_name}/issues/{issue_num}"
+            # Make plan number clickable
+            if issue_url:
+                plan_cell = f"[link={issue_url}][cyan]#{issue_num}[/cyan][/link]"
             else:
-                indicator = "?"
-                status_text = conclusion or "unknown"
-        elif status == "in_progress":
-            indicator = click.style("⏳", fg="yellow")
-            status_text = click.style("in_progress", fg="yellow")
-        elif status == "queued":
-            indicator = click.style("⏸", fg="bright_black")
-            status_text = click.style("queued", fg="bright_black")
-        else:
-            indicator = "?"
-            status_text = status
+                plan_cell = f"[cyan]#{issue_num}[/cyan]"
 
-        # Format branch name
-        branch_styled = click.style(branch, fg="yellow")
+            # Get title from issue map
+            if issue_num in issue_map:
+                title = issue_map[issue_num].title
+                # Truncate to 50 characters
+                if len(title) > 50:
+                    title = title[:47] + "..."
+                title_cell = title
 
-        # Format run ID
-        run_id_styled = click.style(f"run: {run_id}", fg="white", dim=True)
+        # Format PR column
+        pr_cell = "-"
+        checks_cell = "-"
+        if issue_num is not None and issue_num in pr_linkages:
+            prs = pr_linkages[issue_num]
+            selected_pr = select_display_pr(prs)
+            if selected_pr is not None:
+                graphite_url = ctx.graphite.get_graphite_url(
+                    selected_pr.owner, selected_pr.repo, selected_pr.number
+                )
+                pr_cell = format_pr_cell(
+                    selected_pr, use_graphite=use_graphite, graphite_url=graphite_url
+                )
+                checks_cell = get_checks_status_emoji(selected_pr)
 
-        user_output(f"  {branch_styled}  {indicator} {status_text}  ({run_id_styled})")
+        table.add_row(
+            run_id_cell,
+            status_cell,
+            plan_cell,
+            title_cell,
+            pr_cell,
+            checks_cell,
+        )
 
-    user_output()
-    user_output("View details: gh run view {run_id} --web")
+    # Output table to stderr (consistent with user_output convention)
+    console = Console(stderr=True, width=200, force_terminal=True)
+    console.print(table)
+    console.print()  # Add blank line after table
 
 
 @runs_cmd.command()

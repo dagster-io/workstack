@@ -1,71 +1,25 @@
-"""Integration tests for session plan extraction with realistic session files.
+"""Integration tests for plan extraction from ~/.claude/plans/.
 
 Layer 4: Business logic tests using realistic file fixtures.
-Tests the complete workflow of finding plans via slug field and plan files.
+Tests the workflow of reading the most recent plan file.
+
+Note: The plan-extractor agent (not this module) is responsible for
+semantic validation that the plan matches conversation context.
 """
 
-import json
+import time
 from pathlib import Path
 
 from dot_agent_kit.data.kits.erk.session_plan_extractor import (
-    get_claude_project_dir,
     get_latest_plan,
-    get_plan_slug_from_session,
 )
 from tests.unit.kits.erk.fixtures import (
-    JSONL_SESSION_WITH_SLUG,
-    JSONL_SESSION_WITHOUT_SLUG,
     SAMPLE_PLAN_CONTENT,
 )
 
 # ===============================================
 # Helpers
 # ===============================================
-
-
-def create_session_file(file_path: Path, *entries: str) -> None:
-    """Create a JSONL session file with given entries.
-
-    Args:
-        file_path: Path to create file at
-        entries: JSON strings to write (will be compacted to single lines)
-    """
-    # Ensure parent directory exists
-    if not file_path.parent.exists():
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write entries as JSONL (one JSON object per line, no pretty printing)
-    # Parse each entry and write as compact JSON to ensure single-line format
-    with open(file_path, "w", encoding="utf-8") as f:
-        for entry in entries:
-            # Parse JSON and write back as compact single-line
-            data = json.loads(entry)
-            f.write(json.dumps(data) + "\n")
-
-
-def create_mock_claude_project(tmp_path: Path, working_dir: str, monkeypatch) -> tuple[Path, Path]:
-    """Create mock Claude project directory structure.
-
-    Args:
-        tmp_path: pytest tmp_path fixture
-        working_dir: Working directory to encode
-        monkeypatch: pytest monkeypatch fixture
-
-    Returns:
-        Tuple of (mock_home, project_dir)
-    """
-    # Mock home directory
-    mock_home = tmp_path / "home"
-    monkeypatch.setattr(Path, "home", lambda: mock_home)
-
-    # Get project directory using actual function
-    project_dir = get_claude_project_dir(working_dir)
-
-    # Create the directory structure
-    if not project_dir.exists():
-        project_dir.mkdir(parents=True, exist_ok=True)
-
-    return mock_home, project_dir
 
 
 def create_plan_file(mock_home: Path, slug: str, content: str) -> Path:
@@ -91,297 +45,181 @@ def create_plan_file(mock_home: Path, slug: str, content: str) -> Path:
 # ===============================================
 
 
-def test_full_workflow_session_with_slug_and_plan(tmp_path: Path, monkeypatch) -> None:
-    """Test complete workflow: session with slug → extract → read plan file."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_full_workflow_returns_most_recent_plan(tmp_path: Path, monkeypatch) -> None:
+    """Test complete workflow: read most recently modified plan file."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create session file with slug
-    session_file = project_dir / "test-session-123.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
+    # Create older plan
+    create_plan_file(tmp_path, "older-plan", "Old plan content")
 
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
+    # Ensure time difference
+    time.sleep(0.01)
 
-    # Extract plan using full workflow
-    result = get_latest_plan(working_dir)
+    # Create newer plan
+    create_plan_file(tmp_path, "newer-plan", SAMPLE_PLAN_CONTENT)
+
+    # Should return newest plan
+    result = get_latest_plan("/any/working/dir")
 
     assert result == SAMPLE_PLAN_CONTENT
 
 
-def test_session_without_slug_returns_none(tmp_path: Path, monkeypatch) -> None:
-    """Test that session without slug field returns None."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_empty_plans_directory_returns_none(tmp_path: Path, monkeypatch) -> None:
+    """Test that empty plans directory returns None."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create session file without slug
-    session_file = project_dir / "session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITHOUT_SLUG)
+    # Create empty plans directory
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
 
-    # Even if plan file exists, should return None (no slug to find it)
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    result = get_latest_plan(working_dir)
+    result = get_latest_plan("/any/working/dir")
 
     assert result is None
 
 
-def test_session_with_slug_but_no_plan_file(tmp_path: Path, monkeypatch) -> None:
-    """Test that session with slug but missing plan file returns None."""
-    working_dir = "/Users/schrockn/code/erk"
-    _, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Create session file with slug
-    session_file = project_dir / "session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
-
-    # Don't create the plan file
-
-    result = get_latest_plan(working_dir)
-
-    assert result is None
-
-
-def test_project_directory_not_found(tmp_path: Path, monkeypatch) -> None:
-    """Test when project directory doesn't exist."""
+def test_no_plans_directory_returns_none(tmp_path: Path, monkeypatch) -> None:
+    """Test when plans directory doesn't exist."""
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     # Don't create any directories
-    result = get_latest_plan("/Users/schrockn/nonexistent/project")
+    result = get_latest_plan("/any/working/dir")
 
     assert result is None
 
 
-def test_slug_from_agent_file(tmp_path: Path, monkeypatch) -> None:
-    """Test finding slug in an agent subprocess file (agent-*.jsonl)."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_single_plan_file(tmp_path: Path, monkeypatch) -> None:
+    """Test with a single plan file."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create agent file with slug (not main session)
-    agent_file = project_dir / "agent-abc123.jsonl"
-    create_session_file(agent_file, JSONL_SESSION_WITH_SLUG)
+    # Create single plan
+    create_plan_file(tmp_path, "only-plan", SAMPLE_PLAN_CONTENT)
 
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    # Should find slug in agent file
-    result = get_latest_plan(working_dir)
+    result = get_latest_plan("/any/working/dir")
 
     assert result == SAMPLE_PLAN_CONTENT
 
 
-def test_most_recent_session_file_wins(tmp_path: Path, monkeypatch) -> None:
-    """Test that most recently modified session file is checked first."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_multiple_plans_returns_most_recent(tmp_path: Path, monkeypatch) -> None:
+    """Test that most recently modified plan is returned among many."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create older session with different slug
-    older_entry = """{
-        "type": "assistant",
-        "slug": "older-slug-name",
-        "message": {"role": "assistant", "content": []},
-        "timestamp": "2025-11-23T10:00:00.000Z"
-    }"""
-    older_session = project_dir / "session-older.jsonl"
-    create_session_file(older_session, older_entry)
+    # Create several plans with time gaps
+    for i in range(5):
+        create_plan_file(tmp_path, f"plan-{i}", f"Plan {i} content")
+        time.sleep(0.01)
 
-    # Create newer session with different slug
-    import time
+    # Create the expected newest plan
+    create_plan_file(tmp_path, "newest-plan", SAMPLE_PLAN_CONTENT)
 
-    time.sleep(0.01)  # Ensure different mtime
+    result = get_latest_plan("/any/working/dir")
 
-    newer_entry = """{
-        "type": "assistant",
-        "slug": "newer-slug-name",
-        "message": {"role": "assistant", "content": []},
-        "timestamp": "2025-11-23T12:00:00.000Z"
-    }"""
-    newer_session = project_dir / "session-newer.jsonl"
-    create_session_file(newer_session, newer_entry)
-
-    # Create plan files for both
-    create_plan_file(mock_home, "older-slug-name", "Old plan content")
-    create_plan_file(mock_home, "newer-slug-name", "New plan content")
-
-    # Should return plan from newer session file
-    result = get_latest_plan(working_dir)
-
-    assert result == "New plan content"
+    assert result == SAMPLE_PLAN_CONTENT
 
 
-def test_session_id_filtering(tmp_path: Path, monkeypatch) -> None:
-    """Test filtering by specific session ID."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_ignores_non_markdown_files(tmp_path: Path, monkeypatch) -> None:
+    """Test that non-.md files are ignored."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create target session with specific slug
-    target_entry = """{
-        "type": "assistant",
-        "slug": "target-plan-slug",
-        "message": {"role": "assistant", "content": []},
-        "timestamp": "2025-11-23T10:00:00.000Z"
-    }"""
-    target_session = project_dir / "target-session.jsonl"
-    create_session_file(target_session, target_entry)
+    # Create plans directory
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
 
-    # Create other session with different slug (more recent)
-    import time
+    # Create various non-.md files
+    (plans_dir / "notes.txt").write_text("Not a plan", encoding="utf-8")
+    (plans_dir / "backup.json").write_text("{}", encoding="utf-8")
+    (plans_dir / "README").write_text("Read me", encoding="utf-8")
 
     time.sleep(0.01)
 
-    other_entry = """{
-        "type": "assistant",
-        "slug": "other-plan-slug",
-        "message": {"role": "assistant", "content": []},
-        "timestamp": "2025-11-23T12:00:00.000Z"
-    }"""
-    other_session = project_dir / "other-session.jsonl"
-    create_session_file(other_session, other_entry)
+    # Create actual plan file
+    create_plan_file(tmp_path, "real-plan", SAMPLE_PLAN_CONTENT)
 
-    # Create plan files
-    create_plan_file(mock_home, "target-plan-slug", "Target plan content")
-    create_plan_file(mock_home, "other-plan-slug", "Other plan content")
-
-    # Filter to target session
-    result = get_latest_plan(working_dir, session_id="target-session")
-
-    assert result == "Target plan content"
-
-
-def test_malformed_json_handling(tmp_path: Path, monkeypatch) -> None:
-    """Test graceful handling of malformed JSON lines."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Create file with malformed JSON and valid slug entry
-    session_file = project_dir / "session.jsonl"
-    with open(session_file, "w", encoding="utf-8") as f:
-        # Write malformed JSON line
-        f.write("{ this is not valid json }\n")
-        # Write valid entry with slug
-        data = json.loads(JSONL_SESSION_WITH_SLUG)
-        f.write(json.dumps(data) + "\n")
-
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    # Should skip malformed line and find the valid slug
-    result = get_latest_plan(working_dir)
+    result = get_latest_plan("/any/working/dir")
 
     assert result == SAMPLE_PLAN_CONTENT
 
 
-def test_empty_session_files(tmp_path: Path, monkeypatch) -> None:
-    """Test handling of empty session files."""
-    working_dir = "/Users/schrockn/code/erk"
-    _, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_ignores_subdirectories(tmp_path: Path, monkeypatch) -> None:
+    """Test that subdirectories are ignored even if named .md."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Create empty file
-    session_file = project_dir / "empty.jsonl"
-    session_file.touch()
+    # Create plans directory
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
 
-    result = get_latest_plan(working_dir)
+    # Create a directory (not a file) with .md name
+    fake_md_dir = plans_dir / "fake.md"
+    fake_md_dir.mkdir()
 
-    assert result is None
+    # Create actual plan file
+    create_plan_file(tmp_path, "real-plan", SAMPLE_PLAN_CONTENT)
 
-
-def test_path_with_dots_integration(tmp_path: Path, monkeypatch) -> None:
-    """Integration test for paths with dots."""
-    working_dir = "/Users/schrockn/.erk/repos/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Verify project directory name has double hyphens for dots
-    assert "--erk-repos-erk" in str(project_dir)
-
-    # Create session file with slug
-    session_file = project_dir / "test-session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
-
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    # Extract plan using the full workflow
-    result = get_latest_plan(working_dir)
+    result = get_latest_plan("/any/working/dir")
 
     assert result == SAMPLE_PLAN_CONTENT
 
 
-def test_multiple_dots_in_path_integration(tmp_path: Path, monkeypatch) -> None:
-    """Integration test for paths with multiple dot directories."""
-    working_dir = "/Users/schrockn/.config/.local/app"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
+def test_working_dir_parameter_ignored(tmp_path: Path, monkeypatch) -> None:
+    """Test that working_dir parameter doesn't affect result."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Verify dots are converted to hyphens
-    assert "--config--local-app" in str(project_dir)
+    create_plan_file(tmp_path, "test-plan", SAMPLE_PLAN_CONTENT)
 
-    # Create session file with slug
-    session_file = project_dir / "session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
+    # All different working dirs should return same result
+    result1 = get_latest_plan("/path/one")
+    result2 = get_latest_plan("/completely/different/path")
+    result3 = get_latest_plan("/Users/someone/.erk/repos/project")
 
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
+    assert result1 == SAMPLE_PLAN_CONTENT
+    assert result2 == SAMPLE_PLAN_CONTENT
+    assert result3 == SAMPLE_PLAN_CONTENT
 
-    # Extract plan
-    result = get_latest_plan(working_dir)
 
+def test_session_id_parameter_ignored(tmp_path: Path, monkeypatch) -> None:
+    """Test that session_id parameter doesn't affect result."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    create_plan_file(tmp_path, "test-plan", SAMPLE_PLAN_CONTENT)
+
+    # Different session IDs should return same result
+    result1 = get_latest_plan("/path", session_id=None)
+    result2 = get_latest_plan("/path", session_id="abc123")
+    result3 = get_latest_plan("/path", session_id="different-session")
+
+    assert result1 == SAMPLE_PLAN_CONTENT
+    assert result2 == SAMPLE_PLAN_CONTENT
+    assert result3 == SAMPLE_PLAN_CONTENT
+
+
+def test_plan_with_unicode_content(tmp_path: Path, monkeypatch) -> None:
+    """Test reading plan with unicode content."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    unicode_content = """# Plan with Unicode
+
+- Emoji: 🚀 ✅ ❌
+- Japanese: こんにちは
+- Chinese: 你好
+- Arabic: مرحبا
+- Special: ñ ü ö ä
+"""
+    create_plan_file(tmp_path, "unicode-plan", unicode_content)
+
+    result = get_latest_plan("/any/path")
+
+    assert result == unicode_content
+
+
+def test_plan_selection_by_mtime_not_name(tmp_path: Path, monkeypatch) -> None:
+    """Test that selection is by modification time, not alphabetical order."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # Create plans with names that would sort differently than mtime
+    create_plan_file(tmp_path, "zzz-oldest", "Oldest plan")
+    time.sleep(0.01)
+    create_plan_file(tmp_path, "aaa-newest", SAMPLE_PLAN_CONTENT)
+
+    result = get_latest_plan("/path")
+
+    # Should return "aaa-newest" because it's most recent, not "zzz-oldest"
     assert result == SAMPLE_PLAN_CONTENT
-
-
-def test_worktree_path_integration(tmp_path: Path, monkeypatch) -> None:
-    """Integration test with realistic worktree path (actual use case)."""
-    working_dir = "/Users/schrockn/.erk/repos/erk/worktrees/extract-from-session"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Verify project name is correct
-    expected_name = "-Users-schrockn--erk-repos-erk-worktrees-extract-from-session"
-    assert str(project_dir).endswith(expected_name)
-
-    # Create session file with slug
-    session_file = project_dir / "test-session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
-
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    # Extract plan
-    result = get_latest_plan(working_dir)
-
-    assert result == SAMPLE_PLAN_CONTENT
-
-
-def test_slug_appears_later_in_file(tmp_path: Path, monkeypatch) -> None:
-    """Test finding slug that appears after other entries."""
-    working_dir = "/Users/schrockn/code/erk"
-    mock_home, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Create session with slug appearing after other entries
-    session_file = project_dir / "session.jsonl"
-    with open(session_file, "w", encoding="utf-8") as f:
-        # First entries without slug
-        f.write(json.dumps(json.loads(JSONL_SESSION_WITHOUT_SLUG)) + "\n")
-        f.write(json.dumps(json.loads(JSONL_SESSION_WITHOUT_SLUG)) + "\n")
-        # Then entry with slug
-        f.write(json.dumps(json.loads(JSONL_SESSION_WITH_SLUG)) + "\n")
-
-    # Create matching plan file
-    create_plan_file(mock_home, "joyful-munching-hammock", SAMPLE_PLAN_CONTENT)
-
-    # Should find the slug
-    result = get_latest_plan(working_dir)
-
-    assert result == SAMPLE_PLAN_CONTENT
-
-
-def test_get_plan_slug_from_session_directly(tmp_path: Path, monkeypatch) -> None:
-    """Test get_plan_slug_from_session function directly."""
-    working_dir = "/Users/schrockn/code/erk"
-    _, project_dir = create_mock_claude_project(tmp_path, working_dir, monkeypatch)
-
-    # Create session file with slug
-    session_file = project_dir / "session.jsonl"
-    create_session_file(session_file, JSONL_SESSION_WITH_SLUG)
-
-    # Test direct slug extraction
-    result = get_plan_slug_from_session(project_dir)
-
-    assert result == "joyful-munching-hammock"

@@ -16,13 +16,8 @@ def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
 
     Prints the value or exits with error if key not found.
     """
-    if len(parts) != 2:
-        user_output(f"Invalid key: {key}")
-        raise SystemExit(1)
-
-    if parts[1] not in cfg.env:
-        user_output(f"Key not found: {key}")
-        raise SystemExit(1)
+    Ensure.invariant(len(parts) == 2, f"Invalid key: {key}")
+    Ensure.invariant(parts[1] in cfg.env, f"Key not found: {key}")
 
     machine_output(cfg.env[parts[1]])
 

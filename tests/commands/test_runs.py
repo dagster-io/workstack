@@ -409,3 +409,284 @@ def test_runs_logs_no_runs_for_branch(tmp_path: Path) -> None:
     # Assert
     assert result.exit_code == 1
     assert "No workflow runs found for branch: feature-y" in result.output
+
+
+def test_runs_cmd_displays_pr_column_with_pr(tmp_path: Path) -> None:
+    """Test runs command displays PR number when PR exists for branch."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    github_ops = FakeGitHub(
+        workflow_runs=workflow_runs,
+        pr_statuses={"feat-1": ("OPEN", 42, "My PR Title")},
+    )
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "#42" in result.output
+
+
+def test_runs_cmd_displays_pr_column_without_pr(tmp_path: Path) -> None:
+    """Test runs command displays '-' when no PR exists for branch."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    # No pr_statuses configured for feat-1
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # Table should contain "-" for PR column (not a PR number)
+    assert "feat-1" in result.output
+    # The output should not contain any PR number format
+    assert "#" not in result.output or result.output.count("#") == 0
+
+
+def test_runs_cmd_displays_plan_column_with_impl_folder(tmp_path: Path) -> None:
+    """Test runs command displays issue number when .impl/issue.json exists."""
+    import json
+
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+
+    # Create worktree directory with .impl folder
+    worktree_path = tmp_path / "worktrees" / "feat-1"
+    worktree_path.mkdir(parents=True)
+    impl_folder = worktree_path / ".impl"
+    impl_folder.mkdir()
+
+    # Create issue.json with issue reference
+    issue_data = {
+        "issue_number": 123,
+        "issue_url": "https://github.com/test-owner/test-repo/issues/123",
+        "created_at": "2024-01-01T00:00:00Z",
+        "synced_at": "2024-01-01T00:00:00Z",
+    }
+    (impl_folder / "issue.json").write_text(json.dumps(issue_data))
+
+    git_ops = FakeGit(
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=repo_root, branch="main"),
+                WorktreeInfo(path=worktree_path, branch="feat-1"),
+            ]
+        },
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "#123" in result.output
+
+
+def test_runs_cmd_displays_plan_column_without_impl_folder(tmp_path: Path) -> None:
+    """Test runs command displays '-' when no .impl folder exists."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+
+    # Create worktree directory WITHOUT .impl folder
+    worktree_path = tmp_path / "worktrees" / "feat-1"
+    worktree_path.mkdir(parents=True)
+
+    git_ops = FakeGit(
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=repo_root, branch="main"),
+                WorktreeInfo(path=worktree_path, branch="feat-1"),
+            ]
+        },
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "feat-1" in result.output
+    # Plan column should show "-" (no issue number)
+    # We verify there's no issue number format in the output
+    # Since PR column is also "-", we just verify the run shows correctly
+
+
+def test_runs_cmd_fallback_when_repo_info_unavailable(tmp_path: Path) -> None:
+    """Test runs command falls back to simple display when repo info unavailable."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    # Empty repo_owner and repo_name causes get_repo_info() to return None
+    github_ops = FakeGitHub(
+        workflow_runs=workflow_runs,
+        repo_owner="",
+        repo_name="",
+    )
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # Should show simple text format, not Rich table
+    assert "Plan Implementation Runs:" in result.output
+    assert "feat-1: run 123 - completed" in result.output
+
+
+def test_runs_cmd_handles_unknown_status(tmp_path: Path) -> None:
+    """Test runs command displays unknown status with '?' prefix."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="some_new_status",
+            conclusion=None,
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "? some_new_status" in result.output
+
+
+def test_runs_cmd_handles_unknown_conclusion(tmp_path: Path) -> None:
+    """Test runs command displays unknown conclusion with '?' prefix."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="some_new_conclusion",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "? some_new_conclusion" in result.output

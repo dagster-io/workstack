@@ -17,7 +17,6 @@ from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
-ERK_QUEUE_LABEL = "erk-queue"
 ERK_PLAN_LABEL = "erk-plan"
 
 
@@ -27,7 +26,7 @@ ERK_PLAN_LABEL = "erk-plan"
 def retry_plan(ctx: ErkContext, identifier: str) -> None:
     """Retry a queued plan by re-triggering the GitHub Actions workflow.
 
-    Removes and re-adds the erk-queue label to trigger the workflow again.
+    Triggers the dispatch-erk-queue workflow via direct dispatch again.
     Tracks retry count via metadata comments.
 
     Args:
@@ -78,13 +77,6 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         user_output(click.style("Error: ", fg="red") + "Issue is not an erk plan")
         raise SystemExit(1)
 
-    if ERK_QUEUE_LABEL not in issue.labels:
-        user_output(
-            click.style("Error: ", fg="red")
-            + "Plan has not been queued yet (use 'erk submit' first)"
-        )
-        raise SystemExit(1)
-
     # Calculate retry count by parsing all comments
     try:
         comments = ctx.issues.get_issue_comments(repo_root, issue_number)
@@ -123,11 +115,14 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
     if not triggered_by:
         triggered_by = "unknown"
 
-    # Remove and re-add the erk-queue label
-    ctx.feedback.info("Updating erk-queue label...")
+    # Trigger workflow via direct dispatch
+    ctx.feedback.info("Triggering dispatch-erk-queue workflow...")
     try:
-        ctx.issues.remove_label_from_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
-        ctx.issues.ensure_label_on_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
+        ctx.github.trigger_workflow(
+            repo_root=repo_root,
+            workflow="dispatch-erk-queue.yml",
+            inputs={"issue_number": str(issue_number)},
+        )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e

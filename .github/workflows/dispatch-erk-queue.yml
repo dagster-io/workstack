@@ -6,26 +6,26 @@
 # "GitHub Actions is not permitted to create or approve pull requests"
 
 name: Dispatch Erk Queue
+run-name: "Dispatch Erk Queue [${{ inputs.distinct_id }}]"
 
 on:
-  issues:
-    types: [opened, labeled]
   workflow_dispatch:
     inputs:
       issue_number:
         description: "GitHub issue number to implement"
         required: true
         type: string
+      distinct_id:
+        description: "Unique identifier for run discovery (base36)"
+        required: true
+        type: string
 
 concurrency:
-  group: implement-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  group: implement-issue-${{ github.event.inputs.issue_number }}
   cancel-in-progress: true
 
 jobs:
   setup:
-    if: |
-      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'erk-queue')) ||
-      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -39,11 +39,7 @@ jobs:
       - name: Set issue number
         id: set_issue
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "issue_number=${{ inputs.issue_number }}" >> $GITHUB_OUTPUT
-          else
-            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-          fi
+          echo "issue_number=${{ inputs.issue_number }}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
@@ -70,16 +66,10 @@ jobs:
         id: branch_name
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
-          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Get issue title - from event or API
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
-          else
-            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
-          fi
+          # Get issue title from API
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
 
           # Convert issue title to kebab-case using sanitize_branch_component logic
           BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
@@ -114,16 +104,10 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Get issue title - from event or API
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
-          else
-            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
-          fi
+          # Get issue title from API
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
           export ISSUE_TITLE
 
           source $HOME/.cargo/env
@@ -180,16 +164,10 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Get issue title - from event or API
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
-          else
-            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
-          fi
+          # Get issue title from API
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
           export ISSUE_TITLE
 
           source $HOME/.cargo/env
@@ -258,19 +236,11 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
-          ISSUE_URL_FROM_EVENT: ${{ github.event.issue.html_url }}
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Get issue data - from event or API
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
-            ISSUE_URL=$(gh issue view "$ISSUE_NUMBER" --json url -q .url)
-          else
-            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
-            ISSUE_URL="$ISSUE_URL_FROM_EVENT"
-          fi
+          # Get issue data from API
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          ISSUE_URL=$(gh issue view "$ISSUE_NUMBER" --json url -q .url)
 
           # Check if PR already exists
           if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then

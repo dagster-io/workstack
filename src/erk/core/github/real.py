@@ -1,6 +1,8 @@
 """Production implementation of GitHub operations."""
 
 import json
+import secrets
+import string
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -461,6 +463,17 @@ query {{
         if verbose and result.stdout:
             user_output(result.stdout)
 
+    def _generate_distinct_id(self) -> str:
+        """Generate a random base36 ID for workflow dispatch correlation.
+
+        Returns:
+            6-character base36 string (e.g., 'a1b2c3')
+        """
+        # Base36 alphabet: 0-9 and a-z
+        base36_chars = string.digits + string.ascii_lowercase
+        # Generate 6 random characters (~2.2 billion possibilities)
+        return "".join(secrets.choice(base36_chars) for _ in range(6))
+
     def trigger_workflow(
         self,
         repo_root: Path,
@@ -469,6 +482,9 @@ query {{
         ref: str | None = None,
     ) -> str:
         """Trigger GitHub Actions workflow via gh CLI.
+
+        Generates a unique distinct_id internally, passes it to the workflow,
+        and uses it to reliably find the triggered run via displayTitle matching.
 
         Args:
             repo_root: Repository root path
@@ -479,18 +495,21 @@ query {{
         Returns:
             The GitHub Actions run ID as a string
         """
+        # Generate distinct ID for reliable run matching
+        distinct_id = self._generate_distinct_id()
+
         cmd = ["gh", "workflow", "run", workflow]
 
         # Add --ref flag if specified
         if ref:
             cmd.extend(["--ref", ref])
 
-        # Add workflow inputs
+        # Add distinct_id to workflow inputs automatically
+        cmd.extend(["-f", f"distinct_id={distinct_id}"])
+
+        # Add caller-provided workflow inputs
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
-
-        # Record trigger time right before calling gh workflow run
-        trigger_time = datetime.now(UTC)
 
         run_subprocess_with_context(
             cmd,
@@ -498,13 +517,10 @@ query {{
             cwd=repo_root,
         )
 
-        # The gh workflow run command doesn't return JSON output by default
-        # We need to get the run ID from the workflow runs list
-        # Retry logic handles race condition where GitHub hasn't created run yet
+        # Poll for the run by matching displayTitle containing the distinct ID
+        # The workflow uses run-name: "Dispatch Erk Queue [<distinct_id>]"
         max_attempts = 5
         for attempt in range(max_attempts):
-            # Query for recent runs with status, conclusion, and createdAt
-            # to match newly triggered run
             runs_cmd = [
                 "gh",
                 "run",
@@ -512,7 +528,7 @@ query {{
                 "--workflow",
                 workflow,
                 "--json",
-                "databaseId,status,conclusion,createdAt",
+                "databaseId,status,conclusion,displayTitle",
                 "--limit",
                 "10",
             ]
@@ -523,7 +539,6 @@ query {{
                 cwd=repo_root,
             )
 
-            # Parse JSON output to extract run ID
             runs_data = json.loads(runs_result.stdout)
             if not runs_data or not isinstance(runs_data, list):
                 msg = (
@@ -532,33 +547,26 @@ query {{
                 )
                 raise RuntimeError(msg)
 
-            # Find newly triggered run by matching timestamp and filtering skipped/cancelled
+            # Find run by matching distinct_id in displayTitle
             for run in runs_data:
                 conclusion = run.get("conclusion")
                 if conclusion in ("skipped", "cancelled"):
                     continue
 
-                # Parse the createdAt timestamp
-                created_at_str = run.get("createdAt")
-                if created_at_str:
-                    # GitHub returns ISO 8601 timestamps with 'Z' suffix
-                    created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                    # Check if this run was created after our trigger
-                    # (with 2-second tolerance for clock skew)
-                    if created_at >= trigger_time.replace(microsecond=0) - timedelta(seconds=2):
-                        run_id = run["databaseId"]
-                        return str(run_id)
+                display_title = run.get("displayTitle", "")
+                # Check for exact match pattern: [<distinct_id>]
+                if f"[{distinct_id}]" in display_title:
+                    run_id = run["databaseId"]
+                    return str(run_id)
 
-            # No valid run found, retry if attempts remaining
+            # No matching run found, retry if attempts remaining
             if attempt < max_attempts - 1:
                 self._time.sleep(1)
 
-        # All attempts exhausted without finding valid run
-        trigger_iso = trigger_time.isoformat()
+        # All attempts exhausted without finding matching run
         msg = (
-            f"GitHub workflow triggered but could not find active run ID "
-            f"created after {trigger_iso}. "
-            "This may indicate GitHub API eventual consistency delay "
+            f"GitHub workflow triggered but could not find run with distinct_id '{distinct_id}' "
+            "in displayTitle. This may indicate GitHub API eventual consistency delay "
             "or all recent runs were skipped/cancelled."
         )
         raise RuntimeError(msg)

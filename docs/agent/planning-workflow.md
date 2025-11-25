@@ -103,16 +103,16 @@ This command:
 
 - Validates the issue has the `erk-plan` label
 - Verifies the issue is OPEN (not closed)
-- Adds the `erk-queue` label to trigger the `dispatch-erk-queue.yml` GitHub Actions workflow
-- Displays workflow monitoring instructions
+- Triggers the `dispatch-erk-queue.yml` GitHub Actions workflow via direct workflow dispatch
+- Displays the workflow run URL
 
 The GitHub Actions workflow will:
 
-1. Automatically run `erk implement <issue> --yolo --verbose`
-2. This creates a dedicated branch and worktree
-3. Sets up the `.impl/` folder with the plan from the issue
-4. Executes the implementation automatically (--yolo flag)
-5. Commits changes and creates a pull request
+1. Create a dedicated branch from trunk
+2. Set up the `.erp/` folder with the plan from the issue
+3. Create a draft PR
+4. Execute the implementation automatically
+5. Mark the PR as ready for review
 
 **Monitor workflow progress:**
 

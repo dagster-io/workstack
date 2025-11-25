@@ -12,15 +12,15 @@ from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_retry_success_first_time() -> None:
-    """Test retrying a queued plan for the first time."""
-    # Arrange: Create issue with erk-plan and erk-queue labels
+    """Test retrying a plan for the first time."""
+    # Arrange: Create issue with erk-plan label
     issue = IssueInfo(
         number=42,
         title="Test Plan",
         body="Test plan body",
         state="OPEN",
         url="https://github.com/owner/repo/issues/42",
-        labels=["erk-plan", "erk-queue"],
+        labels=["erk-plan"],
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
@@ -42,13 +42,15 @@ def test_retry_success_first_time() -> None:
         assert result.exit_code == 0
         assert "Fetched issue #42" in result.output
         assert "Parsing 0 comment(s) for retry history" in result.output
-        assert "Updating erk-queue label..." in result.output
+        assert "Triggering dispatch-erk-queue workflow..." in result.output
         assert "✓ Plan #42 requeued (retry #1)" in result.output
         assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
-        # Verify label was removed and re-added
-        issue_after = github_issues._issues[42]
-        assert "erk-queue" in issue_after.labels  # Re-added
+        # Verify workflow was triggered
+        assert len(ctx.github.triggered_workflows) == 1
+        workflow, inputs = ctx.github.triggered_workflows[0]
+        assert workflow == "dispatch-erk-queue.yml"
+        assert inputs["issue_number"] == "42"
 
         # Verify metadata comment was posted
         assert len(github_issues.added_comments) == 1
@@ -67,7 +69,7 @@ def test_retry_success_subsequent() -> None:
         body="Test plan body",
         state="OPEN",
         url="https://github.com/owner/repo/issues/42",
-        labels=["erk-plan", "erk-queue"],
+        labels=["erk-plan"],
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
@@ -104,7 +106,7 @@ def test_retry_success_subsequent() -> None:
         assert result.exit_code == 0
         assert "Fetched issue #42" in result.output
         assert "Parsing 1 comment(s) for retry history" in result.output
-        assert "Updating erk-queue label..." in result.output
+        assert "Triggering dispatch-erk-queue workflow..." in result.output
         assert "✓ Plan #42 requeued (retry #2)" in result.output
         assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
@@ -125,7 +127,7 @@ def test_retry_error_closed_issue() -> None:
         body="Test plan body",
         state="CLOSED",
         url="https://github.com/owner/repo/issues/42",
-        labels=["erk-plan", "erk-queue"],
+        labels=["erk-plan"],
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
@@ -144,9 +146,8 @@ def test_retry_error_closed_issue() -> None:
         assert result.exit_code == 1
         assert "Error: Cannot retry closed plan" in result.output
 
-        # Verify no label operations performed
-        issue_after = github_issues._issues[42]
-        assert issue_after.labels == ["erk-plan", "erk-queue"]  # Unchanged
+        # Verify no workflow triggered
+        assert len(ctx.github.triggered_workflows) == 0
 
 
 def test_retry_error_missing_plan_label() -> None:
@@ -158,7 +159,7 @@ def test_retry_error_missing_plan_label() -> None:
         body="Test issue body",
         state="OPEN",
         url="https://github.com/owner/repo/issues/42",
-        labels=["erk-queue"],  # Missing erk-plan
+        labels=["other-label"],  # Missing erk-plan
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
@@ -177,43 +178,8 @@ def test_retry_error_missing_plan_label() -> None:
         assert result.exit_code == 1
         assert "Error: Issue is not an erk plan" in result.output
 
-        # Verify no label operations performed
-        issue_after = github_issues._issues[42]
-        assert issue_after.labels == ["erk-queue"]  # Unchanged
-
-
-def test_retry_error_missing_queue_label() -> None:
-    """Test retrying plan without erk-queue label fails."""
-    # Arrange: Create issue missing erk-queue label
-    issue = IssueInfo(
-        number=42,
-        title="Test Plan",
-        body="Test plan body",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/42",
-        labels=["erk-plan"],  # Missing erk-queue
-        assignees=[],
-        created_at=datetime(2024, 1, 1, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
-    )
-
-    github_issues = FakeGitHubIssues(issues={42: issue})
-
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        ctx = build_workspace_test_context(env, issues=github_issues)
-
-        # Act
-        result = runner.invoke(cli, ["retry", "42"], obj=ctx)
-
-        # Assert
-        assert result.exit_code == 1
-        assert "Error: Plan has not been queued yet" in result.output
-        assert "use 'erk submit' first" in result.output
-
-        # Verify no label operations performed
-        issue_after = github_issues._issues[42]
-        assert issue_after.labels == ["erk-plan"]  # Unchanged
+        # Verify no workflow triggered
+        assert len(ctx.github.triggered_workflows) == 0
 
 
 def test_retry_error_issue_not_found() -> None:
@@ -235,14 +201,14 @@ def test_retry_error_issue_not_found() -> None:
 
 def test_retry_with_github_url() -> None:
     """Test retrying with GitHub URL instead of issue number."""
-    # Arrange: Create queued plan
+    # Arrange: Create plan issue
     issue = IssueInfo(
         number=42,
         title="Test Plan",
         body="Test plan body",
         state="OPEN",
         url="https://github.com/owner/repo/issues/42",
-        labels=["erk-plan", "erk-queue"],
+        labels=["erk-plan"],
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),

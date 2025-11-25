@@ -194,8 +194,21 @@ def determine_spinner_status(tool_use: dict | None, command: str, worktree_path:
     if tool_use is None:
         return f"Running {command}..."
 
+    # First try to get a detailed summary
     summary = summarize_tool_use(tool_use, worktree_path)
     if summary:
         return summary
+
+    # For suppressed tools (Read, Glob, Grep), provide a generic but distinct message
+    tool_name = tool_use.get("name")
+    if isinstance(tool_name, str):
+        if tool_name == "Read":
+            return "Reading files..."
+        if tool_name == "Glob":
+            return "Searching for files..."
+        if tool_name == "Grep":
+            return "Searching code..."
+        # Fallback for unknown tools
+        return f"Using {tool_name}..."
 
     return f"Running {command}..."

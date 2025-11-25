@@ -76,6 +76,7 @@ class ClaudeExecutor(ABC):
         worktree_path: Path,
         dangerous: bool,
         verbose: bool = False,
+        debug: bool = False,
     ) -> Iterator[StreamEvent]:
         """Execute Claude CLI command and yield StreamEvents in real-time.
 
@@ -84,6 +85,7 @@ class ClaudeExecutor(ABC):
             worktree_path: Path to worktree directory to run command in
             dangerous: Whether to skip permission prompts
             verbose: Whether to show raw output (True) or filtered output (False)
+            debug: Whether to emit debug output for stream parsing
 
         Yields:
             StreamEvent objects as they occur during execution
@@ -199,6 +201,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         worktree_path: Path,
         dangerous: bool,
         verbose: bool = False,
+        debug: bool = False,
     ) -> Iterator[StreamEvent]:
         """Execute Claude CLI command and yield StreamEvents in real-time.
 
@@ -208,6 +211,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         - Optionally passes --dangerously-skip-permissions when dangerous=True
         - In verbose mode: streams output to terminal (no parsing, no events yielded)
         - In filtered mode: parses stream-json and yields events in real-time
+        - In debug mode: emits additional debug information to stderr
         """
         cmd_args = [
             "claude",
@@ -232,6 +236,13 @@ class RealClaudeExecutor(ClaudeExecutor):
             return
 
         # Filtered mode - streaming with real-time parsing
+        import sys
+
+        if debug:
+            print(f"[DEBUG executor] Starting Popen with args: {cmd_args}", file=sys.stderr)
+            print(f"[DEBUG executor] cwd: {worktree_path}", file=sys.stderr)
+            sys.stderr.flush()
+
         process = subprocess.Popen(
             cmd_args,
             cwd=worktree_path,
@@ -240,6 +251,10 @@ class RealClaudeExecutor(ClaudeExecutor):
             text=True,
             bufsize=1,  # Line buffered
         )
+
+        if debug:
+            print(f"[DEBUG executor] Popen started, pid={process.pid}", file=sys.stderr)
+            sys.stderr.flush()
 
         stderr_output: list[str] = []
 
@@ -253,15 +268,34 @@ class RealClaudeExecutor(ClaudeExecutor):
         stderr_thread.start()
 
         # Process stdout line by line in real-time
+        line_count = 0
+        if debug:
+            print("[DEBUG executor] Starting to read stdout...", file=sys.stderr)
+            sys.stderr.flush()
         if process.stdout:
             for line in process.stdout:
+                line_count += 1
+                if debug:
+                    print(
+                        f"[DEBUG executor] Line #{line_count}: {line[:100]!r}...", file=sys.stderr
+                    )
+                    sys.stderr.flush()
                 if not line.strip():
                     continue
 
                 # Try to parse as JSON
                 parsed = self._parse_stream_json_line(line, worktree_path, command)
                 if parsed is None:
+                    if debug:
+                        print(
+                            f"[DEBUG executor] Line #{line_count} parsed to None", file=sys.stderr
+                        )
+                        sys.stderr.flush()
                     continue
+
+                if debug:
+                    print(f"[DEBUG executor] Line #{line_count} parsed: {parsed}", file=sys.stderr)
+                    sys.stderr.flush()
 
                 # Yield text content
                 text_content = parsed.get("text_content")
@@ -282,6 +316,13 @@ class RealClaudeExecutor(ClaudeExecutor):
                 pr_url_value = parsed.get("pr_url")
                 if pr_url_value is not None:
                     yield StreamEvent("pr_url", pr_url_value)
+
+        if debug:
+            print(
+                f"[DEBUG executor] stdout reading complete, total lines: {line_count}",
+                file=sys.stderr,
+            )
+            sys.stderr.flush()
 
         # Wait for process to complete
         returncode = process.wait()
@@ -340,14 +381,21 @@ class RealClaudeExecutor(ClaudeExecutor):
             "pr_url": None,
         }
 
+        # stream-json format uses "type": "assistant" with nested "message" object
+        # (not "type": "assistant_message" with content at top level)
+        msg_type = data.get("type")
+        message = data.get("message", {})
+        if not isinstance(message, dict):
+            message = {}
+
         # Extract text from assistant messages
-        if data.get("type") == "assistant_message":
-            text = extract_text_content(data)
+        if msg_type == "assistant":
+            text = extract_text_content(message)
             if text:
                 result["text_content"] = text
 
             # Extract tool summaries and spinner updates
-            content = data.get("content", [])
+            content = message.get("content", [])
             if isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "tool_use":
@@ -361,8 +409,8 @@ class RealClaudeExecutor(ClaudeExecutor):
                         break
 
         # Extract PR URL from tool results
-        if data.get("type") == "user_message":
-            content = data.get("content", [])
+        if msg_type == "user":
+            content = message.get("content", [])
             if isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "tool_result":

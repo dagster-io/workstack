@@ -4,8 +4,7 @@ from pathlib import Path
 
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
-
-from erk.core.printing_base import PrintingBase
+from erk_shared.printing.base import PrintingBase
 
 
 class PrintingGitHub(PrintingBase, GitHub):
@@ -113,7 +112,7 @@ class PrintingGitHub(PrintingBase, GitHub):
         input_args = " ".join(f"-f {key}={value}" for key, value in inputs.items())
         self._emit(self._format_command(f"gh workflow run {workflow} {ref_arg}{input_args}"))
         run_id = self._wrapped.trigger_workflow(repo_root, workflow, inputs, ref=ref)
-        self._emit(f"→ Run ID: {run_id}")
+        self._emit(f"-> Run ID: {run_id}")
         return run_id
 
     def create_pr(
@@ -136,5 +135,5 @@ class PrintingGitHub(PrintingBase, GitHub):
             )
         )
         pr_number = self._wrapped.create_pr(repo_root, branch, title, body, base=base)
-        self._emit(f"→ PR #{pr_number}")
+        self._emit(f"-> PR #{pr_number}")
         return pr_number

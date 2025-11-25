@@ -1,7 +1,6 @@
-from erk_shared.integrations.parallel.abc import ParallelTaskRunner
-from erk_shared.integrations.parallel.real import RealParallelTaskRunner
+"""Parallel task runner integration.
 
-__all__ = [
-    "ParallelTaskRunner",
-    "RealParallelTaskRunner",
-]
+Import from submodules:
+- abc: ParallelTaskRunner
+- real: RealParallelTaskRunner
+"""

@@ -1,6 +1,6 @@
 import click
+from erk_shared.output.output import machine_output
 
-from erk.cli.output import machine_output
 from erk.cli.shell_integration.handler import (
     PASSTHROUGH_MARKER,
     ShellIntegrationResult,

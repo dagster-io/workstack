@@ -4,9 +4,9 @@ from pathlib import Path
 
 import click
 from erk_shared.git.abc import WorktreeInfo
+from erk_shared.integrations.graphite.types import BranchMetadata
 
 from erk.cli.commands.stack.land_old.output import _emit, _format_cli_command
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.context import ErkContext, regenerate_context
 
 

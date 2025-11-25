@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from dot_agent_kit.hooks.models import HookDefinition
-from dot_agent_kit.models import KitCliCommandDefinition, KitManifest
+from dot_agent_kit.models.kit import KitCliCommandDefinition, KitManifest
 
 
 def load_kit_manifest(manifest_path: Path) -> KitManifest:

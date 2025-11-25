@@ -1,17 +1,14 @@
-"""Output utilities for CLI commands with clear intent."""
+"""Output utilities for CLI commands with clear intent.
 
-from erk_shared.output import format_duration, machine_output, user_output
+For user_output, machine_output, format_duration - import from erk_shared.output.
+This module provides format_implement_summary.
+"""
+
+from erk_shared.output.output import format_duration
 from rich.panel import Panel
 from rich.text import Text
 
 from erk.core.claude_executor import CommandResult
-
-__all__ = [
-    "format_duration",
-    "format_implement_summary",
-    "machine_output",
-    "user_output",
-]
 
 
 def format_implement_summary(results: list[CommandResult], total_duration: float) -> Panel:

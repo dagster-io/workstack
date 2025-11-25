@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 from erk_shared.github.types import PullRequestInfo
+from erk_shared.integrations.graphite.fake import FakeGraphite
+from erk_shared.integrations.graphite.types import BranchMetadata
 
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.fake import FakeGit
-from erk.core.graphite.fake import FakeGraphite
 
 
 def test_fake_graphite_ops_initialization() -> None:

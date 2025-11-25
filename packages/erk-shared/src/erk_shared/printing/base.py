@@ -9,7 +9,7 @@ from typing import Any
 
 import click
 
-from erk_shared.output import machine_output, user_output
+from erk_shared.output.output import machine_output, user_output
 
 
 class PrintingBase:

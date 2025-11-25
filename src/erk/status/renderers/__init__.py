@@ -1,5 +1,5 @@
-"""Status renderers."""
+"""Status renderers.
 
-from erk.status.renderers.simple import SimpleRenderer
-
-__all__ = ["SimpleRenderer"]
+Import from submodules:
+- simple: SimpleRenderer
+"""

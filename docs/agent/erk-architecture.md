@@ -6,14 +6,14 @@ This document describes the core architectural patterns specific to the erk code
 
 **This codebase uses dependency injection for dry-run mode, NOT boolean flags.**
 
-🔴 **MUST**: Use DryRun wrappers for dry-run mode
-🔴 **MUST NOT**: Pass dry_run flags through business logic functions
-🟡 **SHOULD**: Keep dry-run UI logic at the CLI layer only
+**MUST**: Use DryRun wrappers for dry-run mode
+**MUST NOT**: Pass dry_run flags through business logic functions
+**SHOULD**: Keep dry-run UI logic at the CLI layer only
 
 ### Wrong Pattern
 
 ```python
-# ❌ WRONG: Passing dry_run flag through business logic
+# WRONG: Passing dry_run flag through business logic
 def execute_plan(plan, git, dry_run=False):
     if not dry_run:
         git.add_worktree(...)
@@ -22,7 +22,7 @@ def execute_plan(plan, git, dry_run=False):
 ### Correct Pattern
 
 ```python
-# ✅ CORRECT: Rely on injected integration implementation
+# CORRECT: Rely on injected integration implementation
 def execute_plan(plan, git):
     # Always execute - behavior depends on git implementation
     git.add_worktree(...)  # DryRunGit does nothing, RealGit executes
@@ -88,14 +88,14 @@ Erk uses a two-layer pattern for subprocess execution to provide consistent erro
 
 **NEVER import `time` module directly. ALWAYS use `context.time` abstraction.**
 
-🔴 **MUST**: Use `context.time.sleep()` instead of `time.sleep()`
-🔴 **MUST**: Inject Time dependency through ErkContext
-🟡 **SHOULD**: Use FakeTime in tests to avoid actual sleeping
+**MUST**: Use `context.time.sleep()` instead of `time.sleep()`
+**MUST**: Inject Time dependency through ErkContext
+**SHOULD**: Use FakeTime in tests to avoid actual sleeping
 
 ### Wrong Pattern
 
 ```python
-# ❌ WRONG: Direct time.sleep() import
+# WRONG: Direct time.sleep() import
 import time
 
 def retry_operation(attempt: int) -> None:
@@ -106,7 +106,7 @@ def retry_operation(attempt: int) -> None:
 ### Correct Pattern
 
 ```python
-# ✅ CORRECT: Use context.time.sleep()
+# CORRECT: Use context.time.sleep()
 def retry_operation(context: ErkContext, attempt: int) -> None:
     delay = 2.0 ** attempt
     context.time.sleep(delay)  # Fast in tests with FakeTime
@@ -120,7 +120,7 @@ def retry_operation(context: ErkContext, attempt: int) -> None:
 **Production (RealTime)**:
 
 ```python
-from erk.core.time.real import RealTime
+from erk_shared.integrations.time.real import RealTime
 
 time = RealTime()
 time.sleep(2.0)  # Actually sleeps for 2 seconds
@@ -190,7 +190,7 @@ def test_retry_logic():
 
 ### Interface
 
-**ABC (src/erk/core/time/abc.py)**:
+**ABC (erk_shared/integrations/time/abc.py)**:
 
 ```python
 from abc import ABC, abstractmethod

@@ -8,7 +8,7 @@ from typing import Any
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.kit import KitManifest
 from dot_agent_kit.sources.bundled import BundledKitSource
 

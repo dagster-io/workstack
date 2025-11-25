@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import click
+from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.core.context import ErkContext
 

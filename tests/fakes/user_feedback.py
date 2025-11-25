@@ -1,8 +1,8 @@
 """Fake UserFeedback for testing."""
 
 import click
+from erk_shared.output.output import user_output
 
-from erk.cli.output import user_output
 from erk.core.user_feedback import UserFeedback
 
 

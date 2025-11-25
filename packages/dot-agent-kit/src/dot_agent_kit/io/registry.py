@@ -7,7 +7,9 @@ from pathlib import Path
 
 import yaml
 
-from dot_agent_kit.models import InstalledKit, KitManifest, ProjectConfig, RegistryEntry
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
+from dot_agent_kit.models.kit import KitManifest
+from dot_agent_kit.models.registry import RegistryEntry
 
 
 @dataclass(frozen=True)
@@ -247,7 +249,7 @@ def add_kit_to_registry(kit_id: str, project_dir: Path, version: str, source_typ
     Raises:
         IOError: If registry file cannot be written
     """
-    from dot_agent_kit.io import load_project_config
+    from dot_agent_kit.io.state import load_project_config
 
     registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
@@ -357,7 +359,9 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
         Exception: With list of kits that failed regeneration
     """
     from dot_agent_kit.io.manifest import load_kit_manifest
-    from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
+    from dot_agent_kit.sources.bundled import BundledKitSource
+    from dot_agent_kit.sources.resolver import KitResolver
+    from dot_agent_kit.sources.standalone import StandalonePackageSource
 
     registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 

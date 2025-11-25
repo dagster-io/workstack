@@ -246,8 +246,9 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
 
     # Step 2.5: Check for merge conflicts EARLY
     # First try GitHub API if PR exists (most accurate)
+    from erk_shared.integrations.time.real import RealTime
+
     from erk.core.github.real import RealGitHub
-    from erk.core.time.real import RealTime
 
     github = RealGitHub(RealTime())
     repo_root = Path(ops.git().get_repository_root())

@@ -2,9 +2,9 @@ import dataclasses
 from pathlib import Path
 
 import click
+from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.init_utils import (

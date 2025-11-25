@@ -3,7 +3,7 @@
 This module provides CLI-layer subprocess execution with user-friendly error output.
 
 For integration layer subprocess calls (raises RuntimeError), use:
-    from erk.core.subprocess import run_subprocess_with_context
+    from erk_shared.subprocess_utils import run_subprocess_with_context
 
 For CLI-layer subprocess calls (prints message, raises SystemExit), use:
     from erk.cli.subprocess_utils import run_with_error_reporting (this module)
@@ -13,7 +13,7 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-from erk.cli.output import user_output
+from erk_shared.output.output import user_output
 
 
 def run_with_error_reporting(

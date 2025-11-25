@@ -6,11 +6,12 @@ the down_only flag.
 
 from pathlib import Path
 
+from erk_shared.integrations.graphite.fake import FakeGraphite
+
 from erk.cli.commands.stack.land_old.discovery import _get_branches_to_land
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.fake import FakeGit
-from erk.core.graphite.fake import FakeGraphite
 from tests.test_utils.builders import BranchStackBuilder
 
 

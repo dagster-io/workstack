@@ -1,5 +1,5 @@
-"""Fake implementations for testing."""
+"""Fake implementations for testing.
 
-from tests.fakes.github_admin import FakeGitHubAdmin
-
-__all__ = ["FakeGitHubAdmin"]
+Import from submodules:
+- github_admin: FakeGitHubAdmin
+"""

@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.models.config import InstalledKit
 from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.operations.sync import check_for_updates
 from dot_agent_kit.sources.exceptions import (

@@ -1,6 +1,5 @@
-from erk_shared.shell_utils.temp_files import cleanup_stale_scripts, write_script_to_temp
+"""Shell utilities.
 
-__all__ = [
-    "cleanup_stale_scripts",
-    "write_script_to_temp",
-]
+Import from submodules:
+- temp_files: cleanup_stale_scripts, write_script_to_temp
+"""

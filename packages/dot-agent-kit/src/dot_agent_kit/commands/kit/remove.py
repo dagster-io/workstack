@@ -6,8 +6,8 @@ import click
 
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import remove_hooks
-from dot_agent_kit.io import require_project_config, save_project_config
-from dot_agent_kit.models import ProjectConfig
+from dot_agent_kit.io.state import require_project_config, save_project_config
+from dot_agent_kit.models.config import ProjectConfig
 
 # Reusable argument decorator
 kit_id_argument = click.argument("kit-id")

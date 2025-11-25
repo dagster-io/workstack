@@ -5,8 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
-from erk.core.subprocess import run_subprocess_with_context
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
 def test_success_case_returns_completed_process() -> None:

@@ -1,8 +1,8 @@
 """Tests for GitHub operations."""
 
 import pytest
+from erk_shared.github.parsing import _parse_github_pr_url
 
-from erk.core.github.parsing import _parse_github_pr_url
 from erk.core.github.real import RealGitHub
 from tests.fakes.time import FakeTime
 

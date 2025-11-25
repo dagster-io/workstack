@@ -15,8 +15,8 @@ from erk_shared.impl_folder import (
     save_issue_reference,
 )
 
-from tests.test_utils import sentinel_path
 from tests.test_utils.github_helpers import create_test_issue
+from tests.test_utils.paths import sentinel_path
 
 
 def test_save_and_read_issue_reference(tmp_path: Path) -> None:

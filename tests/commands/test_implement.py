@@ -6,7 +6,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.implement import _detect_target_type, implement
-from erk.core.plan_store import FakePlanStore, Plan, PlanState
+from erk.core.plan_store.fake import FakePlanStore
+from erk.core.plan_store.types import Plan, PlanState
 from tests.fakes.claude_executor import FakeClaudeExecutor
 from tests.fakes.git import FakeGit
 from tests.test_utils.context_builders import build_workspace_test_context

@@ -15,7 +15,7 @@ from erk_shared.integrations.graphite.parsing import (
     read_graphite_json_file,
 )
 from erk_shared.integrations.graphite.types import BranchMetadata
-from erk_shared.output import user_output
+from erk_shared.output.output import user_output
 from erk_shared.subprocess_utils import run_subprocess_with_context
 
 

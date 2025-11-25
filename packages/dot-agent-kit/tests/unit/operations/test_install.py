@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from dot_agent_kit.operations.install import install_kit
-from dot_agent_kit.sources import ResolvedKit
 from dot_agent_kit.sources.exceptions import ArtifactConflictError
+from dot_agent_kit.sources.resolver import ResolvedKit
 
 
 def test_install_kit_basic(tmp_project: Path) -> None:

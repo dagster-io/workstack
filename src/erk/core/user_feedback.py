@@ -3,8 +3,7 @@
 from abc import ABC, abstractmethod
 
 import click
-
-from erk.cli.output import user_output
+from erk_shared.output.output import user_output
 
 
 class UserFeedback(ABC):

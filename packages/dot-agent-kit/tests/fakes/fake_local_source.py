@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import cast
 
-from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
 

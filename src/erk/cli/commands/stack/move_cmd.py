@@ -3,11 +3,11 @@
 from pathlib import Path
 
 import click
+from erk_shared.output.output import user_output
 
 from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.ensure import Ensure
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.core.worktree_utils import (

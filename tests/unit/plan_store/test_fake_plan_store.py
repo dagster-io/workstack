@@ -5,12 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.plan_store import (
-    FakePlanStore,
-    Plan,
-    PlanQuery,
-    PlanState,
-)
+from erk.core.plan_store.fake import FakePlanStore
+from erk.core.plan_store.types import Plan, PlanQuery, PlanState
 
 
 def test_get_plan_success() -> None:

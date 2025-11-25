@@ -2,12 +2,10 @@
 
 from pathlib import Path
 
-from dot_agent_kit.models import (
-    InstallationContext,
-    InstalledKit,
-)
+from dot_agent_kit.models.config import InstalledKit
+from dot_agent_kit.models.installation import InstallationContext
 from dot_agent_kit.operations.install import install_kit as install_kit_base
-from dot_agent_kit.sources import ResolvedKit
+from dot_agent_kit.sources.resolver import ResolvedKit
 
 
 def install_kit_to_project(

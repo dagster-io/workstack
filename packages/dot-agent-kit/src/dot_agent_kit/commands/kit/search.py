@@ -9,7 +9,8 @@ from dot_agent_kit.cli.list_formatting import (
     format_section_header,
 )
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import load_kit_manifest, load_registry
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.io.registry import load_registry
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 from dot_agent_kit.sources.bundled import BundledKitSource
 

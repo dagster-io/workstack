@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.io.state import create_default_config
 from dot_agent_kit.models.artifact import ArtifactSource
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.filesystem_artifact_repository import (
     FilesystemArtifactRepository,
 )

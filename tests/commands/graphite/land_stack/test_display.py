@@ -1,9 +1,9 @@
 """Tests for land-stack display and output formatting."""
 
 from click.testing import CliRunner
+from erk_shared.integrations.graphite.types import BranchMetadata
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.github.fake import FakeGitHub

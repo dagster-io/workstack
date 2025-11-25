@@ -586,7 +586,7 @@ FakeGitHub(
 github = FakeGitHub()
 
 # Pattern 2: Pre-configured PRs
-from erk.core.github import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo
 
 github = FakeGitHub(
     prs={

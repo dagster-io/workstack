@@ -1,9 +1,5 @@
-from erk_shared.printing.base import PrintingBase
+"""Printing utilities.
 
-# Alias for backward compatibility
-PrintingIntegration = PrintingBase
-
-__all__ = [
-    "PrintingBase",
-    "PrintingIntegration",
-]
+Import from submodules:
+- base: PrintingBase
+"""

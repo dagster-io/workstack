@@ -4,7 +4,7 @@ FakeTime is an in-memory implementation that tracks sleep() calls without
 actually sleeping, enabling fast tests.
 """
 
-from erk.core.time.abc import Time
+from erk_shared.integrations.time.abc import Time
 
 
 class FakeTime(Time):

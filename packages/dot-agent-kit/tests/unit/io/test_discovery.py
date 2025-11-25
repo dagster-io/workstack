@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.io.discovery import discover_installed_artifacts
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
 def test_discover_kit_skills_with_matching_prefixes(tmp_project: Path) -> None:

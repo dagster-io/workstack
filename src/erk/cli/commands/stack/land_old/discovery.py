@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from erk.core.branch_metadata import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata
+
 from erk.core.context import ErkContext
 
 

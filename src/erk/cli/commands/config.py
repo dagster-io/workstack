@@ -2,10 +2,10 @@ import subprocess
 from pathlib import Path
 
 import click
+from erk_shared.output.output import machine_output, user_output
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context
-from erk.cli.output import machine_output, user_output
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, write_trunk_to_pyproject
 

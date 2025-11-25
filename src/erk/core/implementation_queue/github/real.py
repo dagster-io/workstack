@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from erk_shared.subprocess_utils import run_subprocess_with_context
+
 from erk.core.implementation_queue.github.abc import GitHubAdmin
-from erk.core.subprocess import run_subprocess_with_context
 
 
 class RealGitHubAdmin(GitHubAdmin):

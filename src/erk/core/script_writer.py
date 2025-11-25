@@ -165,7 +165,7 @@ class ScriptResult:
             )
 
         # Lazy import to avoid circular dependency (cli depends on core)
-        from erk.cli.output import machine_output
+        from erk_shared.output.output import machine_output
 
         # Output path to stdout for shell integration handler
         machine_output(str(self.path), nl=False)
@@ -202,7 +202,7 @@ class ScriptResult:
             )
 
         # Lazy import to avoid circular dependency (cli depends on core)
-        from erk.cli.output import user_output
+        from erk_shared.output.output import user_output
 
         # Output path to stderr for user visibility
         user_output(str(self.path), nl=False)

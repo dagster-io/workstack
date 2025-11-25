@@ -1,5 +1,6 @@
-"""Kit command group and commands."""
+"""Kit command group and commands.
 
-from dot_agent_kit.commands.kit.group import kit_group
-
-__all__ = ["kit_group"]
+Import from submodules:
+- group: kit_group
+- install, registry, search, show, sync: individual commands
+"""

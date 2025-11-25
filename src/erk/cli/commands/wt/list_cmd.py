@@ -3,9 +3,9 @@ from pathlib import Path
 import click
 from erk_shared.github.types import PullRequestInfo, WorkflowRun
 from erk_shared.impl_folder import get_impl_path
+from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.display_utils import (
     format_branch_without_worktree,

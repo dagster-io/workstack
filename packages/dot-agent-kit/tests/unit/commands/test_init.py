@@ -6,7 +6,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from dot_agent_kit.commands.init import init
-from dot_agent_kit.io import load_project_config
+from dot_agent_kit.io.state import load_project_config
 
 
 def test_init_creates_config(tmp_project: Path, cli_runner: CliRunner) -> None:

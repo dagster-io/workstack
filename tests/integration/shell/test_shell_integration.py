@@ -278,7 +278,8 @@ def test_shell_integration_jump_invokes_successfully() -> None:
 def test_shell_integration_up_invokes_successfully() -> None:
     """Test that __shell up invokes command successfully with Graphite stack."""
 
-    from erk.core.branch_metadata import BranchMetadata
+    from erk_shared.integrations.graphite.types import BranchMetadata
+
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -308,7 +309,8 @@ def test_shell_integration_up_invokes_successfully() -> None:
 def test_shell_integration_down_invokes_successfully() -> None:
     """Test that __shell down invokes command successfully with Graphite stack."""
 
-    from erk.core.branch_metadata import BranchMetadata
+    from erk_shared.integrations.graphite.types import BranchMetadata
+
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -558,7 +560,8 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
     Verifies that land-stack is registered in the shell integration handler's command_map,
     which enables it to receive the --script flag for directory switching after landing PRs.
     """
-    from erk.core.branch_metadata import BranchMetadata
+    from erk_shared.integrations.graphite.types import BranchMetadata
+
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()

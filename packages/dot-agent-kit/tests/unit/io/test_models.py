@@ -2,12 +2,9 @@
 
 import pytest
 
-from dot_agent_kit.models import (
-    InstalledKit,
-    KitManifest,
-    ProjectConfig,
-    RegistryEntry,
-)
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
+from dot_agent_kit.models.kit import KitManifest
+from dot_agent_kit.models.registry import RegistryEntry
 
 
 def test_installed_kit_immutable() -> None:

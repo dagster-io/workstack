@@ -5,9 +5,9 @@ from datetime import UTC, datetime
 
 import click
 from erk_shared.github.metadata import create_submission_queued_block, render_erk_issue_event
+from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 

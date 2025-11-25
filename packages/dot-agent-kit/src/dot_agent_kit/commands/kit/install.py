@@ -10,26 +10,15 @@ import click
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
 from dot_agent_kit.hooks.settings import load_settings, save_settings
-from dot_agent_kit.io import (
-    create_default_config,
-    load_kit_manifest,
-    load_project_config,
-    save_project_config,
-)
-from dot_agent_kit.models import InstallationContext, InstalledKit, ProjectConfig
-from dot_agent_kit.operations import (
-    SyncResult,
-    check_for_updates,
-    get_installation_context,
-    install_kit_to_project,
-    sync_kit,
-)
-from dot_agent_kit.sources import (
-    BundledKitSource,
-    KitResolver,
-    ResolvedKit,
-    StandalonePackageSource,
-)
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.io.state import create_default_config, load_project_config, save_project_config
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
+from dot_agent_kit.models.installation import InstallationContext
+from dot_agent_kit.operations.sync import SyncResult, check_for_updates, sync_kit
+from dot_agent_kit.operations.user_install import get_installation_context, install_kit_to_project
+from dot_agent_kit.sources.bundled import BundledKitSource
+from dot_agent_kit.sources.resolver import KitResolver, ResolvedKit
+from dot_agent_kit.sources.standalone import StandalonePackageSource
 
 
 def _all_artifacts_are_symlinks(installed: InstalledKit, project_dir: Path) -> bool:

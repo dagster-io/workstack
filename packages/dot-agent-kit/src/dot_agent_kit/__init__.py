@@ -1,5 +1,7 @@
-"""dot-agent-kit: Kit management for Claude Code."""
+"""dot-agent-kit: Kit management for Claude Code.
 
-from dot_agent_kit.version import __version__
+Import from submodules:
+- version: __version__
+"""
 
-__all__ = ["__version__"]
+from dot_agent_kit.version import __version__ as __version__

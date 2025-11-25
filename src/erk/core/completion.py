@@ -10,7 +10,7 @@ import shutil
 import sys
 from abc import ABC, abstractmethod
 
-from erk.core.subprocess import run_subprocess_with_context
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
 class Completion(ABC):

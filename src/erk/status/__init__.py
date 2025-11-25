@@ -1,5 +1,8 @@
-"""Status command implementation."""
+"""Status command implementation.
 
-from erk.status.orchestrator import StatusOrchestrator
-
-__all__ = ["StatusOrchestrator"]
+Import from submodules:
+- orchestrator: StatusOrchestrator
+- models.status_data: StatusData, GitStatus, etc.
+- collectors: StatusCollector, GitStatusCollector, etc.
+- renderers.simple: SimpleRenderer
+"""

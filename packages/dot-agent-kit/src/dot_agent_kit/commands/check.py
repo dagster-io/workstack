@@ -14,12 +14,12 @@ from dot_agent_kit.hooks.settings import (
     extract_kit_id_from_command,
     load_settings,
 )
-from dot_agent_kit.io import load_project_config
 from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.io.state import load_project_config
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE
-from dot_agent_kit.operations import validate_project
-from dot_agent_kit.sources import BundledKitSource
+from dot_agent_kit.operations.validation import validate_project
+from dot_agent_kit.sources.bundled import BundledKitSource
 
 
 @dataclass(frozen=True)

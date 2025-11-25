@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from dot_agent_kit.io import load_project_config
+from dot_agent_kit.io.state import load_project_config
 
 
 @dataclass(frozen=True)

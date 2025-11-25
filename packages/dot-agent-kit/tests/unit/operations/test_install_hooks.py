@@ -6,7 +6,7 @@ import yaml
 
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
 from dot_agent_kit.operations.install import install_kit
-from dot_agent_kit.sources import ResolvedKit
+from dot_agent_kit.sources.resolver import ResolvedKit
 
 
 def test_install_kit_installs_hooks(tmp_path: Path) -> None:

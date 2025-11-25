@@ -323,6 +323,14 @@ class IssueReference:
     synced_at: str
 
 
+@dataclass(frozen=True)
+class RunInfo:
+    """GitHub Actions run information associated with a plan implementation."""
+
+    run_id: str
+    run_url: str
+
+
 def save_issue_reference(impl_dir: Path, issue_number: int, issue_url: str) -> None:
     """Save GitHub issue reference to .impl/issue.json.
 
@@ -401,6 +409,39 @@ def has_issue_reference(impl_dir: Path) -> bool:
     """
     issue_file = impl_dir / "issue.json"
     return issue_file.exists()
+
+
+def read_run_info(impl_dir: Path) -> RunInfo | None:
+    """Read GitHub Actions run info from .impl/run-info.json.
+
+    Args:
+        impl_dir: Path to .impl/ directory
+
+    Returns:
+        RunInfo if file exists and is valid, None otherwise
+    """
+    run_info_file = impl_dir / "run-info.json"
+
+    if not run_info_file.exists():
+        return None
+
+    # Gracefully handle JSON parsing errors (third-party API exception handling)
+    try:
+        data = json.loads(run_info_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+    # Validate required fields exist
+    required_fields = ["run_id", "run_url"]
+    missing_fields = [f for f in required_fields if f not in data]
+
+    if missing_fields:
+        return None
+
+    return RunInfo(
+        run_id=data["run_id"],
+        run_url=data["run_url"],
+    )
 
 
 def read_plan_author(impl_dir: Path) -> str | None:

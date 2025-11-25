@@ -414,9 +414,14 @@ jobs:
           cp -r .erp .impl
           echo "✓ Copied .erp/ to .impl/ for implementation"
 
-          # Write run info for inclusion in PR description
-          echo '{"run_id": "${{ github.run_id }}", "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' > .impl/run-info.json
-          echo "✓ Created .impl/run-info.json with workflow run info"
+          # Write run-info.json with GitHub Actions context
+          cat > .impl/run-info.json <<EOF
+          {
+            "run_id": "${{ github.run_id }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+          echo "✓ Created .impl/run-info.json with workflow run link"
 
       - name: Run implementation
         id: implement

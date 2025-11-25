@@ -1,12 +1,10 @@
 """Output utilities for CLI commands with clear intent."""
 
-from typing import Any
-
+from erk_shared.output import format_duration, machine_output, user_output
 from rich.panel import Panel
 from rich.text import Text
 
 from erk.core.claude_executor import CommandResult
-from erk_shared.output import format_duration, machine_output, user_output
 
 __all__ = [
     "format_duration",

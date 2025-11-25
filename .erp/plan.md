@@ -7,6 +7,7 @@ Standardize issue and PR number display across all CLI commands to be consistent
 ## Context & Understanding
 
 ### Current State
+
 - **Existing Infrastructure**: OSC 8 hyperlink support already implemented in `format_pr_info()` (src/erk/core/display_utils.py:63-94) and `format_plan_display()` (src/erk/core/display_utils.py:233-274)
 - **Inconsistency Problem**: List commands show clickable PR numbers, but status renderer and other commands show plain text with separate URL lines
 - **Mixed Output Libraries**:
@@ -15,18 +16,21 @@ Standardize issue and PR number display across all CLI commands to be consistent
   - Different hyperlink syntaxes required: OSC 8 for Click, Rich markup for Rich tables
 
 ### Technical Details
+
 - **OSC 8 Format**: `\033]8;;{url}\033\\{colored_text}\033]8;;\033\\`
 - **Rich Markup Format**: `[link={url}][cyan]#{number}[/cyan][/link]`
 - **Color Convention**: Cyan = clickable links (vs bright_blue for non-clickable indicators) - see display_utils.py:86-87
 - **Visual Length**: `get_visible_length()` (display_utils.py:14-27) already handles OSC 8 sequences for proper alignment
 
 ### URL Construction Patterns
+
 - **Issue URLs**: `https://github.com/{owner}/{repo}/issues/{number}` (from `IssueInfo.url`)
 - **PR GitHub URLs**: `https://github.com/{owner}/{repo}/pull/{number}` (from `PullRequestInfo.url`)
 - **PR Graphite URLs**: `https://app.graphite.com/github/pr/{owner}/{repo}/{number}` (via `ctx.graphite.get_graphite_url()`)
 - **Conversion**: `_graphite_url_to_github_url()` exists but we're going opposite direction
 
 ### User Preferences
+
 - PR links → Graphite URLs (for stack visualization features)
 - Remove duplicate URL lines from status output (cleaner, since numbers are clickable)
 - Rich tables → Use Rich markup syntax (native rendering)
@@ -35,10 +39,12 @@ Standardize issue and PR number display across all CLI commands to be consistent
 ### Locations Needing Updates
 
 **Already Linked:**
+
 - ✅ `display_utils.py::format_pr_info()` - PR numbers with Graphite URLs
 - ✅ `display_utils.py::format_plan_display()` - Issue numbers with GitHub URLs
 
 **Plain Text (Need Linking):**
+
 - ❌ `status/renderers/simple.py:164` - Issue numbers (has URL available)
 - ❌ `status/renderers/simple.py:233` - PR numbers (has URL available)
 - ❌ `cli/commands/submit.py:80` - Issue numbers (has issue.url)
@@ -113,10 +119,12 @@ def format_clickable_issue_rich(number: int, url: str) -> str:
 Update `format_pr_info()` and `format_plan_display()` to use new utilities:
 
 **In `format_pr_info()` (lines 63-94):**
+
 - Replace inline OSC 8 code (lines 84-88) with call to `format_clickable_pr(pr.number, graphite_url, use_graphite=True)`
 - Keep fallback logic for when URL is unavailable
 
 **In `format_plan_display()` (lines 233-274):**
+
 - Replace inline OSC 8 code (lines 244-246) with call to `format_clickable_issue(plan_identifier, url)`
 - Keep fallback logic for when URL is unavailable
 
@@ -125,11 +133,13 @@ Update `format_pr_info()` and `format_plan_display()` to use new utilities:
 ### 3. Fix Status Renderer (status/renderers/simple.py)
 
 **Issue Number Display (line 164):**
+
 - Replace: `issue_text = click.style(f"#{status.plan.issue_number}", fg="cyan")`
 - With: `issue_text = format_clickable_issue(status.plan.issue_number, status.plan.issue_url)`
 - Remove line 168 (separate URL display): `user_output(click.style(f"  {status.plan.issue_url}", dim=True))`
 
 **PR Number Display (line 233):**
+
 - Replace: `pr_link = click.style(f"#{pr.number}", fg="cyan")`
 - With: `pr_link = format_clickable_pr(pr.number, pr.url, use_graphite=True)`
 - Remove line 256 (separate URL display): `user_output(click.style(f"    {pr.url}", dim=True))`
@@ -139,6 +149,7 @@ Update `format_pr_info()` and `format_plan_display()` to use new utilities:
 ### 4. Fix Submit Command (cli/commands/submit.py)
 
 **Line 80:**
+
 - Replace: `click.style(f'#{issue_number}', fg='cyan')`
 - With: `format_clickable_issue(issue_number, issue.url)`
 
@@ -147,11 +158,13 @@ Update `format_pr_info()` and `format_plan_display()` to use new utilities:
 ### 5. Fix Land Stack Commands
 
 **In land_stack/execution.py:**
+
 - Locate PR number displays
 - Ensure PR objects have `.url` field available
 - Replace plain cyan styling with `format_clickable_pr(pr.number, pr.url, use_graphite=True)`
 
 **In land_stack/display.py:**
+
 - Locate PR number displays
 - Ensure PR objects have `.url` field available
 - Replace plain cyan styling with `format_clickable_pr(pr.number, pr.url, use_graphite=True)`
@@ -161,6 +174,7 @@ Update `format_pr_info()` and `format_plan_display()` to use new utilities:
 ### 6. Fix Plan List Command (cli/commands/plan/list_cmd.py)
 
 **Line 178:**
+
 - Replace: `issue_id = f"#{plan.plan_identifier}"`
 - With: `issue_id = format_clickable_issue_rich(plan.plan_identifier, plan.url)` (assuming plan has URL)
 - If plan object doesn't have URL, may need to construct it from repository context
@@ -178,6 +192,7 @@ from erk.core.display_utils import format_clickable_issue, format_clickable_pr, 
 ### 8. Test Changes
 
 **Manual Testing:**
+
 - Run `erk status` - verify issue/PR numbers are clickable, no duplicate URLs
 - Run `erk plan list` - verify issue numbers are clickable in table
 - Run `erk submit` (or mock workflow) - verify issue numbers are clickable
@@ -185,11 +200,13 @@ from erk.core.display_utils import format_clickable_issue, format_clickable_pr, 
 - Test in multiple terminals (iTerm2, Terminal.app, VSCode terminal) to ensure compatibility
 
 **Visual Verification:**
+
 - Confirm cyan color consistency for all clickable numbers
 - Verify alignment/formatting isn't broken (OSC 8 sequences should be invisible to `get_visible_length()`)
 - Check that Graphite URLs are used for PRs (hover or click to verify)
 
 **Edge Cases:**
+
 - What happens when URL is unavailable? (Should fall back to plain cyan text)
 - What happens in terminals that don't support OSC 8? (Should still show text, just not clickable)
 

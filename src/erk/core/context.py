@@ -36,6 +36,7 @@ from erk.core.repo_discovery import (
     ensure_erk_metadata_dir,
 )
 from erk.core.script_writer import RealScriptWriter, ScriptWriter
+from erk.core.services.plan_list_service import PlanListService
 from erk.core.shell import RealShell, Shell
 from erk.core.user_feedback import InteractiveFeedback, SuppressedFeedback, UserFeedback
 
@@ -63,6 +64,7 @@ class ErkContext:
     config_store: ConfigStore
     script_writer: ScriptWriter
     feedback: UserFeedback
+    plan_list_service: PlanListService
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -135,10 +137,12 @@ class ErkContext:
         from erk.core.github.fake import FakeGitHub
         from erk.core.plan_store.fake import FakePlanStore
 
+        fake_github = FakeGitHub()
+        fake_issues = FakeGitHubIssues()
         return ErkContext(
             git=git,
-            github=FakeGitHub(),
-            issues=FakeGitHubIssues(),
+            github=fake_github,
+            issues=fake_issues,
             plan_store=FakePlanStore(),
             graphite=FakeGraphite(),
             shell=FakeShell(),
@@ -148,6 +152,7 @@ class ErkContext:
             config_store=FakeConfigStore(config=None),
             script_writer=FakeScriptWriter(),
             feedback=FakeUserFeedback(),
+            plan_list_service=PlanListService(fake_github, fake_issues),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -169,6 +174,7 @@ class ErkContext:
         config_store: ConfigStore | None = None,
         script_writer: ScriptWriter | None = None,
         feedback: UserFeedback | None = None,
+        plan_list_service: PlanListService | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -273,6 +279,9 @@ class ErkContext:
         if feedback is None:
             feedback = FakeUserFeedback()
 
+        if plan_list_service is None:
+            plan_list_service = PlanListService(github, issues)
+
         if global_config is None:
             global_config = GlobalConfig(
                 erk_root=Path("/test/erks"),
@@ -310,6 +319,7 @@ class ErkContext:
             config_store=config_store,
             script_writer=script_writer,
             feedback=feedback,
+            plan_list_service=plan_list_service,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
@@ -436,6 +446,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
     github: GitHub = RealGitHub(time)
     issues: GitHubIssues = RealGitHubIssues()
     plan_store: PlanStore = GitHubPlanStore(issues)
+    plan_list_service: PlanListService = PlanListService(github, issues)
 
     # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery
@@ -477,6 +488,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
         config_store=RealConfigStore(),
         script_writer=RealScriptWriter(),
         feedback=feedback,
+        plan_list_service=plan_list_service,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

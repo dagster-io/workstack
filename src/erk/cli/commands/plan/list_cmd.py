@@ -6,9 +6,9 @@ from pathlib import Path
 
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
-from erk_shared.github.issues import GitHubIssues
+from erk_shared.github.issues import GitHubIssues, IssueInfo
 from erk_shared.github.metadata_blocks import parse_metadata_blocks
-from erk_shared.github.types import PullRequestInfo, WorkflowRun
+from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
 from erk_shared.output.output import user_output
 from rich.console import Console
@@ -21,8 +21,34 @@ from erk.core.display_utils import (
     format_workflow_run_id,
     get_workflow_run_state,
 )
-from erk.core.plan_store.types import Plan, PlanQuery, PlanState
+from erk.core.plan_store.types import Plan, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
+
+
+def _issue_to_plan(issue: IssueInfo) -> Plan:
+    """Convert IssueInfo to Plan format.
+
+    Args:
+        issue: IssueInfo from GraphQL query
+
+    Returns:
+        Plan object with equivalent data
+    """
+    # Map issue state to PlanState
+    state = PlanState.OPEN if issue.state == "OPEN" else PlanState.CLOSED
+
+    return Plan(
+        plan_identifier=str(issue.number),
+        title=issue.title,
+        body=issue.body,
+        state=state,
+        url=issue.url,
+        labels=issue.labels,
+        assignees=issue.assignees,
+        created_at=issue.created_at,
+        updated_at=issue.updated_at,
+        metadata={"number": issue.number},
+    )
 
 
 def select_display_pr(prs: list[PullRequestInfo]) -> PullRequestInfo | None:
@@ -187,28 +213,34 @@ def _list_plans_impl(
     run_state: str | None,
     limit: int | None,
 ) -> None:
-    """Implementation logic for listing plans with optional filters."""
+    """Implementation logic for listing plans with optional filters.
+
+    Uses PlanListService to batch all API calls into 2 total:
+    1. Single GraphQL query for issues + PRs + comments + checks
+    2. REST API call for workflow runs
+    """
     repo = discover_repo_context(ctx, ctx.cwd)
     ensure_erk_metadata_dir(repo)  # Ensure erk metadata directories exist
     repo_root = repo.root  # Use git repository root for GitHub operations
 
-    # Build query from CLI options
-    labels_list = list(label) if label else None
-    state_enum = None
-    if state:
-        state_enum = PlanState.OPEN if state.lower() == "open" else PlanState.CLOSED
+    # Build labels list - default to ["erk-plan"] if no labels specified
+    labels_list = list(label) if label else ["erk-plan"]
 
-    query = PlanQuery(
-        labels=labels_list,
-        state=state_enum,
-        limit=limit,
-    )
-
+    # Use PlanListService for batched API calls (2 total: GraphQL + REST)
     try:
-        plans = ctx.plan_store.list_plans(repo_root, query)
+        plan_data = ctx.plan_list_service.get_plan_list_data(
+            repo_root=repo_root,
+            labels=labels_list,
+            workflow_name="dispatch-erk-queue.yml",
+            state=state,
+            limit=limit,
+        )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
+
+    # Convert IssueInfo to Plan objects
+    plans = [_issue_to_plan(issue) for issue in plan_data.issues]
 
     if not plans:
         user_output("No plans found matching the criteria.")
@@ -217,34 +249,13 @@ def _list_plans_impl(
     # Display results header
     user_output(f"\nFound {len(plans)} plan(s):\n")
 
-    # Batch fetch all issue comments for worktree status
-    issue_numbers: list[int] = []
-    for plan in plans:
-        num = plan.metadata.get("number")
-        if isinstance(num, int):
-            issue_numbers.append(num)
-
-    all_comments: dict[int, list[str]] = {}
-    if issue_numbers:
-        try:
-            all_comments = ctx.issues.get_multiple_issue_comments(repo_root, issue_numbers)
-        except Exception:
-            # If batch fetch fails, continue without worktree status
-            pass
-
-    # Batch fetch PR linkages for all issues
-    pr_linkages: dict[int, list[PullRequestInfo]] = {}
-    if issue_numbers:
-        try:
-            pr_linkages = ctx.github.get_prs_linked_to_issues(repo_root, issue_numbers)
-        except Exception:
-            # If batch fetch fails, continue without PR info
-            pass
+    # Use pre-fetched data from PlanListService
+    all_comments = plan_data.issue_comments
+    pr_linkages = plan_data.pr_linkages
+    workflow_runs_by_title = plan_data.workflow_runs
 
     # Build local worktree mapping from .impl/issue.json files
-    # This also builds branch-to-issue mapping for workflow run queries
     worktree_by_issue: dict[int, str] = {}
-    branch_to_issue: dict[str, int] = {}
     worktrees = ctx.git.list_worktrees(repo_root)
     for worktree in worktrees:
         impl_folder = worktree.path / ".impl"
@@ -254,43 +265,6 @@ def _list_plans_impl(
                 # If multiple worktrees have same issue, keep first found
                 if issue_ref.issue_number not in worktree_by_issue:
                     worktree_by_issue[issue_ref.issue_number] = worktree.path.name
-                    # Extract branch name from worktree directory name
-                    branch_to_issue[worktree.path.name] = issue_ref.issue_number
-
-    # Batch query workflow runs for all branches with .impl/ folders
-    runs_by_branch = {}
-    if branch_to_issue:
-        branches = list(branch_to_issue.keys())
-        try:
-            runs_by_branch = ctx.github.get_workflow_runs_by_branches(
-                repo_root, "dispatch-erk-queue.yml", branches
-            )
-        except Exception:
-            # If API query fails, continue without run IDs
-            pass
-
-    # Build reverse mapping: issue_number -> workflow run
-    runs_by_issue: dict[int, WorkflowRun] = {}
-    for branch, run in runs_by_branch.items():
-        issue_num = branch_to_issue.get(branch)
-        if issue_num is not None and run is not None:
-            runs_by_issue[issue_num] = run
-
-    # Build title-to-issue mapping for workflow run lookup
-    # dispatch-erk-queue.yml runs have headBranch=master but display_title=issue title
-    title_by_issue: dict[int, str] = {}
-    for plan in plans:
-        issue_number = plan.metadata.get("number")
-        if isinstance(issue_number, int):
-            title_by_issue[issue_number] = plan.title
-
-    # Query workflow runs by display title (issue title)
-    workflow_runs_by_title: dict[str, WorkflowRun | None] = {}
-    titles_to_query = list(title_by_issue.values())
-    if titles_to_query:
-        workflow_runs_by_title = ctx.github.get_workflow_runs_by_titles(
-            repo_root, "dispatch-erk-queue.yml", titles_to_query
-        )
 
     # Apply run state filter if specified
     if run_state:

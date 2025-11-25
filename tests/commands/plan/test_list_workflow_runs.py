@@ -4,17 +4,31 @@ from datetime import UTC, datetime
 
 from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
-from erk_shared.github.issues import FakeGitHubIssues
+from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 from erk_shared.github.types import WorkflowRun
 
 from erk.cli.cli import cli
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
-from erk.core.plan_store.fake import FakePlanStore
 from erk.core.plan_store.types import Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 from tests.test_utils.output_helpers import strip_ansi
+
+
+def plan_to_issue(plan: Plan) -> IssueInfo:
+    """Convert Plan to IssueInfo for test setup."""
+    return IssueInfo(
+        number=int(plan.plan_identifier),
+        title=plan.title,
+        body=plan.body,
+        state="OPEN" if plan.state == PlanState.OPEN else "CLOSED",
+        url=plan.url or "",
+        labels=plan.labels,
+        assignees=plan.assignees,
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+    )
 
 
 def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
@@ -73,15 +87,13 @@ def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
             display_title="Test Implementation",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"123": plan})
+        issues = FakeGitHubIssues(issues={123: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -151,15 +163,13 @@ def test_list_linkifies_workflow_run_id_with_owner_repo() -> None:
             display_title="Test with URL",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"456": plan})
+        issues = FakeGitHubIssues(issues={456: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -225,15 +235,13 @@ def test_list_displays_plain_run_id_without_owner_repo() -> None:
             display_title="Plan without URL",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"789": plan})
+        issues = FakeGitHubIssues(issues={789: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -288,15 +296,13 @@ def test_list_handles_missing_workflow_run() -> None:
 
         # No workflow runs
         github = FakeGitHub(workflow_runs=[])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"111": plan})
+        issues = FakeGitHubIssues(issues={111: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -357,15 +363,13 @@ def test_list_handles_batch_query_failure() -> None:
 
         # No workflow runs configured (simulates API failure or no runs found)
         github = FakeGitHub(workflow_runs=[])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"222": plan})
+        issues = FakeGitHubIssues(issues={222: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -467,15 +471,15 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
             display_title="Second Implementation",  # Must match plan2.title
         )
         github = FakeGitHub(workflow_runs=[run1, run2])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"301": plan1, "302": plan2})
+        issues = FakeGitHubIssues(
+            issues={301: plan_to_issue(plan1), 302: plan_to_issue(plan2)}, comments={}
+        )
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -523,15 +527,13 @@ def test_list_skips_run_id_for_plans_without_impl_folder() -> None:
             head_sha="xyz999",
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(comments={})
-        plan_store = FakePlanStore(plans={"999": plan})
+        issues = FakeGitHubIssues(issues={999: plan_to_issue(plan)}, comments={})
 
         ctx = build_workspace_test_context(
             env,
             git=git,
             github=github,
             issues=issues,
-            plan_store=plan_store,
         )
 
         result = runner.invoke(cli, ["list"], obj=ctx)

@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
 from erk.cli.cli import cli
 from erk.cli.commands.ls import ls_cmd
@@ -12,10 +13,25 @@ from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
+def plan_to_issue(plan: Plan) -> IssueInfo:
+    """Convert Plan to IssueInfo for test setup."""
+    return IssueInfo(
+        number=int(plan.plan_identifier),
+        title=plan.title,
+        body=plan.body,
+        state="OPEN" if plan.state == PlanState.OPEN else "CLOSED",
+        url=plan.url or "",
+        labels=plan.labels,
+        assignees=plan.assignees,
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+    )
+
+
 def test_top_level_list_command_works() -> None:
     """Test that top-level 'erk list' command works."""
     # Arrange
-    issue1 = Plan(
+    plan1 = Plan(
         plan_identifier="1",
         title="Test Issue",
         body="",
@@ -30,8 +46,8 @@ def test_top_level_list_command_works() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"1": issue1})
-        ctx = build_workspace_test_context(env, plan_store=store)
+        issues = FakeGitHubIssues(issues={1: plan_to_issue(plan1)})
+        ctx = build_workspace_test_context(env, issues=issues)
 
         # Act - Use top-level list command
         result = runner.invoke(cli, ["list"], obj=ctx)
@@ -46,7 +62,7 @@ def test_top_level_list_command_works() -> None:
 def test_ls_command_lists_plans_by_default() -> None:
     """Test that 'erk ls' lists plans by default (new behavior)."""
     # Arrange
-    issue1 = Plan(
+    plan1 = Plan(
         plan_identifier="1",
         title="Test Plan",
         body="",
@@ -61,8 +77,8 @@ def test_ls_command_lists_plans_by_default() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"1": issue1})
-        ctx = build_workspace_test_context(env, plan_store=store)
+        issues = FakeGitHubIssues(issues={1: plan_to_issue(plan1)})
+        ctx = build_workspace_test_context(env, issues=issues)
 
         # Act - Use ls command without --worktrees flag
         result = runner.invoke(ls_cmd, [], obj=ctx)
@@ -107,7 +123,7 @@ def test_ls_command_with_worktrees_flag() -> None:
 def test_ls_command_plan_filters_work() -> None:
     """Test that plan filters work with 'erk ls' command."""
     # Arrange
-    open_issue = Plan(
+    open_plan = Plan(
         plan_identifier="1",
         title="Open Plan",
         body="",
@@ -119,7 +135,7 @@ def test_ls_command_plan_filters_work() -> None:
         updated_at=datetime(2024, 1, 1, tzinfo=UTC),
         metadata={},
     )
-    closed_issue = Plan(
+    closed_plan = Plan(
         plan_identifier="2",
         title="Closed Plan",
         body="",
@@ -134,8 +150,10 @@ def test_ls_command_plan_filters_work() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"1": open_issue, "2": closed_issue})
-        ctx = build_workspace_test_context(env, plan_store=store)
+        issues = FakeGitHubIssues(
+            issues={1: plan_to_issue(open_plan), 2: plan_to_issue(closed_plan)}
+        )
+        ctx = build_workspace_test_context(env, issues=issues)
 
         # Act - Filter for open plans
         result = runner.invoke(ls_cmd, ["--state", "open"], obj=ctx)

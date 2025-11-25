@@ -334,7 +334,7 @@ def test_noop_github_issues_list_issues_delegates() -> None:
 def test_noop_github_issues_list_with_filters_delegates() -> None:
     """Test DryRunGitHubIssues list_issues with filters delegates correctly."""
     pre_configured = {
-        1: create_test_issue(1, "Open Issue", "Body", url="http://url/1"),
+        1: create_test_issue(1, "Open Issue", "Body", url="http://url/1", labels=["plan"]),
         2: create_test_issue(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
@@ -342,10 +342,10 @@ def test_noop_github_issues_list_with_filters_delegates() -> None:
 
     result = noop.list_issues(sentinel_path(), labels=["plan"], state="open")
 
-    # Should delegate to wrapped implementation
-    # Fake doesn't implement label filtering, but delegates state filtering
+    # Should delegate to wrapped implementation with both state and label filtering
     assert len(result) == 1
     assert result[0].state == "OPEN"
+    assert "plan" in result[0].labels
 
 
 def test_noop_github_issues_write_operations_blocked() -> None:

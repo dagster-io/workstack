@@ -14,10 +14,10 @@ Exit Codes:
     0: Always (even on error, to support || true pattern)
 
 Examples:
-    $ dot-agent run erk post-pr-comment --pr-url "https://github.com/org/repo/pull/123" --pr-number 123
+    $ dot-agent run erk post-pr-comment --pr-url "https://github.com/o/r/pull/1" --pr-number 1
     {"success": true, "issue_number": 456}
 
-    $ dot-agent run erk post-pr-comment --pr-url "https://github.com/org/repo/pull/123" --pr-number 123
+    $ dot-agent run erk post-pr-comment --pr-url "https://github.com/o/r/pull/1" --pr-number 1
     {"success": false, "error_type": "no_issue_reference", "message": "..."}
 """
 

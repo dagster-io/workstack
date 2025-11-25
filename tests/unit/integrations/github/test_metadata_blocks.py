@@ -1,5 +1,7 @@
 """Tests for GitHub metadata blocks API."""
 
+import logging
+
 import pytest
 from erk_shared.github.metadata_blocks import (
     ImplementationStatusSchema,
@@ -520,13 +522,14 @@ field: value
 Invalid body structure without proper details tags
 <!-- /erk:metadata-block -->"""
 
-    blocks = parse_metadata_blocks(text)
+    with caplog.at_level(logging.DEBUG):
+        blocks = parse_metadata_blocks(text)
     # Should skip invalid block and return only the valid one
     assert len(blocks) == 1
     assert blocks[0].key == "valid-block"
     assert blocks[0].data == {"field": "value"}
 
-    # Should log warning for invalid block
+    # Should log debug message for invalid block
     assert any(
         "Failed to parse metadata block 'invalid-block'" in record.message
         for record in caplog.records
@@ -608,9 +611,10 @@ invalid: yaml: content:
 </details>
 <!-- /erk:metadata-block -->"""
 
-    blocks = parse_metadata_blocks(text)
+    with caplog.at_level(logging.DEBUG):
+        blocks = parse_metadata_blocks(text)
     assert blocks == []
-    # Should log warning
+    # Should log debug message
     assert any("Failed to parse YAML" in record.message for record in caplog.records)
 
 
@@ -629,9 +633,10 @@ def test_parse_lenient_on_non_dict_yaml(
 </details>
 <!-- /erk:metadata-block -->"""
 
-    blocks = parse_metadata_blocks(text)
+    with caplog.at_level(logging.DEBUG):
+        blocks = parse_metadata_blocks(text)
     assert blocks == []
-    # Should log warning
+    # Should log debug message
     assert any("YAML content is not a dict" in record.message for record in caplog.records)
 
 

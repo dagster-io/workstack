@@ -327,6 +327,9 @@ Implement with auto-confirmation (yolo mode):
 Implement and auto-submit PR (dangerous mode):
     erk implement [issue_number] --dangerous
 
+Submit plan to erk queue:
+    erk submit [issue_number]
+
 **Note:** This plan was extracted raw from session files without enrichment.
 ```
 

@@ -156,31 +156,25 @@ def format_workflow_status(workflow_run: WorkflowRun | None, workflow_url: str |
 
 
 def format_workflow_run_id(workflow_run: WorkflowRun | None, workflow_url: str | None) -> str:
-    """Format workflow run ID with linkification.
+    """Format workflow run ID with linkification using Rich markup.
 
     Args:
         workflow_run: Workflow run information (None if no workflow run)
         workflow_url: GitHub Actions workflow run URL (None if unavailable)
 
     Returns:
-        Formatted workflow run ID string (e.g., "12345678") or empty string if no workflow
+        Formatted workflow run ID string with Rich markup, or empty string if no workflow
     """
     if workflow_run is None:
         return ""
 
-    # Format run ID text
     run_id_text = workflow_run.run_id
 
-    # If we have a URL, make it clickable using OSC 8 terminal escape sequence
+    # Use Rich markup for proper column width calculation in Rich tables
     if workflow_url:
-        # Wrap the link text in cyan color
-        colored_run_id = click.style(run_id_text, fg="cyan")
-        clickable_link = f"\033]8;;{workflow_url}\033\\{colored_run_id}\033]8;;\033\\"
-        return clickable_link
+        return f"[link={workflow_url}][cyan]{run_id_text}[/cyan][/link]"
     else:
-        # No URL available - just show colored text without link
-        colored_run_id = click.style(run_id_text, fg="cyan")
-        return colored_run_id
+        return f"[cyan]{run_id_text}[/cyan]"
 
 
 def format_branch_without_worktree(

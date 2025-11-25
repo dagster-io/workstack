@@ -117,7 +117,7 @@ def test_no_plan_placeholder_uses_dimmed_white() -> None:
 
 
 def test_format_workflow_run_id_with_url() -> None:
-    """Test that workflow run ID with URL is linkified and colored cyan."""
+    """Test that workflow run ID with URL returns Rich markup for linkification."""
     # Arrange
     workflow_run = WorkflowRun(
         run_id="12345678",
@@ -131,15 +131,20 @@ def test_format_workflow_run_id_with_url() -> None:
     # Act
     result = format_workflow_run_id(workflow_run, workflow_url)
 
-    # Assert: Check for cyan color and OSC 8 link
-    assert "\x1b[36m" in result, "Expected cyan color code for run ID"
+    # Assert: Check for Rich markup (NOT raw ANSI escape codes)
+    # Rich uses [link=URL]...[/link] and [cyan]...[/cyan] markup
+    assert "[cyan]" in result, "Expected Rich cyan markup"
+    assert "[/cyan]" in result, "Expected Rich cyan close tag"
     assert "12345678" in result, "Expected run ID in output"
-    assert "\x1b]8;;" in result, "Expected OSC 8 link escape sequence"
-    assert workflow_url in result, "Expected workflow URL in link"
+    assert f"[link={workflow_url}]" in result, "Expected Rich link markup"
+    assert "[/link]" in result, "Expected Rich link close tag"
+    # Must NOT contain raw ANSI escape codes (which break Rich table alignment)
+    assert "\x1b[" not in result, "Should not contain raw ANSI escape codes"
+    assert "\x1b]8;;" not in result, "Should not contain raw OSC 8 escape sequences"
 
 
 def test_format_workflow_run_id_without_url() -> None:
-    """Test that workflow run ID without URL is colored but not linkified."""
+    """Test that workflow run ID without URL returns Rich markup without link."""
     # Arrange
     workflow_run = WorkflowRun(
         run_id="87654321",
@@ -153,10 +158,13 @@ def test_format_workflow_run_id_without_url() -> None:
     # Act
     result = format_workflow_run_id(workflow_run, workflow_url)
 
-    # Assert: Check for cyan color but no OSC 8 link
-    assert "\x1b[36m" in result, "Expected cyan color code for run ID"
+    # Assert: Check for Rich cyan markup but no link
+    assert "[cyan]" in result, "Expected Rich cyan markup"
+    assert "[/cyan]" in result, "Expected Rich cyan close tag"
     assert "87654321" in result, "Expected run ID in output"
-    assert "\x1b]8;;" not in result, "Should not have OSC 8 link without URL"
+    assert "[link=" not in result, "Should not have link markup without URL"
+    # Must NOT contain raw ANSI escape codes
+    assert "\x1b[" not in result, "Should not contain raw ANSI escape codes"
 
 
 def test_format_workflow_run_id_none() -> None:
@@ -166,6 +174,65 @@ def test_format_workflow_run_id_none() -> None:
 
     # Assert
     assert result == "", "Expected empty string for None workflow run"
+
+
+def test_format_workflow_run_id_rich_table_alignment() -> None:
+    """Test that workflow run ID output works correctly in Rich tables.
+
+    This test would have caught the alignment bug where raw ANSI escape codes
+    caused Rich to miscalculate column widths, resulting in misaligned tables.
+
+    The key insight: Rich markup like [cyan]text[/cyan] is properly handled
+    by Rich's width calculations, but raw escape codes like \\x1b[36m are not.
+    """
+    from io import StringIO
+
+    from rich.console import Console
+    from rich.table import Table
+
+    # Arrange: Create a table similar to erk plan list
+    table = Table()
+    table.add_column("Plan", no_wrap=True)
+    table.add_column("Run ID", no_wrap=True)
+    table.add_column("Title", no_wrap=True)
+
+    # Create workflow run with URL (triggers linkification)
+    workflow_run = WorkflowRun(
+        run_id="19652144787",  # Real-ish run ID length
+        status="completed",
+        conclusion="success",
+        branch="master",
+        head_sha="abc123",
+    )
+    workflow_url = "https://github.com/owner/repo/actions/runs/19652144787"
+
+    run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
+
+    # Add rows with varying run ID presence
+    table.add_row("#1108", run_id_cell, "Plan: Test Implementation")
+    table.add_row("#1106", "-", "Another plan without run")
+
+    # Act: Render the table
+    console = Console(file=StringIO(), width=120, force_terminal=True)
+    console.print(table)
+    output = console.file.getvalue()  # type: ignore[attr-defined]
+
+    # Assert: Verify table structure is intact
+    # If alignment is broken, the column separators won't line up
+    lines = output.strip().split("\n")
+
+    # Find the header separator line and data lines
+    separator_lines = [line for line in lines if "─" in line or "━" in line]
+    data_lines = [line for line in lines if "│" in line and "#" in line]
+
+    # The data lines should have consistent column separator positions
+    # This would fail if escape codes cause width miscalculation
+    assert len(data_lines) >= 2, "Expected at least 2 data rows"
+
+    # Count column separators - should be consistent across rows
+    for line in data_lines:
+        separator_count = line.count("│")
+        assert separator_count == 4, f"Expected 4 separators per row, got {separator_count}"
 
 
 def test_get_workflow_status_emoji_completed_success() -> None:

@@ -100,10 +100,10 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
 
     new_retry_count = previous_retry_count + 1
 
-    # Get current user from git config
+    # Get GitHub username from gh CLI (requires authentication)
     try:
         result = subprocess.run(
-            ["git", "config", "user.name"],
+            ["gh", "api", "user", "--jq", ".login"],
             capture_output=True,
             text=True,
             check=True,

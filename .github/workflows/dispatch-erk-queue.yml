@@ -280,8 +280,6 @@ jobs:
             cat > pr_body.md <<EOF
           Closes #$ISSUE_NUMBER
 
-          Implementation of plan from issue #$ISSUE_NUMBER
-
           $ISSUE_URL
 
           **Status:** Queued for implementation

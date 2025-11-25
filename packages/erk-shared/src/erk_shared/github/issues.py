@@ -389,6 +389,13 @@ class RealGitHubIssues(GitHubIssues):
         if not issue_numbers:
             return {}
 
+        # Get owner and repo name (GraphQL doesn't support {owner}/{repo} placeholders)
+        repo_info_cmd = ["gh", "repo", "view", "--json", "owner,name"]
+        repo_info_stdout = execute_gh_command(repo_info_cmd, repo_root)
+        repo_info = json.loads(repo_info_stdout)
+        owner = repo_info["owner"]["login"]
+        repo_name = repo_info["name"]
+
         # Build GraphQL query with aliases for each issue
         aliases = []
         for i, num in enumerate(issue_numbers):
@@ -397,7 +404,7 @@ class RealGitHubIssues(GitHubIssues):
                 f"number comments(first: 100) {{ nodes {{ body }} }} }}"
             )
 
-        query = 'query { repository(owner: "$owner", name: "$repo") { ' + " ".join(aliases) + " } }"
+        query = f'query {{ repository(owner: "{owner}", name: "{repo_name}") {{ ' + " ".join(aliases) + " } }"
 
         cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
         stdout = execute_gh_command(cmd, repo_root)

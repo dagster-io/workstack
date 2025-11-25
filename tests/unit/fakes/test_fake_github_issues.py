@@ -354,22 +354,37 @@ def test_fake_github_issues_empty_labels() -> None:
     assert issues.created_issues == [("Title", "Body", [])]
 
 
-def test_fake_github_issues_label_filtering_not_implemented() -> None:
-    """Test that label filtering is not implemented (returns all issues).
+def test_fake_github_issues_label_filtering_implemented() -> None:
+    """Test that label filtering filters issues by required labels."""
+    pre_configured = {
+        1: create_test_issue(
+            1, "Issue 1", "Body 1", url="http://url/1", labels=["erk-plan", "bug"]
+        ),
+        2: create_test_issue(2, "Issue 2", "Body 2", url="http://url/2", labels=["erk-plan"]),
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
 
-    This is acceptable for fake - we control the state in tests.
-    """
+    # Filter for issues with a label that exists on issue 1 but not issue 2
+    result = issues.list_issues(sentinel_path(), labels=["erk-plan", "bug"])
+
+    # Only issue 1 has both labels
+    assert len(result) == 1
+    assert result[0].number == 1
+
+
+def test_fake_github_issues_label_filtering_returns_none_when_no_match() -> None:
+    """Test that label filtering returns empty list when no issues match."""
     pre_configured = {
         1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
         2: create_test_issue(2, "Issue 2", "Body 2", url="http://url/2"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
-    # Labels parameter is accepted but ignored in fake
+    # Filter for a label that doesn't exist on any issue
     result = issues.list_issues(sentinel_path(), labels=["nonexistent"])
 
-    # Fake returns all issues (filtering not implemented)
-    assert len(result) == 2
+    # No issues have this label
+    assert len(result) == 0
 
 
 def test_fake_github_issues_state_case_sensitivity() -> None:

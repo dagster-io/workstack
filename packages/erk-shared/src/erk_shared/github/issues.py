@@ -640,11 +640,14 @@ class FakeGitHubIssues(GitHubIssues):
     ) -> list[IssueInfo]:
         """Query issues from fake storage.
 
-        Note: label filtering is not implemented in fake - returns all issues
-        matching state filter. This is acceptable for testing since we control
-        the fake's state.
+        Filters issues by labels (AND logic) and state.
         """
         issues = list(self._issues.values())
+
+        # Filter by labels (AND logic - issue must have ALL specified labels)
+        if labels:
+            label_set = set(labels)
+            issues = [issue for issue in issues if label_set.issubset(set(issue.labels))]
 
         if state and state != "all":
             state_upper = state.upper()

@@ -11,6 +11,7 @@ instead of relying on ensure_erk_metadata_dir()'s return value.
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues
 
 from erk.cli.commands.plan.get import get_plan
 from erk.cli.commands.plan.list_cmd import list_plans
@@ -37,17 +38,17 @@ def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
     """
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Track which directory is passed to gh operations
+        # Track which directory is passed to GitHubIssues operations
         captured_repo_root: Path | None = None
 
-        class TrackingPlanStore(FakePlanStore):
-            def list_plans(self, repo_root: Path, query):
+        class TrackingGitHubIssues(FakeGitHubIssues):
+            def list_issues(self, repo_root: Path, **kwargs):
                 nonlocal captured_repo_root
                 captured_repo_root = repo_root
                 return []  # Return empty list
 
-        store = TrackingPlanStore()
-        ctx = env.build_context(plan_store=store)
+        issues = TrackingGitHubIssues()
+        ctx = env.build_context(issues=issues)
 
         # Act: Run the list command
         result = runner.invoke(list_plans, obj=ctx)
@@ -55,7 +56,7 @@ def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
         # Assert: Command should succeed
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # Assert: repo_root passed to store should be git root, NOT metadata dir
+        # Assert: repo_root passed to GitHubIssues should be git root, NOT metadata dir
         assert captured_repo_root == env.cwd, (
             f"Expected repo_root to be git repository root ({env.cwd}), "
             f"but got erk metadata directory ({captured_repo_root})"

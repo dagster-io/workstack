@@ -985,10 +985,15 @@ query {{
         # Get all workflow runs
         all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
 
-        # Filter to requested titles
+        # Filter to requested titles, excluding skipped runs
+        # Skipped runs indicate conditions weren't met (path filters, conditionals)
+        # and shouldn't hide previous meaningful runs
         title_set = set(titles)
         runs_by_title: dict[str, list[WorkflowRun]] = {}
         for run in all_runs:
+            # Skip runs with "skipped" conclusion - they're not meaningful for tracking
+            if run.status == "completed" and run.conclusion == "skipped":
+                continue
             if run.display_title in title_set:
                 if run.display_title not in runs_by_title:
                     runs_by_title[run.display_title] = []
@@ -1027,3 +1032,96 @@ query {{
                 result[title] = title_runs[0]
 
         return result
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Poll for a workflow run matching branch name within timeout.
+
+        Uses multi-factor matching (creation time + event type + branch validation)
+        to reliably find the correct workflow run even under high throughput.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branch_name: Expected branch name to match
+            timeout: Maximum seconds to poll (default: 30)
+            poll_interval: Seconds between poll attempts (default: 2)
+
+        Returns:
+            Run ID as string if found within timeout, None otherwise
+        """
+        start_time = datetime.now(UTC)
+        max_attempts = timeout // poll_interval
+
+        for attempt in range(max_attempts):
+            # Query for recent runs with branch info
+            runs_cmd = [
+                "gh",
+                "run",
+                "list",
+                "--workflow",
+                workflow,
+                "--json",
+                "databaseId,status,conclusion,createdAt,event,headBranch",
+                "--limit",
+                "20",
+            ]
+
+            try:
+                runs_result = run_subprocess_with_context(
+                    runs_cmd,
+                    operation_context=(
+                        f"poll for workflow run (workflow: {workflow}, branch: {branch_name})"
+                    ),
+                    cwd=repo_root,
+                )
+
+                # Parse JSON output
+                runs_data = json.loads(runs_result.stdout)
+                if not runs_data or not isinstance(runs_data, list):
+                    # No runs found, retry
+                    if attempt < max_attempts - 1:
+                        self._time.sleep(poll_interval)
+                        continue
+                    return None
+
+                # Find run matching our criteria
+                for run in runs_data:
+                    # Skip skipped/cancelled runs
+                    conclusion = run.get("conclusion")
+                    if conclusion in ("skipped", "cancelled"):
+                        continue
+
+                    # Match by branch name
+                    head_branch = run.get("headBranch")
+                    if head_branch != branch_name:
+                        continue
+
+                    # Verify run was created after we started polling (within tolerance)
+                    created_at_str = run.get("createdAt")
+                    if created_at_str:
+                        created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                        # Allow 5-second tolerance for runs created just before polling started
+                        if created_at >= start_time - timedelta(seconds=5):
+                            run_id = run["databaseId"]
+                            return str(run_id)
+
+                # No matching run found, retry if attempts remaining
+                if attempt < max_attempts - 1:
+                    self._time.sleep(poll_interval)
+
+            except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
+                # Command failed, retry if attempts remaining
+                if attempt < max_attempts - 1:
+                    self._time.sleep(poll_interval)
+                    continue
+                return None
+
+        # Timeout reached without finding matching run
+        return None

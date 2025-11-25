@@ -133,3 +133,16 @@ class DryRunGitHub(GitHub):
     ) -> dict[str, WorkflowRun | None]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_workflow_runs_by_titles(repo_root, workflow, titles)
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.poll_for_workflow_run(
+            repo_root, workflow, branch_name, timeout, poll_interval
+        )

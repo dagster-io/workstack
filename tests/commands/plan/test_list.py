@@ -932,14 +932,16 @@ timestamp: "2024-11-23T12:00:00Z"
         assert "#1005" in result.output
 
 
-def test_list_plans_filter_by_action_state_pending() -> None:
-    """Test filtering plans by action state (pending)."""
+def test_list_plans_filter_by_run_state_queued() -> None:
+    """Test filtering plans by workflow run state (queued)."""
     from erk_shared.github.issues import FakeGitHubIssues
+    from erk_shared.github.types import WorkflowRun
+    from src.erk.core.github.fake import FakeGitHub
 
-    # Arrange - Create plans with different action states
-    pending_plan = Plan(
+    # Arrange - Create plans with different workflow run states
+    queued_plan = Plan(
         plan_identifier="1010",
-        title="Pending Plan",
+        title="Queued Plan",
         body="",
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1010",
@@ -950,9 +952,9 @@ def test_list_plans_filter_by_action_state_pending() -> None:
         metadata={"number": 1010},
     )
 
-    no_queue_plan = Plan(
+    running_plan = Plan(
         plan_identifier="1011",
-        title="No Queue Plan",
+        title="Running Plan",
         body="",
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1011",
@@ -963,30 +965,53 @@ def test_list_plans_filter_by_action_state_pending() -> None:
         metadata={"number": 1011},
     )
 
+    # Configure workflow runs - queued run matches first plan's title
+    queued_run = WorkflowRun(
+        run_id="11111",
+        status="queued",
+        conclusion=None,
+        branch="master",
+        head_sha="abc123",
+        display_title="Queued Plan",
+    )
+    running_run = WorkflowRun(
+        run_id="22222",
+        status="in_progress",
+        conclusion=None,
+        branch="master",
+        head_sha="def456",
+        display_title="Running Plan",
+    )
+
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        github = FakeGitHubIssues(comments={1010: [], 1011: []})
-        store = FakePlanStore(plans={"1010": pending_plan, "1011": no_queue_plan})
-        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+        github_issues = FakeGitHubIssues(comments={1010: [], 1011: []})
+        github = FakeGitHub(workflow_runs=[queued_run, running_run])
+        store = FakePlanStore(plans={"1010": queued_plan, "1011": running_plan})
+        ctx = build_workspace_test_context(
+            env, plan_store=store, issues=github_issues, github=github
+        )
 
-        # Act
-        result = runner.invoke(cli, ["list", "--action-state", "pending"], obj=ctx)
+        # Act - Filter for queued workflow runs
+        result = runner.invoke(cli, ["list", "--run-state", "queued"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
         assert "#1010" in result.output
-        assert "Pending Plan" in result.output
+        assert "Queued Plan" in result.output
         assert "#1011" not in result.output
 
 
-def test_list_plans_filter_by_action_state_complete() -> None:
-    """Test filtering plans by action state (complete)."""
+def test_list_plans_filter_by_run_state_success() -> None:
+    """Test filtering plans by workflow run state (success)."""
     from erk_shared.github.issues import FakeGitHubIssues
+    from erk_shared.github.types import WorkflowRun
+    from src.erk.core.github.fake import FakeGitHub
 
     # Arrange
-    complete_plan = Plan(
+    success_plan = Plan(
         plan_identifier="1020",
-        title="Complete Plan",
+        title="Success Plan",
         body="",
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1020",
@@ -997,9 +1022,9 @@ def test_list_plans_filter_by_action_state_complete() -> None:
         metadata={"number": 1020},
     )
 
-    pending_plan = Plan(
+    failed_plan = Plan(
         plan_identifier="1021",
-        title="Pending Plan",
+        title="Failed Plan",
         body="",
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1021",
@@ -1010,43 +1035,50 @@ def test_list_plans_filter_by_action_state_complete() -> None:
         metadata={"number": 1021},
     )
 
-    # Create comment with complete status
-    complete_comment = """
-<!-- erk:metadata-block:erk-implementation-status -->
-<details>
-<summary><code>erk-implementation-status</code></summary>
-
-```yaml
-status: complete
-completed_steps: 5
-total_steps: 5
-timestamp: "2024-11-23T12:00:00Z"
-```
-</details>
-<!-- /erk:metadata-block -->
-"""
+    # Configure workflow runs - success run matches first plan's title
+    success_run = WorkflowRun(
+        run_id="11111",
+        status="completed",
+        conclusion="success",
+        branch="master",
+        head_sha="abc123",
+        display_title="Success Plan",
+    )
+    failed_run = WorkflowRun(
+        run_id="22222",
+        status="completed",
+        conclusion="failure",
+        branch="master",
+        head_sha="def456",
+        display_title="Failed Plan",
+    )
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        github = FakeGitHubIssues(comments={1020: [complete_comment], 1021: []})
-        store = FakePlanStore(plans={"1020": complete_plan, "1021": pending_plan})
-        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+        github_issues = FakeGitHubIssues(comments={1020: [], 1021: []})
+        github = FakeGitHub(workflow_runs=[success_run, failed_run])
+        store = FakePlanStore(plans={"1020": success_plan, "1021": failed_plan})
+        ctx = build_workspace_test_context(
+            env, plan_store=store, issues=github_issues, github=github
+        )
 
-        # Act
-        result = runner.invoke(cli, ["list", "--action-state", "complete"], obj=ctx)
+        # Act - Filter for success workflow runs
+        result = runner.invoke(cli, ["list", "--run-state", "success"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
         assert "#1020" in result.output
-        assert "Complete Plan" in result.output
+        assert "Success Plan" in result.output
         assert "#1021" not in result.output
 
 
-def test_list_plans_action_filter_no_matches() -> None:
-    """Test action state filter with no matching plans."""
+def test_list_plans_run_state_filter_no_matches() -> None:
+    """Test run-state filter with no matching plans."""
     from erk_shared.github.issues import FakeGitHubIssues
+    from erk_shared.github.types import WorkflowRun
+    from src.erk.core.github.fake import FakeGitHub
 
-    # Arrange - Plan without erk-queue label (action state will be "-")
+    # Arrange - Plan with workflow run that doesn't match filter
     plan = Plan(
         plan_identifier="1030",
         title="Regular Plan",
@@ -1060,14 +1092,27 @@ def test_list_plans_action_filter_no_matches() -> None:
         metadata={"number": 1030},
     )
 
+    # Configure workflow run with completed/success state
+    success_run = WorkflowRun(
+        run_id="11111",
+        status="completed",
+        conclusion="success",
+        branch="master",
+        head_sha="abc123",
+        display_title="Regular Plan",
+    )
+
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        github = FakeGitHubIssues(comments={})
+        github_issues = FakeGitHubIssues(comments={})
+        github = FakeGitHub(workflow_runs=[success_run])
         store = FakePlanStore(plans={"1030": plan})
-        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+        ctx = build_workspace_test_context(
+            env, plan_store=store, issues=github_issues, github=github
+        )
 
-        # Act - Filter for "running" which won't match
-        result = runner.invoke(cli, ["list", "--action-state", "running"], obj=ctx)
+        # Act - Filter for "in_progress" which won't match (run is completed/success)
+        result = runner.invoke(cli, ["list", "--run-state", "in_progress"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1116,7 +1161,9 @@ def test_list_plans_pr_column_open_pr() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#200 👀" in result.output
+        # PR cell uses Rich markup: [link=url]#200[/link] 👀
+        assert "#200" in result.output
+        assert "👀" in result.output  # Open PR emoji
         assert "✅" in result.output  # Checks passing
 
 
@@ -1162,7 +1209,9 @@ def test_list_plans_pr_column_draft_pr() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#201 🚧" in result.output
+        # PR cell uses Rich markup: [link=url]#201[/link] 🚧
+        assert "#201" in result.output
+        assert "🚧" in result.output  # Draft PR emoji
         assert "🔄" in result.output  # Checks pending
 
 
@@ -1208,7 +1257,9 @@ def test_list_plans_pr_column_merged_pr() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#202 🎉" in result.output
+        # PR cell uses Rich markup: [link=url]#202[/link] 🎉
+        assert "#202" in result.output
+        assert "🎉" in result.output  # Merged PR emoji
         assert "✅" in result.output  # Checks passing
 
 
@@ -1254,7 +1305,9 @@ def test_list_plans_pr_column_closed_pr() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#203 ⛔" in result.output
+        # PR cell uses Rich markup: [link=url]#203[/link] ⛔
+        assert "#203" in result.output
+        assert "⛔" in result.output  # Closed PR emoji
         assert "🚫" in result.output  # Checks failing
 
 
@@ -1300,7 +1353,10 @@ def test_list_plans_pr_column_with_conflicts() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#204 👀💥" in result.output  # Open with conflicts
+        # PR cell uses Rich markup: [link=url]#204[/link] 👀💥
+        assert "#204" in result.output
+        assert "👀" in result.output  # Open PR emoji
+        assert "💥" in result.output  # Conflict indicator
 
 
 def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
@@ -1360,7 +1416,9 @@ def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "#206 👀" in result.output  # Shows open PR, not closed
+        # PR cell uses Rich markup: [link=url]#206[/link] 👀
+        assert "#206" in result.output  # Shows open PR, not closed
+        assert "👀" in result.output  # Open PR emoji
 
 
 def test_list_plans_pr_column_no_pr_linked() -> None:

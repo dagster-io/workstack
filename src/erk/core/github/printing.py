@@ -150,3 +150,16 @@ class PrintingGitHub(PrintingBase, GitHub):
         pr_number = self._wrapped.create_pr(repo_root, branch, title, body, base=base)
         self._emit(f"→ PR #{pr_number}")
         return pr_number
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Poll for workflow run (read-only, no printing)."""
+        return self._wrapped.poll_for_workflow_run(
+            repo_root, workflow, branch_name, timeout, poll_interval
+        )

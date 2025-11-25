@@ -1,5 +1,6 @@
 """Submit issue for remote AI implementation via GitHub Actions."""
 
+import re
 import subprocess
 from datetime import UTC, datetime
 
@@ -14,6 +15,53 @@ from erk.core.repo_discovery import RepoContext
 # Label used to queue issues for automated implementation
 ERK_QUEUE_LABEL = "erk-queue"
 ERK_PLAN_LABEL = "erk-plan"
+
+
+def _derive_branch_name_from_issue_title(title: str) -> str:
+    """Derive branch name from issue title matching dispatch-erk-queue.yml logic.
+
+    This must match the branch naming logic in .github/workflows/dispatch-erk-queue.yml
+    to ensure we can find the correct workflow run.
+
+    Args:
+        title: Issue title to convert
+
+    Returns:
+        Sanitized branch name (max 30 chars, matching workflow logic)
+    """
+    # Lowercase
+    lowered = title.lower()
+    # Replace non-alphanumeric characters with hyphens
+    replaced = re.sub(r"[^a-z0-9-]+", "-", lowered)
+    # Collapse consecutive hyphens
+    collapsed = re.sub(r"-+", "-", replaced)
+    # Strip leading/trailing hyphens
+    trimmed = collapsed.strip("-")
+    # Truncate to 30 characters (matching workflow)
+    branch_name = trimmed[:30]
+    # Strip trailing hyphens after truncation
+    branch_name = branch_name.rstrip("-")
+    return branch_name
+
+
+def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
+    """Construct GitHub Actions workflow run URL from issue URL and run ID.
+
+    Args:
+        issue_url: GitHub issue URL (e.g., https://github.com/owner/repo/issues/123)
+        run_id: Workflow run ID
+
+    Returns:
+        Workflow run URL (e.g., https://github.com/owner/repo/actions/runs/1234567890)
+    """
+    # Extract owner/repo from issue URL
+    # Pattern: https://github.com/owner/repo/issues/123
+    parts = issue_url.split("/")
+    if len(parts) >= 5:
+        owner = parts[-4]
+        repo = parts[-3]
+        return f"https://github.com/{owner}/{repo}/actions/runs/{run_id}"
+    return f"https://github.com/actions/runs/{run_id}"
 
 
 @click.command("submit")
@@ -157,11 +205,30 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             + "Workflow will still be triggered by label."
         )
 
+    # Poll for workflow run URL
+    user_output("Polling for workflow run...")
+    branch_name = _derive_branch_name_from_issue_title(issue.title)
+    run_id = ctx.github.poll_for_workflow_run(
+        repo_root=repo.root,
+        workflow="dispatch-erk-queue.yml",
+        branch_name=branch_name,
+        timeout=30,
+        poll_interval=2,
+    )
+
     # Success output
     user_output("")
     user_output(click.style("✓", fg="green") + " Issue submitted successfully!")
     user_output("")
     user_output("Next steps:")
     user_output(f"  • View issue: {issue.url}")
-    user_output("  • Monitor workflow progress at the link above")
+
+    if run_id:
+        # Construct and display workflow run URL
+        workflow_url = _construct_workflow_run_url(issue.url, run_id)
+        user_output(f"  • View workflow run: {workflow_url}")
+    else:
+        # Explicit fallback message when polling times out
+        user_output("  • (workflow run URL will be available shortly)")
+
     user_output("")

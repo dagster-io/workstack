@@ -1,3 +1,5 @@
+import copy
+
 import click
 
 from erk.cli.commands.admin import admin_group
@@ -33,6 +35,13 @@ from erk.cli.help_formatter import GroupedCommandGroup
 from erk.core.context import create_context
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])  # terse help flags
+
+
+def _hidden_alias(cmd: click.Command) -> click.Command:
+    """Create a hidden clone of a command for deprecated aliases."""
+    clone = copy.copy(cmd)
+    clone.hidden = True
+    return clone
 
 
 @click.group(cls=GroupedCommandGroup, context_settings=CONTEXT_SETTINGS)
@@ -78,26 +87,17 @@ cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)
 
 # Deprecated aliases (hidden from help and autocomplete)
-consolidate_stack.hidden = True
-move_stack.hidden = True
-split_stack.hidden = True
-create_wt.hidden = True
-current_wt.hidden = True
-delete_wt.hidden = True
-del_wt.hidden = True
-goto_wt.hidden = True
-rename_wt.hidden = True
-status_cmd.hidden = True
-
-cli.add_command(consolidate_stack, name="consolidate")  # Deprecated: use 'erk stack consolidate'
-cli.add_command(create_wt, name="create")  # Deprecated: use 'erk wt create'
-cli.add_command(current_wt, name="current")  # Deprecated: use 'erk wt current'
-cli.add_command(delete_wt, name="delete")  # Deprecated: use 'erk wt delete'
-cli.add_command(del_wt, name="del")  # Deprecated: use 'erk wt delete'
-cli.add_command(goto_wt, name="goto")  # Deprecated: use 'erk wt goto'
-cli.add_command(move_stack, name="move")  # Deprecated: use 'erk stack move'
-cli.add_command(rename_wt, name="rename")  # Deprecated: use 'erk wt rename'
-cli.add_command(split_stack, name="split")  # Deprecated: use 'erk stack split'
+# Use _hidden_alias() to create clones so the original commands remain visible in their groups
+# Deprecated: use 'erk stack consolidate'
+cli.add_command(_hidden_alias(consolidate_stack), name="consolidate")
+cli.add_command(_hidden_alias(create_wt), name="create")  # Deprecated: use 'erk wt create'
+cli.add_command(_hidden_alias(current_wt), name="current")  # Deprecated: use 'erk wt current'
+cli.add_command(_hidden_alias(delete_wt), name="delete")  # Deprecated: use 'erk wt delete'
+cli.add_command(_hidden_alias(del_wt), name="del")  # Deprecated: use 'erk wt delete'
+cli.add_command(_hidden_alias(goto_wt), name="goto")  # Deprecated: use 'erk wt goto'
+cli.add_command(_hidden_alias(move_stack), name="move")  # Deprecated: use 'erk stack move'
+cli.add_command(_hidden_alias(rename_wt), name="rename")  # Deprecated: use 'erk wt rename'
+cli.add_command(_hidden_alias(split_stack), name="split")  # Deprecated: use 'erk stack split'
 
 
 def main() -> None:

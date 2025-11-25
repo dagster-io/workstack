@@ -46,8 +46,8 @@ def _get_sync_status(ctx: ErkContext, worktree_path: Path, branch: str | None) -
     return " ".join(parts)
 
 
-def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> str | None:
-    """Get impl issue number from local sources.
+def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> tuple[str | None, str | None]:
+    """Get impl issue number and URL from local sources.
 
     Checks .impl/issue.json first, then git config fallback.
 
@@ -56,7 +56,7 @@ def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> str | None:
         worktree_path: Path to the worktree directory
 
     Returns:
-        Issue number formatted as "#{number}", or None if not found
+        Tuple of (issue number formatted as "#{number}", issue URL) or (None, None) if not found
     """
     # Try .impl/issue.json first
     impl_path = get_impl_path(worktree_path, git_ops=ctx.git)
@@ -64,32 +64,64 @@ def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> str | None:
         # impl_path points to plan.md, get the parent .impl/ directory
         issue_ref = read_issue_reference(impl_path.parent)
         if issue_ref is not None:
-            return f"#{issue_ref.issue_number}"
+            return f"#{issue_ref.issue_number}", issue_ref.issue_url
 
-    # Fallback to git config
+    # Fallback to git config (no URL available from git config)
     branch = ctx.git.get_current_branch(worktree_path)
     if branch is not None:
         issue_num = ctx.git.get_branch_issue(worktree_path, branch)
         if issue_num is not None:
-            return f"#{issue_num}"
+            return f"#{issue_num}", None
 
-    return None
+    return None, None
 
 
-def _format_pr_cell(pr: PullRequestInfo | None) -> str:
-    """Format PR cell for Rich table: emoji + #number or "-".
+def _format_pr_cell(
+    pr: PullRequestInfo | None, *, use_graphite: bool, graphite_url: str | None
+) -> str:
+    """Format PR cell for Rich table: emoji + clickable #number or "-".
 
     Args:
         pr: Pull request info, or None if no PR
+        use_graphite: If True, use Graphite URL; if False, use GitHub URL
+        graphite_url: Graphite URL for the PR (None if unavailable)
 
     Returns:
-        Formatted string for table cell
+        Formatted string for table cell with Rich link markup
     """
     if pr is None:
         return "-"
 
     emoji = get_pr_status_emoji(pr)
-    return f"{emoji} #{pr.number}"
+    pr_text = f"#{pr.number}"
+
+    # Determine which URL to use
+    url = graphite_url if use_graphite else pr.url
+
+    # Make PR number clickable if URL is available using Rich [link=...] markup
+    if url:
+        return f"{emoji} [link={url}]{pr_text}[/link]"
+    else:
+        return f"{emoji} {pr_text}"
+
+
+def _format_impl_cell(issue_text: str | None, issue_url: str | None) -> str:
+    """Format impl issue cell for Rich table with optional link.
+
+    Args:
+        issue_text: Issue number formatted as "#{number}", or None
+        issue_url: Issue URL for clickable link, or None
+
+    Returns:
+        Formatted string for table cell with Rich link markup
+    """
+    if issue_text is None:
+        return "-"
+
+    if issue_url:
+        return f"[link={issue_url}]{issue_text}[/link]"
+    else:
+        return issue_text
 
 
 def _list_worktrees(ctx: ErkContext) -> None:
@@ -125,6 +157,9 @@ def _list_worktrees(ctx: ErkContext) -> None:
             prs = graphite_prs
         # If Graphite cache is missing, prs stays empty - graceful degradation
 
+    # Determine use_graphite for URL selection
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
     # Create Rich table
     table = Table(show_header=True, header_style="bold", box=None)
     table.add_column("worktree", style="cyan", no_wrap=True)
@@ -150,11 +185,19 @@ def _list_worktrees(ctx: ErkContext) -> None:
 
     root_branch_display = f"({root_branch})" if root_branch else "-"
     root_pr = prs.get(root_branch) if root_branch else None
-    root_pr_cell = _format_pr_cell(root_pr)
+    root_graphite_url = (
+        ctx.graphite.get_graphite_url(root_pr.owner, root_pr.repo, root_pr.number)
+        if root_pr
+        else None
+    )
+    root_pr_cell = _format_pr_cell(
+        root_pr, use_graphite=use_graphite, graphite_url=root_graphite_url
+    )
     root_sync = _get_sync_status(ctx, repo.root, root_branch)
-    root_impl = _get_impl_issue(ctx, repo.root) or "-"
+    root_impl_text, root_impl_url = _get_impl_issue(ctx, repo.root)
+    root_impl_cell = _format_impl_cell(root_impl_text, root_impl_url)
 
-    table.add_row(root_name, root_branch_display, root_pr_cell, root_sync, root_impl)
+    table.add_row(root_name, root_branch_display, root_pr_cell, root_sync, root_impl_cell)
 
     # Non-root worktrees, sorted by name
     non_root_worktrees = [wt for wt in worktrees if wt.path != repo.root]
@@ -177,13 +220,15 @@ def _list_worktrees(ctx: ErkContext) -> None:
 
         # PR info from Graphite cache
         pr = prs.get(branch) if branch else None
-        pr_cell = _format_pr_cell(pr)
+        graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number) if pr else None
+        pr_cell = _format_pr_cell(pr, use_graphite=use_graphite, graphite_url=graphite_url)
 
         # Sync status
         sync_cell = _get_sync_status(ctx, wt.path, branch)
 
         # Impl issue
-        impl_cell = _get_impl_issue(ctx, wt.path) or "-"
+        impl_text, impl_url = _get_impl_issue(ctx, wt.path)
+        impl_cell = _format_impl_cell(impl_text, impl_url)
 
         table.add_row(name_cell, branch_display, pr_cell, sync_cell, impl_cell)
 

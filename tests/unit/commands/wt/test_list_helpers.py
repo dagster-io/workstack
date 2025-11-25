@@ -5,6 +5,7 @@ from pathlib import Path
 from erk_shared.github.types import PullRequestInfo
 
 from erk.cli.commands.wt.list_cmd import (
+    _format_impl_cell,
     _format_pr_cell,
     _get_impl_issue,
     _get_sync_status,
@@ -98,13 +99,14 @@ def test_get_impl_issue_from_impl_folder(tmp_path: Path) -> None:
     git = FakeGit(existing_paths={plan_file})
     ctx = create_test_context(git=git)
 
-    result = _get_impl_issue(ctx, worktree_path)
+    issue_text, issue_url = _get_impl_issue(ctx, worktree_path)
 
-    assert result == "#42"
+    assert issue_text == "#42"
+    assert issue_url == "https://github.com/owner/repo/issues/42"
 
 
 def test_get_impl_issue_from_git_config() -> None:
-    """Test getting impl issue from git config fallback."""
+    """Test getting impl issue from git config fallback (no URL available)."""
     worktree_path = Path("/repo/worktree")
     git = FakeGit(
         current_branches={worktree_path: "feature"},
@@ -112,13 +114,14 @@ def test_get_impl_issue_from_git_config() -> None:
     )
     ctx = create_test_context(git=git)
 
-    result = _get_impl_issue(ctx, worktree_path)
+    issue_text, issue_url = _get_impl_issue(ctx, worktree_path)
 
-    assert result == "#123"
+    assert issue_text == "#123"
+    assert issue_url is None  # Git config doesn't have URL
 
 
 def test_get_impl_issue_none_when_not_found() -> None:
-    """Test getting impl issue returns None when no issue found."""
+    """Test getting impl issue returns (None, None) when no issue found."""
     worktree_path = Path("/repo/worktree")
     git = FakeGit(
         current_branches={worktree_path: "feature"},
@@ -126,13 +129,14 @@ def test_get_impl_issue_none_when_not_found() -> None:
     )
     ctx = create_test_context(git=git)
 
-    result = _get_impl_issue(ctx, worktree_path)
+    issue_text, issue_url = _get_impl_issue(ctx, worktree_path)
 
-    assert result is None
+    assert issue_text is None
+    assert issue_url is None
 
 
-def test_format_pr_cell_with_pr() -> None:
-    """Test formatting PR cell with PR info."""
+def test_format_pr_cell_with_pr_and_graphite_url() -> None:
+    """Test formatting PR cell with PR info and Graphite URL."""
     pr = PullRequestInfo(
         number=123,
         state="OPEN",
@@ -144,10 +148,37 @@ def test_format_pr_cell_with_pr() -> None:
         checks_passing=None,
     )
 
-    result = _format_pr_cell(pr)
+    result = _format_pr_cell(
+        pr,
+        use_graphite=True,
+        graphite_url="https://app.graphite.com/github/pr/owner/repo/123",
+    )
 
     assert "#123" in result
     assert "👀" in result  # Default open PR emoji
+    assert "[link=" in result  # Has Rich link markup
+    assert "graphite.com" in result  # Uses Graphite URL
+
+
+def test_format_pr_cell_with_pr_github_url() -> None:
+    """Test formatting PR cell with PR info using GitHub URL."""
+    pr = PullRequestInfo(
+        number=123,
+        state="OPEN",
+        is_draft=False,
+        url="https://github.com/owner/repo/pull/123",
+        owner="owner",
+        repo="repo",
+        title="Add feature",
+        checks_passing=None,
+    )
+
+    result = _format_pr_cell(pr, use_graphite=False, graphite_url=None)
+
+    assert "#123" in result
+    assert "👀" in result  # Default open PR emoji
+    assert "[link=" in result  # Has Rich link markup
+    assert "github.com" in result  # Uses GitHub URL
 
 
 def test_format_pr_cell_with_draft_pr() -> None:
@@ -163,7 +194,7 @@ def test_format_pr_cell_with_draft_pr() -> None:
         checks_passing=None,
     )
 
-    result = _format_pr_cell(pr)
+    result = _format_pr_cell(pr, use_graphite=False, graphite_url=None)
 
     assert "#456" in result
     assert "🚧" in result  # Draft PR emoji
@@ -182,7 +213,7 @@ def test_format_pr_cell_with_merged_pr() -> None:
         checks_passing=None,
     )
 
-    result = _format_pr_cell(pr)
+    result = _format_pr_cell(pr, use_graphite=False, graphite_url=None)
 
     assert "#789" in result
     assert "🎉" in result  # Merged PR emoji
@@ -190,6 +221,30 @@ def test_format_pr_cell_with_merged_pr() -> None:
 
 def test_format_pr_cell_none() -> None:
     """Test formatting PR cell with no PR."""
-    result = _format_pr_cell(None)
+    result = _format_pr_cell(None, use_graphite=False, graphite_url=None)
+
+    assert result == "-"
+
+
+def test_format_impl_cell_with_url() -> None:
+    """Test formatting impl cell with URL makes it clickable."""
+    result = _format_impl_cell("#42", "https://github.com/owner/repo/issues/42")
+
+    assert "#42" in result
+    assert "[link=" in result
+    assert "github.com" in result
+
+
+def test_format_impl_cell_without_url() -> None:
+    """Test formatting impl cell without URL shows plain text."""
+    result = _format_impl_cell("#123", None)
+
+    assert result == "#123"
+    assert "[link=" not in result
+
+
+def test_format_impl_cell_none() -> None:
+    """Test formatting impl cell with no issue."""
+    result = _format_impl_cell(None, None)
 
     assert result == "-"

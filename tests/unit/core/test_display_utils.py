@@ -166,3 +166,183 @@ def test_format_workflow_run_id_none() -> None:
 
     # Assert
     assert result == "", "Expected empty string for None workflow run"
+
+
+def test_get_workflow_status_emoji_completed_success() -> None:
+    """Test emoji for completed workflow with success conclusion."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="123",
+        status="completed",
+        conclusion="success",
+        branch="main",
+        head_sha="abc",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "✅", "Expected green check for successful completion"
+
+
+def test_get_workflow_status_emoji_completed_failure() -> None:
+    """Test emoji for completed workflow with failure conclusion."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="456",
+        status="completed",
+        conclusion="failure",
+        branch="main",
+        head_sha="def",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "❌", "Expected red X for failed completion"
+
+
+def test_get_workflow_status_emoji_completed_cancelled() -> None:
+    """Test emoji for completed workflow with cancelled conclusion."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="789",
+        status="completed",
+        conclusion="cancelled",
+        branch="main",
+        head_sha="ghi",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "⛔", "Expected stop sign for cancelled workflow"
+
+
+def test_get_workflow_status_emoji_in_progress() -> None:
+    """Test emoji for in-progress workflow."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="101",
+        status="in_progress",
+        conclusion=None,
+        branch="main",
+        head_sha="jkl",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "⟳", "Expected reload symbol for in-progress workflow"
+
+
+def test_get_workflow_status_emoji_queued() -> None:
+    """Test emoji for queued workflow."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="202",
+        status="queued",
+        conclusion=None,
+        branch="main",
+        head_sha="mno",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "⧗", "Expected hourglass for queued workflow"
+
+
+def test_get_workflow_status_emoji_unknown_status() -> None:
+    """Test emoji for unknown workflow status."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="303",
+        status="unknown_status",
+        conclusion=None,
+        branch="main",
+        head_sha="pqr",
+    )
+
+    # Act
+    from erk.core.display_utils import get_workflow_status_emoji
+
+    result = get_workflow_status_emoji(workflow_run)
+
+    # Assert
+    assert result == "❓", "Expected question mark for unknown status"
+
+
+def test_format_workflow_status_with_url() -> None:
+    """Test format_workflow_status with URL includes OSC 8 linkification."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="555",
+        status="completed",
+        conclusion="success",
+        branch="main",
+        head_sha="stu",
+    )
+    workflow_url = "https://github.com/owner/repo/actions/runs/555"
+
+    # Act
+    from erk.core.display_utils import format_workflow_status
+
+    result = format_workflow_status(workflow_run, workflow_url)
+
+    # Assert
+    assert "✅" in result, "Expected success emoji"
+    assert "CI" in result, "Expected CI text"
+    assert "\x1b[36m" in result, "Expected cyan color"
+    assert "\x1b]8;;" in result, "Expected OSC 8 link escape sequence"
+    assert workflow_url in result, "Expected URL in OSC 8 link"
+
+
+def test_format_workflow_status_without_url() -> None:
+    """Test format_workflow_status without URL displays plain colored text."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="666",
+        status="in_progress",
+        conclusion=None,
+        branch="main",
+        head_sha="vwx",
+    )
+    workflow_url = None
+
+    # Act
+    from erk.core.display_utils import format_workflow_status
+
+    result = format_workflow_status(workflow_run, workflow_url)
+
+    # Assert
+    assert "⟳" in result, "Expected in-progress emoji"
+    assert "CI" in result, "Expected CI text"
+    assert "\x1b[36m" in result, "Expected cyan color"
+    assert "\x1b]8;;" not in result, "Should not have OSC 8 link without URL"
+
+
+def test_format_workflow_status_none_workflow() -> None:
+    """Test format_workflow_status with None workflow returns empty string."""
+    # Act
+    from erk.core.display_utils import format_workflow_status
+
+    result = format_workflow_status(None, None)
+
+    # Assert
+    assert result == "", "Expected empty string for None workflow"

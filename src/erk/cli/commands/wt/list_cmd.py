@@ -16,7 +16,6 @@ from erk.core.display_utils import (
 )
 from erk.core.file_utils import extract_plan_title
 from erk.core.repo_discovery import RepoContext
-from erk.core.workflow_display import get_workflow_run_for_worktree
 from erk.core.worktree_utils import find_current_worktree
 
 
@@ -91,13 +90,48 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if ci:
             prs = ctx.github.enrich_prs_with_ci_status_batch(prs, repo.root)
 
-    # Fetch workflow run information for worktrees with .impl/ folders
-    workflow_info: dict[Path, tuple[WorkflowRun | None, str | None]] = {}
+    # Fetch workflow run information using direct API queries
+    # Build branch-to-worktree mapping for batch query
+    branch_to_worktree: dict[str, Path] = {}
     for wt in worktrees:
-        workflow_run, workflow_url = get_workflow_run_for_worktree(
-            wt.path, ctx.github, ctx.issues, repo.root
-        )
-        workflow_info[wt.path] = (workflow_run, workflow_url)
+        if wt.branch is not None:
+            branch_to_worktree[wt.branch] = wt.path
+
+    # Batch query workflow runs for all branches
+    runs_by_branch: dict[str, WorkflowRun | None] = {}
+    if branch_to_worktree:
+        branch_names = list(branch_to_worktree.keys())
+        try:
+            runs_by_branch = ctx.github.get_workflow_runs_by_branches(
+                repo.root, "dispatch-erk-queue.yml", branch_names
+            )
+        except Exception:
+            # If API query fails, continue without workflow runs
+            pass
+
+    # Determine GitHub owner/repo from PR info for URL construction
+    github_owner: str | None = None
+    github_repo: str | None = None
+    if prs:
+        # Use first PR to extract owner/repo
+        for pr in prs.values():
+            github_owner = pr.owner
+            github_repo = pr.repo
+            break
+
+    # Build worktree path -> (workflow run, url) mapping
+    workflow_info: dict[Path, tuple[WorkflowRun | None, str | None]] = {}
+    for branch, wt_path in branch_to_worktree.items():
+        workflow_run = runs_by_branch.get(branch)
+        workflow_url = None
+        if workflow_run is not None and github_owner and github_repo:
+            workflow_url = f"https://github.com/{github_owner}/{github_repo}/actions/runs/{workflow_run.run_id}"
+        workflow_info[wt_path] = (workflow_run, workflow_url)
+
+    # Add None entries for worktrees without branches or workflow runs
+    for wt in worktrees:
+        if wt.path not in workflow_info:
+            workflow_info[wt.path] = (None, None)
 
     # Identify branches without worktrees
     branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}

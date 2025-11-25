@@ -9,6 +9,10 @@ from erk_shared.github.metadata import parse_metadata_blocks
 def extract_workflow_run_id(comment_bodies: list[str]) -> str | None:
     """Extract workflow run ID from workflow-started metadata blocks.
 
+    DEPRECATED: This function is deprecated in favor of querying GitHub Actions API directly
+    via GitHub.get_workflow_runs_by_branches(). The workflow-started metadata blocks are
+    not reliably posted by workflows, making this approach unreliable.
+
     Searches through comment bodies for workflow-started metadata blocks and
     extracts the most recent workflow_run_id.
 

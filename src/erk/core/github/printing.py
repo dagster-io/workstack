@@ -77,6 +77,12 @@ class PrintingGitHub(PrintingBase, GitHub):
         """Get PRs linked to issues (read-only, no printing)."""
         return self._wrapped.get_prs_linked_to_issues(repo_root, issue_numbers)
 
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get workflow runs by branches (read-only, no printing)."""
+        return self._wrapped.get_workflow_runs_by_branches(repo_root, workflow, branches)
+
     # Operations that need printing
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:

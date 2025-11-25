@@ -728,3 +728,180 @@ def test_get_current_username_none() -> None:
     result = fake.get_current_username()
 
     assert result is None
+
+
+# ============================================================================
+# close_issue() tests
+# ============================================================================
+
+
+def test_close_issue_updates_state() -> None:
+    """Test close_issue changes issue state from OPEN to closed."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body")}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.close_issue(sentinel_path(), 42)
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.state == "closed"
+
+
+def test_close_issue_missing_raises() -> None:
+    """Test close_issue raises RuntimeError for non-existent issue."""
+    issues = FakeGitHubIssues()
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        issues.close_issue(sentinel_path(), 999)
+
+
+def test_close_issue_tracks_mutation() -> None:
+    """Test close_issue tracks closed issue number in closed_issues list."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body")}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.close_issue(sentinel_path(), 42)
+
+    assert 42 in issues.closed_issues
+
+
+def test_close_issue_preserves_other_fields() -> None:
+    """Test close_issue preserves title, body, labels unchanged."""
+    pre_configured = {
+        42: create_test_issue(42, "Test Issue", "Test body", labels=["bug", "urgent"])
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.close_issue(sentinel_path(), 42)
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.title == "Test Issue"
+    assert updated_issue.body == "Test body"
+    assert updated_issue.labels == ["bug", "urgent"]
+    assert updated_issue.number == 42
+
+
+# ============================================================================
+# closed_issues property tests
+# ============================================================================
+
+
+def test_closed_issues_empty_initially() -> None:
+    """Test closed_issues property is empty list on new instance."""
+    issues = FakeGitHubIssues()
+
+    assert issues.closed_issues == []
+
+
+def test_closed_issues_tracks_multiple() -> None:
+    """Test closed_issues tracks multiple closes in order."""
+    pre_configured = {
+        10: create_test_issue(10, "Issue 10", "Body"),
+        20: create_test_issue(20, "Issue 20", "Body"),
+        30: create_test_issue(30, "Issue 30", "Body"),
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.close_issue(sentinel_path(), 20)
+    issues.close_issue(sentinel_path(), 10)
+    issues.close_issue(sentinel_path(), 30)
+
+    assert issues.closed_issues == [20, 10, 30]
+
+
+# ============================================================================
+# ensure_label_on_issue() tests
+# ============================================================================
+
+
+def test_ensure_label_on_issue_adds_label() -> None:
+    """Test ensure_label_on_issue adds label when not present."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body", labels=[])}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.ensure_label_on_issue(sentinel_path(), 42, "new-label")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert "new-label" in updated_issue.labels
+
+
+def test_ensure_label_on_issue_idempotent() -> None:
+    """Test ensure_label_on_issue is idempotent (no duplicate when already present)."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body", labels=["existing"])}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.ensure_label_on_issue(sentinel_path(), 42, "existing")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    # Label should appear only once
+    assert updated_issue.labels.count("existing") == 1
+
+
+def test_ensure_label_on_issue_missing_raises() -> None:
+    """Test ensure_label_on_issue raises RuntimeError for non-existent issue."""
+    issues = FakeGitHubIssues()
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        issues.ensure_label_on_issue(sentinel_path(), 999, "label")
+
+
+def test_ensure_label_on_issue_appends_to_existing() -> None:
+    """Test ensure_label_on_issue preserves existing labels."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body", labels=["label1", "label2"])}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.ensure_label_on_issue(sentinel_path(), 42, "label3")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.labels == ["label1", "label2", "label3"]
+
+
+# ============================================================================
+# remove_label_from_issue() tests
+# ============================================================================
+
+
+def test_remove_label_from_issue_removes() -> None:
+    """Test remove_label_from_issue removes label when present."""
+    pre_configured = {
+        42: create_test_issue(42, "Test Issue", "Body", labels=["bug", "enhancement"])
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.remove_label_from_issue(sentinel_path(), 42, "bug")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert "bug" not in updated_issue.labels
+    assert "enhancement" in updated_issue.labels
+
+
+def test_remove_label_from_issue_missing_raises() -> None:
+    """Test remove_label_from_issue raises RuntimeError for non-existent issue."""
+    issues = FakeGitHubIssues()
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        issues.remove_label_from_issue(sentinel_path(), 999, "label")
+
+
+def test_remove_label_from_issue_preserves_others() -> None:
+    """Test remove_label_from_issue preserves other labels unchanged."""
+    pre_configured = {
+        42: create_test_issue(42, "Test Issue", "Body", labels=["keep1", "remove", "keep2"])
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.remove_label_from_issue(sentinel_path(), 42, "remove")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.labels == ["keep1", "keep2"]
+
+
+def test_remove_label_from_issue_idempotent() -> None:
+    """Test remove_label_from_issue is idempotent (no error when label not on issue)."""
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body", labels=["other"])}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    # Should not raise error when label doesn't exist on issue
+    issues.remove_label_from_issue(sentinel_path(), 42, "nonexistent")
+
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.labels == ["other"]

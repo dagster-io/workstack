@@ -400,3 +400,119 @@ def test_noop_github_issues_get_current_username_with_none() -> None:
     result = noop.get_current_username()
 
     assert result is None
+
+
+# ============================================================================
+# DryRunGitHubIssues - Write operation no-op tests
+# ============================================================================
+
+
+def test_noop_github_issues_update_issue_body_noop() -> None:
+    """Test DryRunGitHubIssues update_issue_body does nothing in dry-run mode."""
+    pre_configured = {42: create_test_issue(42, "Test", "Original body", url="http://url/42")}
+    fake = FakeGitHubIssues(issues=pre_configured)
+    noop = DryRunGitHubIssues(fake)
+
+    # Should not raise error
+    noop.update_issue_body(sentinel_path(), 42, "Updated body")
+
+    # Wrapped fake should not have mutated
+    original_issue = fake.get_issue(sentinel_path(), 42)
+    assert original_issue.body == "Original body"
+
+
+def test_noop_github_issues_ensure_label_exists_noop() -> None:
+    """Test DryRunGitHubIssues ensure_label_exists does nothing in dry-run mode."""
+    fake = FakeGitHubIssues()
+    noop = DryRunGitHubIssues(fake)
+
+    # Should not raise error
+    noop.ensure_label_exists(sentinel_path(), "new-label", "description", "FF0000")
+
+    # Wrapped fake should not have created the label
+    assert "new-label" not in fake.labels
+    assert len(fake.created_labels) == 0
+
+
+def test_noop_github_issues_ensure_label_on_issue_noop() -> None:
+    """Test DryRunGitHubIssues ensure_label_on_issue does nothing in dry-run mode."""
+    pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url/42", labels=[])}
+    fake = FakeGitHubIssues(issues=pre_configured)
+    noop = DryRunGitHubIssues(fake)
+
+    # Should not raise error
+    noop.ensure_label_on_issue(sentinel_path(), 42, "new-label")
+
+    # Wrapped fake should not have mutated the issue labels
+    issue = fake.get_issue(sentinel_path(), 42)
+    assert "new-label" not in issue.labels
+
+
+def test_noop_github_issues_remove_label_from_issue_noop() -> None:
+    """Test DryRunGitHubIssues remove_label_from_issue does nothing in dry-run mode."""
+    pre_configured = {
+        42: create_test_issue(42, "Test", "Body", url="http://url/42", labels=["existing-label"])
+    }
+    fake = FakeGitHubIssues(issues=pre_configured)
+    noop = DryRunGitHubIssues(fake)
+
+    # Should not raise error
+    noop.remove_label_from_issue(sentinel_path(), 42, "existing-label")
+
+    # Wrapped fake should not have removed the label
+    issue = fake.get_issue(sentinel_path(), 42)
+    assert "existing-label" in issue.labels
+
+
+def test_noop_github_issues_close_issue_noop() -> None:
+    """Test DryRunGitHubIssues close_issue does nothing in dry-run mode."""
+    pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url/42")}
+    fake = FakeGitHubIssues(issues=pre_configured)
+    noop = DryRunGitHubIssues(fake)
+
+    # Should not raise error
+    noop.close_issue(sentinel_path(), 42)
+
+    # Wrapped fake should not have closed the issue
+    issue = fake.get_issue(sentinel_path(), 42)
+    assert issue.state == "OPEN"
+    assert len(fake.closed_issues) == 0
+
+
+# ============================================================================
+# DryRunGitHubIssues - Read operation delegation tests
+# ============================================================================
+
+
+def test_noop_github_issues_get_issue_comments_delegates() -> None:
+    """Test DryRunGitHubIssues get_issue_comments delegates to wrapped implementation."""
+    comments = {
+        42: ["First comment", "Second comment"],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+    noop = DryRunGitHubIssues(fake)
+
+    result = noop.get_issue_comments(sentinel_path(), 42)
+
+    # Should delegate to wrapped implementation
+    assert result == ["First comment", "Second comment"]
+
+
+def test_noop_github_issues_get_multiple_issue_comments_delegates() -> None:
+    """Test DryRunGitHubIssues get_multiple_issue_comments delegates to wrapped implementation."""
+    comments = {
+        10: ["Comment on 10"],
+        20: ["First on 20", "Second on 20"],
+        30: [],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+    noop = DryRunGitHubIssues(fake)
+
+    result = noop.get_multiple_issue_comments(sentinel_path(), [10, 20, 30])
+
+    # Should delegate to wrapped implementation
+    assert result == {
+        10: ["Comment on 10"],
+        20: ["First on 20", "Second on 20"],
+        30: [],
+    }

@@ -4,11 +4,11 @@ from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
 from erk_shared.github.issues import FakeGitHubIssues
 from erk_shared.github.types import WorkflowRun
+from erk_shared.integrations.graphite.fake import FakeGraphite
 
 from erk.cli.cli import cli
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
-from erk.core.graphite.fake import FakeGraphite
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 from tests.test_utils.output_helpers import strip_ansi
 

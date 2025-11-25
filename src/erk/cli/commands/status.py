@@ -1,11 +1,11 @@
 """Status command implementation."""
 
 import click
+from erk_shared.integrations.parallel.real import RealParallelTaskRunner
 
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
-from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.git import GitStatusCollector
 from erk.status.collectors.github import GitHubPRCollector
 from erk.status.collectors.graphite import GraphiteStackCollector

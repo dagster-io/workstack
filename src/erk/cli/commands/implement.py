@@ -21,13 +21,13 @@ from erk_shared.naming import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
+from erk_shared.output.output import user_output
 
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.completions import complete_plan_files
 from erk.cli.commands.wt.create_cmd import add_worktree, run_post_worktree_setup
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
-from erk.cli.output import user_output
 from erk.core.claude_executor import ClaudeExecutor
 from erk.core.context import ErkContext
 from erk.core.plan_store.types import PlanState

@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import require_project_config
+from dot_agent_kit.io.state import require_project_config
 
 
 @click.group()

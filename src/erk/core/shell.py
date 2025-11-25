@@ -10,7 +10,7 @@ import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk.core.subprocess import run_subprocess_with_context
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
 def detect_shell_from_env(shell_env: str) -> tuple[str, Path] | None:

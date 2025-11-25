@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 from erk_shared.naming import sanitize_worktree_name
+from erk_shared.output.output import user_output
 
 from erk.cli.commands.stack.split_old.display import (
     confirm_split,
@@ -17,7 +18,6 @@ from erk.cli.commands.stack.split_old.plan import (
     get_stack_branches,
 )
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 
 # Validation functions

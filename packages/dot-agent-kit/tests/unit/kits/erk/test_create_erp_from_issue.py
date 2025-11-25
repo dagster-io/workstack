@@ -13,7 +13,8 @@ from click.testing import CliRunner
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue import (
     create_erp_from_issue,
 )
-from erk.core.plan_store import FakePlanStore, Plan, PlanState
+from erk.core.plan_store.fake import FakePlanStore
+from erk.core.plan_store.types import Plan, PlanState
 
 
 def test_create_erp_from_issue_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError
 from dot_agent_kit.sources.resolver import KitSource, ResolvedKit

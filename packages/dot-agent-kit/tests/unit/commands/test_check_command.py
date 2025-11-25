@@ -11,8 +11,8 @@ from dot_agent_kit.commands.check import (
     compare_artifact_lists,
     validate_kit_fields,
 )
-from dot_agent_kit.io import save_project_config
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.io.state import save_project_config
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.models.types import SourceType
 
 
@@ -615,7 +615,7 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
 
         # Create local artifacts that match bundled version
         # Read bundled artifact content
-        from dot_agent_kit.sources import BundledKitSource
+        from dot_agent_kit.sources.bundled import BundledKitSource
 
         bundled_source = BundledKitSource()
         bundled_path = bundled_source._get_bundled_kit_path("devrun")
@@ -672,7 +672,7 @@ def test_check_command_detects_missing_artifacts(tmp_path: Path) -> None:
         save_project_config(project_dir, config)
 
         # Create local artifact that matches bundled version
-        from dot_agent_kit.sources import BundledKitSource
+        from dot_agent_kit.sources.bundled import BundledKitSource
 
         bundled_source = BundledKitSource()
         bundled_path = bundled_source._get_bundled_kit_path("gt")
@@ -753,7 +753,7 @@ artifacts:
         local_artifact2.write_text("obsolete content", encoding="utf-8")
 
         # Monkey patch BundledKitSource to return our mock kit
-        from dot_agent_kit.sources import BundledKitSource
+        from dot_agent_kit.sources.bundled import BundledKitSource
 
         original_get_path = BundledKitSource._get_bundled_kit_path
 
@@ -839,7 +839,7 @@ artifacts:
         local_obsolete.write_text("obsolete content", encoding="utf-8")
 
         # Monkey patch BundledKitSource
-        from dot_agent_kit.sources import BundledKitSource
+        from dot_agent_kit.sources.bundled import BundledKitSource
 
         original_get_path = BundledKitSource._get_bundled_kit_path
 
@@ -898,7 +898,7 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
         save_project_config(project_dir, config)
 
         # Copy all artifacts from bundled kit
-        from dot_agent_kit.sources import BundledKitSource
+        from dot_agent_kit.sources.bundled import BundledKitSource
 
         bundled_source = BundledKitSource()
         bundled_path = bundled_source._get_bundled_kit_path("gt")

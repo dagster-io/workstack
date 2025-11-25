@@ -15,10 +15,10 @@ from erk_shared.naming import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
+from erk_shared.output.output import user_output
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
-from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext

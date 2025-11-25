@@ -6,13 +6,13 @@ from click.testing import CliRunner
 from pytest import CaptureFixture
 
 from dot_agent_kit.commands.kit.list import _list_artifacts, list_installed_kits
-from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.io.state import create_default_config
 from dot_agent_kit.models.artifact import (
     ArtifactLevel,
     ArtifactSource,
     InstalledArtifact,
 )
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from tests.fakes.fake_artifact_repository import FakeArtifactRepository
 
 
@@ -327,7 +327,7 @@ def test_list_command_cli(tmp_project: Path) -> None:
     """
     import os
 
-    from dot_agent_kit.io import save_project_config
+    from dot_agent_kit.io.state import save_project_config
 
     # Set up a basic project config
     config = create_default_config()

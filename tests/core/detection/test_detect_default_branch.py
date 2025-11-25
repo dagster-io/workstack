@@ -1,7 +1,7 @@
 import pytest
 
 from erk.core.git.fake import FakeGit
-from tests.test_utils import sentinel_path
+from tests.test_utils.paths import sentinel_path
 
 
 def test_detect_default_branch_uses_remote_head_master() -> None:

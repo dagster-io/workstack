@@ -7,19 +7,19 @@ from pathlib import Path
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
+from erk_shared.github.metadata_blocks import parse_metadata_blocks
 from erk_shared.github.status_history import extract_workflow_run_id
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
+from erk_shared.output.output import user_output
 from rich.console import Console
 from rich.table import Table
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.display_utils import format_workflow_run_id
-from erk.core.plan_store import Plan, PlanQuery, PlanState
+from erk.core.plan_store.types import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
-from erk.integrations.github.metadata_blocks import parse_metadata_blocks
 
 
 def select_display_pr(prs: list[PullRequestInfo]) -> PullRequestInfo | None:

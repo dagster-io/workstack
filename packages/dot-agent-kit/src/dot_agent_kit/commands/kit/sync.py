@@ -5,10 +5,12 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import require_project_config, save_project_config
 from dot_agent_kit.io.registry import rebuild_registry
-from dot_agent_kit.operations import check_for_updates, sync_all_kits, sync_kit
-from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
+from dot_agent_kit.io.state import require_project_config, save_project_config
+from dot_agent_kit.operations.sync import check_for_updates, sync_all_kits, sync_kit
+from dot_agent_kit.sources.bundled import BundledKitSource
+from dot_agent_kit.sources.resolver import KitResolver
+from dot_agent_kit.sources.standalone import StandalonePackageSource
 
 
 @click.command()

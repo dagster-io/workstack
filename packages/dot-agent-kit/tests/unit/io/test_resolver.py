@@ -6,12 +6,13 @@ from typing import cast
 import pytest
 
 from dot_agent_kit.models.types import SourceType
-from dot_agent_kit.sources import KitResolver, ResolvedKit, StandalonePackageSource
 from dot_agent_kit.sources.exceptions import (
     KitManifestError,
     KitNotFoundError,
     ResolverNotConfiguredError,
 )
+from dot_agent_kit.sources.resolver import KitResolver, ResolvedKit
+from dot_agent_kit.sources.standalone import StandalonePackageSource
 
 
 def test_standalone_can_resolve() -> None:

@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.models import HookDefinition
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
 def _extract_validation_error_details(error: ValidationError) -> tuple[list[str], list[str]]:

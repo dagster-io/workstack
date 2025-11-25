@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import create_default_config, save_project_config
+from dot_agent_kit.io.state import create_default_config, save_project_config
 
 
 @click.command()

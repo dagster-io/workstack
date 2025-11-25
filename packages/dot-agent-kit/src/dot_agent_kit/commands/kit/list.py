@@ -16,7 +16,7 @@ from dot_agent_kit.cli.list_formatting import (
     format_subsection_header,
 )
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import require_project_config
+from dot_agent_kit.io.state import require_project_config
 from dot_agent_kit.models.artifact import (
     ARTIFACT_TYPE_PLURALS,
     ArtifactSource,
@@ -24,7 +24,8 @@ from dot_agent_kit.models.artifact import (
     InstalledArtifact,
 )
 from dot_agent_kit.models.config import ProjectConfig
-from dot_agent_kit.repositories import ArtifactRepository, FilesystemArtifactRepository
+from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
+from dot_agent_kit.repositories.filesystem_artifact_repository import FilesystemArtifactRepository
 
 # Reusable option decorator
 artifacts_option = click.option(

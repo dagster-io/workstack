@@ -11,7 +11,8 @@ from dot_agent_kit.cli.list_formatting import (
     format_section_header,
 )
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import discover_installed_artifacts, require_project_config
+from dot_agent_kit.io.discovery import discover_installed_artifacts
+from dot_agent_kit.io.state import require_project_config
 
 # Reusable option decorator
 verbose_option = click.option(

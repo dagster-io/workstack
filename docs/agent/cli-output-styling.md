@@ -110,7 +110,7 @@ Standard emojis for CLI output:
 - `user_output()` - Routes to stderr for user-facing messages
 - `machine_output()` - Routes to stdout for shell integration data
 
-**Import:** `from erk.cli.output import user_output, machine_output`
+**Import:** `from erk_shared.output.output import user_output, machine_output`
 
 ### When to Use Each
 
@@ -127,7 +127,7 @@ Standard emojis for CLI output:
 ### Example
 
 ```python
-from erk.cli.output import user_output, machine_output
+from erk_shared.output.output import user_output, machine_output
 
 # User-facing messages
 user_output(f"✓ Created worktree {name}")

@@ -8,9 +8,9 @@ import json
 from pathlib import Path
 
 import pytest
+from erk_shared.integrations.graphite.real import RealGraphite
 
 from erk.core.git.fake import FakeGit
-from erk.core.graphite.real import RealGraphite
 from tests.conftest import load_fixture
 
 

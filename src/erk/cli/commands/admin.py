@@ -3,11 +3,11 @@
 from typing import Literal
 
 import click
+from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.implementation_queue.github import RealGitHubAdmin
+from erk.core.implementation_queue.github.real import RealGitHubAdmin
 
 
 @click.group("admin")

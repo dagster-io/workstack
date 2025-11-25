@@ -10,7 +10,7 @@ import pytest
 from erk_shared.github.types import PRInfo, PullRequestInfo, WorkflowRun
 
 from erk.core.github.fake import FakeGitHub
-from tests.test_utils import sentinel_path
+from tests.test_utils.paths import sentinel_path
 
 
 def test_fake_github_ops_initialization() -> None:

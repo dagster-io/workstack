@@ -3,8 +3,9 @@
 from pathlib import Path
 from typing import Any
 
+from erk_shared.printing.base import PrintingBase
+
 from erk.core.implementation_queue.github.abc import GitHubAdmin
-from erk.core.printing_base import PrintingBase
 
 
 class PrintingGitHubAdmin(PrintingBase, GitHubAdmin):

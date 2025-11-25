@@ -3,9 +3,9 @@
 import click
 
 from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
-from erk.cli.commands.stack.land_cmd import land_stack_cmd
+from erk.cli.commands.stack.land_old.command import land_stack as land_stack_cmd
 from erk.cli.commands.stack.move_cmd import move_stack
-from erk.cli.commands.stack.split_cmd import split_stack
+from erk.cli.commands.stack.split_old.command import split_cmd as split_stack
 
 
 @click.group("stack")

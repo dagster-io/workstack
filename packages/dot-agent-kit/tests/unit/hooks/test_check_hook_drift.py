@@ -12,9 +12,9 @@ from dot_agent_kit.commands.check import (
     check,
 )
 from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition, HookEntry, MatcherGroup
-from dot_agent_kit.io import save_project_config
-from dot_agent_kit.models import InstalledKit, ProjectConfig
-from dot_agent_kit.sources import BundledKitSource
+from dot_agent_kit.io.state import save_project_config
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
+from dot_agent_kit.sources.bundled import BundledKitSource
 
 
 def test_extract_hooks_for_kit_filters_correctly() -> None:

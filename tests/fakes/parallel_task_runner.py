@@ -7,7 +7,7 @@ with keyword arguments specifying expected results.
 
 from collections.abc import Callable
 
-from erk.core.parallel_task_runner import ParallelTaskRunner
+from erk_shared.integrations.parallel.abc import ParallelTaskRunner
 
 
 class FakeParallelTaskRunner(ParallelTaskRunner):

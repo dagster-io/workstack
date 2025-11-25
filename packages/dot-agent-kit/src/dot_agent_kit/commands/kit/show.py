@@ -5,7 +5,9 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import load_kit_manifest, load_project_config, load_registry
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.io.registry import load_registry
+from dot_agent_kit.io.state import load_project_config
 from dot_agent_kit.sources.bundled import BundledKitSource
 
 

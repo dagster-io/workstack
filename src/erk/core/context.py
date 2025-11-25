@@ -9,9 +9,14 @@ from erk_shared.git.abc import Git
 from erk_shared.git.real import RealGit
 from erk_shared.github.abc import GitHub
 from erk_shared.github.issues import DryRunGitHubIssues, GitHubIssues, RealGitHubIssues
+from erk_shared.integrations.graphite.abc import Graphite
+from erk_shared.integrations.graphite.dry_run import DryRunGraphite
+from erk_shared.integrations.graphite.real import RealGraphite
+from erk_shared.integrations.time.abc import Time
+from erk_shared.integrations.time.real import RealTime
+from erk_shared.output.output import user_output
 
 from erk.cli.config import LoadedConfig, load_config
-from erk.cli.output import user_output
 from erk.core.claude_executor import ClaudeExecutor, RealClaudeExecutor
 from erk.core.completion import Completion, RealCompletion
 from erk.core.config_store import (
@@ -22,10 +27,8 @@ from erk.core.config_store import (
 from erk.core.git.dry_run import DryRunGit
 from erk.core.github.dry_run import DryRunGitHub
 from erk.core.github.real import RealGitHub
-from erk.core.graphite.abc import Graphite
-from erk.core.graphite.dry_run import DryRunGraphite
-from erk.core.graphite.real import RealGraphite
-from erk.core.plan_store import GitHubPlanStore, PlanStore
+from erk.core.plan_store.github import GitHubPlanStore
+from erk.core.plan_store.store import PlanStore
 from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
@@ -34,8 +37,6 @@ from erk.core.repo_discovery import (
 )
 from erk.core.script_writer import RealScriptWriter, ScriptWriter
 from erk.core.shell import RealShell, Shell
-from erk.core.time.abc import Time
-from erk.core.time.real import RealTime
 from erk.core.user_feedback import InteractiveFeedback, SuppressedFeedback, UserFeedback
 
 
@@ -97,7 +98,7 @@ class ErkContext:
             Before (7 lines):
             >>> from erk.core.git.fake import FakeGit
             >>> from erk.core.github.fake import FakeGitHub
-            >>> from erk.core.graphite.fake import FakeGraphite
+            >>> from erk_shared.integrations.graphite.fake import FakeGraphite
             >>> from tests.fakes.shell import FakeShell
             >>> ctx = ErkContext(
             ...     git=git,
@@ -122,6 +123,7 @@ class ErkContext:
             use ErkContext.for_test() instead.
         """
         from erk_shared.github.issues import FakeGitHubIssues
+        from erk_shared.integrations.graphite.fake import FakeGraphite
         from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
@@ -131,8 +133,7 @@ class ErkContext:
 
         from erk.core.config_store import FakeConfigStore
         from erk.core.github.fake import FakeGitHub
-        from erk.core.graphite.fake import FakeGraphite
-        from erk.core.plan_store import FakePlanStore
+        from erk.core.plan_store.fake import FakePlanStore
 
         return ErkContext(
             git=git,
@@ -225,19 +226,19 @@ class ErkContext:
             which is more concise.
         """
         from erk_shared.github.issues import FakeGitHubIssues
+        from erk_shared.integrations.graphite.fake import FakeGraphite
         from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
         from tests.fakes.time import FakeTime
         from tests.fakes.user_feedback import FakeUserFeedback
-        from tests.test_utils import sentinel_path
+        from tests.test_utils.paths import sentinel_path
 
         from erk.core.config_store import FakeConfigStore
         from erk.core.git.fake import FakeGit
         from erk.core.github.fake import FakeGitHub
-        from erk.core.graphite.fake import FakeGraphite
-        from erk.core.plan_store import FakePlanStore
+        from erk.core.plan_store.fake import FakePlanStore
 
         if git is None:
             git = FakeGit()

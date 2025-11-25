@@ -1,5 +1,5 @@
-"""Workstack development CLI."""
+"""Workstack development CLI.
 
-from erk_dev.__main__ import cli
-
-__all__ = ["cli"]
+Import from submodules:
+- __main__: cli
+"""

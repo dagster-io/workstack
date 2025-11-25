@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from dot_agent_kit.io import create_default_config, save_project_config
-from dot_agent_kit.models import InstalledKit
-from dot_agent_kit.operations import validate_artifact, validate_project
+from dot_agent_kit.io.state import create_default_config, save_project_config
+from dot_agent_kit.models.config import InstalledKit
+from dot_agent_kit.operations.validation import validate_artifact, validate_project
 
 
 def test_validate_artifact_valid(tmp_path: Path) -> None:

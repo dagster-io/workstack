@@ -1,9 +1,9 @@
-"""Status information collectors."""
+"""Status information collectors.
 
-from erk.status.collectors.base import StatusCollector
-from erk.status.collectors.git import GitStatusCollector
-
-__all__ = [
-    "StatusCollector",
-    "GitStatusCollector",
-]
+Import from submodules:
+- base: StatusCollector
+- git: GitStatusCollector
+- github: GitHubPRCollector
+- graphite: GraphiteStackCollector
+- impl: PlanFileCollector
+"""

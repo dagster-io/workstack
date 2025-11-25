@@ -10,8 +10,8 @@ from click.testing import CliRunner
 from dot_agent_kit.commands.kit.install import install
 from dot_agent_kit.commands.kit.remove import remove
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
-from dot_agent_kit.io import load_project_config
-from dot_agent_kit.sources import KitResolver
+from dot_agent_kit.io.state import load_project_config
+from dot_agent_kit.sources.resolver import KitResolver
 from tests.fakes.fake_local_source import FakeLocalSource
 
 

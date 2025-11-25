@@ -1,5 +1,5 @@
-"""Test helper utilities."""
+"""Test helper utilities.
 
-from tests.helpers.commits import make_test_commits
-
-__all__ = ["make_test_commits"]
+Import from submodules:
+- commits: make_test_commits
+"""

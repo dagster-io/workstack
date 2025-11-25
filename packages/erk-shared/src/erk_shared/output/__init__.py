@@ -1,7 +1,5 @@
-from erk_shared.output.output import format_duration, machine_output, user_output
+"""Output utilities.
 
-__all__ = [
-    "format_duration",
-    "machine_output",
-    "user_output",
-]
+Import from submodules:
+- output: format_duration, machine_output, user_output
+"""

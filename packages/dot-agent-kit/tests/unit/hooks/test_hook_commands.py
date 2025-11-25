@@ -6,7 +6,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dot_agent_kit.commands.hook import hook_group
+from dot_agent_kit.commands.hook.group import hook_group
 
 
 def create_test_hook_entry(

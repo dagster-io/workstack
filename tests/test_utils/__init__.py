@@ -1,5 +1,6 @@
-"""Shared test utilities and helpers."""
+"""Shared test utilities and helpers.
 
-from tests.test_utils.paths import sentinel_path
-
-__all__ = ["sentinel_path"]
+Import from submodules:
+- paths: sentinel_path
+- env_helpers: make_env
+"""

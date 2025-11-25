@@ -4,11 +4,11 @@ import json
 
 from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
+from erk_shared.integrations.graphite.fake import FakeGraphite
 
 from erk.cli.cli import cli
 from erk.cli.config import LoadedConfig
 from erk.core.git.fake import FakeGit
-from erk.core.graphite.fake import FakeGraphite
 from erk.core.repo_discovery import RepoContext
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
@@ -804,7 +804,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         )
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from erk.core.branch_metadata import BranchMetadata
+        from erk_shared.integrations.graphite.types import BranchMetadata
 
         branch_metadata = {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
@@ -882,7 +882,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         config_toml.write_text("", encoding="utf-8")
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from erk.core.branch_metadata import BranchMetadata
+        from erk_shared.integrations.graphite.types import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
@@ -948,7 +948,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from erk.core.branch_metadata import BranchMetadata
+        from erk_shared.integrations.graphite.types import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),
@@ -1004,7 +1004,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from erk.core.branch_metadata import BranchMetadata
+        from erk_shared.integrations.graphite.types import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),

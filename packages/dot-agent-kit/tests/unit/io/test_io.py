@@ -2,14 +2,10 @@
 
 from pathlib import Path
 
-from dot_agent_kit.io import (
-    create_default_config,
-    load_kit_manifest,
-    load_project_config,
-    load_registry,
-    save_project_config,
-)
-from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.io.registry import load_registry
+from dot_agent_kit.io.state import create_default_config, load_project_config, save_project_config
+from dot_agent_kit.models.config import InstalledKit
 
 
 def test_load_save_project_config(tmp_project: Path) -> None:
@@ -24,7 +20,7 @@ def test_load_save_project_config(tmp_project: Path) -> None:
         artifacts=["artifact1.md"],
     )
 
-    from dot_agent_kit.models import ProjectConfig
+    from dot_agent_kit.models.config import ProjectConfig
 
     config = ProjectConfig(
         version="1",

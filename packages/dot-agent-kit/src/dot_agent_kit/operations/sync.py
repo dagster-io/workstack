@@ -5,17 +5,17 @@ from pathlib import Path
 from typing import NamedTuple
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.operations.artifact_operations import create_artifact_operations
 from dot_agent_kit.operations.install import install_kit
-from dot_agent_kit.sources import KitResolver, ResolvedKit
 from dot_agent_kit.sources.exceptions import (
     KitNotFoundError,
     KitResolutionError,
     ResolverNotConfiguredError,
     SourceAccessError,
 )
+from dot_agent_kit.sources.resolver import KitResolver, ResolvedKit
 
 
 class UpdateCheckResult(NamedTuple):

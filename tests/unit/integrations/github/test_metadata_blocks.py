@@ -1,8 +1,7 @@
 """Tests for GitHub metadata blocks API."""
 
 import pytest
-
-from erk.integrations.github.metadata_blocks import (
+from erk_shared.github.metadata_blocks import (
     ImplementationStatusSchema,
     MetadataBlock,
     ProgressStatusSchema,
@@ -726,7 +725,7 @@ field: value
 
 
 def test_round_trip_create_render_parse() -> None:
-    """Test round-trip: create → render → parse → extract."""
+    """Test round-trip: create -> render -> parse -> extract."""
     # Create
     block = create_metadata_block(
         key="test-key",
@@ -857,7 +856,7 @@ def test_render_erk_issue_event_with_all_parameters() -> None:
     assert "<!-- erk:metadata-block:erk-implementation-status -->" in comment
     assert "\n---\n\nNext: implement feature X" in comment
 
-    # Verify format: title → blank → metadata → blank → separator → blank → description
+    # Verify format: title -> blank -> metadata -> blank -> separator -> blank -> description
     lines = comment.split("\n")
     assert lines[0] == "✓ Step 3/5 completed"
     assert lines[1] == ""  # Blank line after title
@@ -883,7 +882,7 @@ def test_render_erk_issue_event_with_empty_description() -> None:
         description="",
     )
 
-    # Verify structure: title → blank → metadata → blank → separator → blank (no description)
+    # Verify structure: title -> blank -> metadata -> blank -> separator -> blank (no description)
     assert comment.startswith("✅ Implementation complete\n\n")
     assert "<!-- erk:metadata-block:erk-implementation-status -->" in comment
     assert comment.endswith("---\n")
@@ -1037,7 +1036,7 @@ def test_rendered_plan_block_is_parseable() -> None:
 
 def test_plan_issue_schema_validates_valid_data() -> None:
     """Test PlanIssueSchema accepts valid data."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+    from erk_shared.github.metadata_blocks import PlanIssueSchema
 
     schema = PlanIssueSchema()
     data = {
@@ -1051,7 +1050,7 @@ def test_plan_issue_schema_validates_valid_data() -> None:
 
 def test_plan_issue_schema_validates_without_plan_file() -> None:
     """Test PlanIssueSchema accepts data without optional plan_file."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+    from erk_shared.github.metadata_blocks import PlanIssueSchema
 
     schema = PlanIssueSchema()
     data = {
@@ -1064,7 +1063,7 @@ def test_plan_issue_schema_validates_without_plan_file() -> None:
 
 def test_plan_issue_schema_rejects_missing_required_field() -> None:
     """Test PlanIssueSchema rejects missing required fields."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+    from erk_shared.github.metadata_blocks import PlanIssueSchema
 
     schema = PlanIssueSchema()
     data = {
@@ -1078,7 +1077,7 @@ def test_plan_issue_schema_rejects_missing_required_field() -> None:
 
 def test_plan_issue_schema_rejects_non_positive_issue_number() -> None:
     """Test PlanIssueSchema rejects non-positive issue_number."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+    from erk_shared.github.metadata_blocks import PlanIssueSchema
 
     schema = PlanIssueSchema()
     data = {
@@ -1092,7 +1091,7 @@ def test_plan_issue_schema_rejects_non_positive_issue_number() -> None:
 
 def test_plan_issue_schema_get_key() -> None:
     """Test PlanIssueSchema returns correct key."""
-    from erk.integrations.github.metadata_blocks import PlanIssueSchema
+    from erk_shared.github.metadata_blocks import PlanIssueSchema
 
     schema = PlanIssueSchema()
     assert schema.get_key() == "erk-plan"
@@ -1103,7 +1102,7 @@ def test_plan_issue_schema_get_key() -> None:
 
 def test_create_plan_issue_block_with_plan_file() -> None:
     """Test create_plan_issue_block with plan_file."""
-    from erk.integrations.github.metadata_blocks import create_plan_issue_block
+    from erk_shared.github.metadata_blocks import create_plan_issue_block
 
     block = create_plan_issue_block(
         issue_number=123,
@@ -1119,7 +1118,7 @@ def test_create_plan_issue_block_with_plan_file() -> None:
 
 def test_create_plan_issue_block_without_plan_file() -> None:
     """Test create_plan_issue_block without plan_file."""
-    from erk.integrations.github.metadata_blocks import create_plan_issue_block
+    from erk_shared.github.metadata_blocks import create_plan_issue_block
 
     block = create_plan_issue_block(
         issue_number=456,
@@ -1135,7 +1134,7 @@ def test_create_plan_issue_block_without_plan_file() -> None:
 
 def test_render_erk_issue_event_with_plan_issue_block() -> None:
     """Test render_erk_issue_event with plan issue block and workflow instructions."""
-    from erk.integrations.github.metadata_blocks import (
+    from erk_shared.github.metadata_blocks import (
         create_plan_issue_block,
         render_erk_issue_event,
     )

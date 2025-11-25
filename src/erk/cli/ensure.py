@@ -16,8 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import click
-
-from erk.cli.output import user_output
+from erk_shared.output.output import user_output
 
 if TYPE_CHECKING:
     from erk.core.context import ErkContext

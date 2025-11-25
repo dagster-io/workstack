@@ -1,11 +1,11 @@
 """Goto command - navigate directly to a worktree by name."""
 
 import click
+from erk_shared.output.output import user_output
 
 from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.commands.navigation_helpers import activate_root_repo, activate_worktree
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
 from erk.core.context import ErkContext
 
 

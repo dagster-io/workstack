@@ -1,8 +1,7 @@
 """Low-level output formatting primitives for land-stack."""
 
 import click
-
-from erk.cli.output import machine_output, user_output
+from erk_shared.output.output import machine_output, user_output
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:

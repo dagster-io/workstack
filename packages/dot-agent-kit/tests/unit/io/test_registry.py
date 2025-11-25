@@ -9,7 +9,8 @@ from dot_agent_kit.io.registry import (
     rebuild_registry,
     remove_kit_from_registry,
 )
-from dot_agent_kit.models import InstalledKit, KitManifest, ProjectConfig
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
+from dot_agent_kit.models.kit import KitManifest
 
 
 def test_generate_registry_entry() -> None:
@@ -314,8 +315,8 @@ def test_generate_doc_registry_content() -> None:
 
 def test_old_format_migration() -> None:
     """Test migration from old format to new format."""
-    from dot_agent_kit.io import save_project_config
-    from dot_agent_kit.models import ProjectConfig
+    from dot_agent_kit.io.state import save_project_config
+    from dot_agent_kit.models.config import ProjectConfig
 
     tmp_path = Path("/tmp/test_migration")
     tmp_path.mkdir(exist_ok=True)

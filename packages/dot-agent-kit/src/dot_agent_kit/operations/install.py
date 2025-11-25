@@ -5,11 +5,11 @@ from pathlib import Path
 
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import install_hooks
-from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.io.manifest import load_kit_manifest
+from dot_agent_kit.models.config import InstalledKit
 from dot_agent_kit.operations.artifact_operations import create_artifact_operations
-from dot_agent_kit.sources import ResolvedKit
 from dot_agent_kit.sources.exceptions import ArtifactConflictError
+from dot_agent_kit.sources.resolver import ResolvedKit
 
 
 def install_kit(

@@ -1,8 +1,8 @@
 """Simple text-based status renderer."""
 
 import click
+from erk_shared.output.output import user_output
 
-from erk.cli.output import user_output
 from erk.status.models.status_data import StatusData
 
 

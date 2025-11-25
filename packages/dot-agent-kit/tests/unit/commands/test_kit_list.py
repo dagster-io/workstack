@@ -5,8 +5,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from dot_agent_kit.commands.kit.list import list_installed_kits
-from dot_agent_kit.io import save_project_config
-from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.io.state import save_project_config
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
 def test_list_installed_kits_with_data() -> None:

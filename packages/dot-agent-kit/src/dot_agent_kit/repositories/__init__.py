@@ -1,8 +1,6 @@
-"""Repository implementations for dot-agent-kit."""
+"""Repository implementations for dot-agent-kit.
 
-from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
-from dot_agent_kit.repositories.filesystem_artifact_repository import (
-    FilesystemArtifactRepository,
-)
-
-__all__ = ["ArtifactRepository", "FilesystemArtifactRepository"]
+Import from submodules:
+- artifact_repository: ArtifactRepository
+- filesystem_artifact_repository: FilesystemArtifactRepository
+"""

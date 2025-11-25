@@ -14,7 +14,8 @@ from click.testing import CliRunner
 
 from erk.cli.commands.plan.get import get_plan
 from erk.cli.commands.plan.list_cmd import list_plans
-from erk.core.plan_store import FakePlanStore
+from erk.core.plan_store.fake import FakePlanStore
+from erk.core.plan_store.types import Plan, PlanState
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
@@ -80,8 +81,6 @@ def test_plan_issue_get_uses_repo_root_not_metadata_dir() -> None:
 
         # Create a fake issue to return
         from datetime import UTC, datetime
-
-        from erk.core.plan_store import Plan, PlanState
 
         fake_issue = Plan(
             plan_identifier="42",

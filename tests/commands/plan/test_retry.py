@@ -51,6 +51,7 @@ def test_retry_success_first_time() -> None:
         workflow, inputs = ctx.github.triggered_workflows[0]
         assert workflow == "dispatch-erk-queue.yml"
         assert inputs["issue_number"] == "42"
+        assert inputs["issue_title"] == "Test Plan"
 
         # Verify metadata comment was posted
         assert len(github_issues.added_comments) == 1

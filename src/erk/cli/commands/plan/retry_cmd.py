@@ -121,7 +121,10 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         ctx.github.trigger_workflow(
             repo_root=repo_root,
             workflow="dispatch-erk-queue.yml",
-            inputs={"issue_number": str(issue_number)},
+            inputs={
+                "issue_number": str(issue_number),
+                "issue_title": issue.title,
+            },
         )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))

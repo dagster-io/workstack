@@ -121,6 +121,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
         inputs={
             "issue_number": str(issue_number),
             "submitted_by": submitted_by,
+            "issue_title": issue.title,
         },
     )
     user_output(click.style("✓", fg="green") + " Workflow triggered.")

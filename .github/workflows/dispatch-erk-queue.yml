@@ -6,7 +6,7 @@
 # "GitHub Actions is not permitted to create or approve pull requests"
 
 name: Dispatch Erk Queue
-run-name: "Dispatch Erk Queue [${{ inputs.distinct_id }}]"
+run-name: "${{ inputs.issue_title }}"
 
 on:
   workflow_dispatch:
@@ -21,6 +21,10 @@ on:
         type: string
       distinct_id:
         description: "Unique identifier for run discovery (base36)"
+        required: true
+        type: string
+      issue_title:
+        description: "Issue title for workflow run display"
         required: true
         type: string
 

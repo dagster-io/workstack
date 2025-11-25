@@ -63,6 +63,7 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
     workflow, inputs = fake_github.triggered_workflows[0]
     assert workflow == "dispatch-erk-queue.yml"
     assert inputs["issue_number"] == "123"
+    assert inputs["issue_title"] == "Implement feature X"
 
     # Verify queued comment was posted
     added_comments = fake_github_issues.added_comments

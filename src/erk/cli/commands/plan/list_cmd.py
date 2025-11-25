@@ -281,7 +281,14 @@ def _list_plans_impl(
     if run_state:
         filtered_plans: list[Plan] = []
         for plan in plans:
-            workflow_run = workflow_runs_by_title.get(plan.title)
+            # Get workflow run - try schema v2 first (keyed by issue number),
+            # then fallback to schema v1 (keyed by title)
+            plan_issue_number = plan.metadata.get("number")
+            workflow_run = None
+            if isinstance(plan_issue_number, int):
+                workflow_run = workflow_runs_by_title.get(plan_issue_number)
+            if workflow_run is None:
+                workflow_run = workflow_runs_by_title.get(plan.title)
             if workflow_run is None:
                 # No workflow run - skip this plan when filtering
                 continue
@@ -357,9 +364,17 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
-        # Get workflow run for this plan by title (dispatch-erk-queue uses display_title)
+        # Get workflow run for this plan
+        # Schema v2: keyed by issue number (int)
+        # Schema v1 fallback: keyed by title (str)
         run_id_cell = "-"
-        workflow_run = workflow_runs_by_title.get(plan.title)
+        workflow_run = None
+        if isinstance(issue_number, int):
+            # Try schema v2 first (keyed by issue number)
+            workflow_run = workflow_runs_by_title.get(issue_number)
+        if workflow_run is None:
+            # Fallback to schema v1 (keyed by title)
+            workflow_run = workflow_runs_by_title.get(plan.title)
         if workflow_run is not None:
             # Build workflow URL from plan.url attribute
             workflow_url = None

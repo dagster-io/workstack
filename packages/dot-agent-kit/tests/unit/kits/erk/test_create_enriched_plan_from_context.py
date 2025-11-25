@@ -1,4 +1,9 @@
-"""Unit tests for create-enriched-plan-from-context command."""
+"""Unit tests for create-enriched-plan-from-context command.
+
+Schema Version 2 format:
+- Issue body contains only metadata (plan-header block)
+- First comment contains plan content wrapped in markers
+"""
 
 import json
 from pathlib import Path
@@ -7,13 +12,17 @@ from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext
-from erk.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_from_context import (
+from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_from_context import (
     create_enriched_plan_from_context,
 )
 
 
 def test_create_enriched_plan_issue_success() -> None:
-    """Test successful issue creation from enriched plan with --plan-file."""
+    """Test successful issue creation from enriched plan with --plan-file.
+
+    Schema v2: Issue body has metadata, first comment has plan content.
+    """
+    # FakeGitHubIssues default username is "testuser"
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -29,23 +38,37 @@ def test_create_enriched_plan_issue_success() -> None:
             obj=DotAgentContext.for_test(github_issues=fake_gh),
         )
 
-        assert result.exit_code == 0
-        output = json.loads(result.output)
-        assert output["success"] is True
-        assert output["issue_number"] == 1
-        assert "github.com/test-owner/test-repo/issues/1" in output["issue_url"]
+    assert result.exit_code == 0, f"Failed with output: {result.output}"
+    output = json.loads(result.output)
+    assert output["success"] is True
+    assert output["issue_number"] == 1
+    assert "github.com/test-owner/test-repo/issues/1" in output["issue_url"]
 
-    # Verify behavior through fake's mutation tracking
+    # Verify issue created with metadata body (schema v2)
     assert len(fake_gh.created_issues) == 1
     title, body, labels = fake_gh.created_issues[0]
     assert title == "My Feature"
-    # erk-plan label required for erk submit validation
     assert labels == ["erk-plan"]
-    assert "Step 1" in body
+    # Body contains plan-header metadata block
+    assert "plan-header" in body
+    assert "schema_version: '2'" in body
+    assert "created_by: testuser" in body
+    assert "worktree_name: my-feature" in body
+
+    # Verify first comment has plan content (schema v2)
+    assert len(fake_gh.added_comments) == 1
+    issue_num, comment_body = fake_gh.added_comments[0]
+    assert issue_num == 1
+    assert "<!-- erk:plan-content -->" in comment_body
+    assert "Step 1" in comment_body
+    assert "Step 2" in comment_body
 
 
 def test_create_enriched_plan_issue_multiline() -> None:
-    """Test --plan-file option with multi-line content."""
+    """Test --plan-file option with multi-line content.
+
+    Schema v2: Plan content preserved in first comment with markers.
+    """
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -75,15 +98,18 @@ Test instructions
             obj=DotAgentContext.for_test(github_issues=fake_gh),
         )
 
-        assert result.exit_code == 0
+    assert result.exit_code == 0, f"Failed with output: {result.output}"
 
-    # Verify newlines preserved correctly
+    # Verify issue created
     assert len(fake_gh.created_issues) == 1
-    _title, body, _labels = fake_gh.created_issues[0]
-    assert "## Context" in body
-    assert "## Steps" in body
-    assert "## Testing" in body
-    assert "First step" in body
+
+    # Verify plan content in first comment (newlines preserved)
+    assert len(fake_gh.added_comments) == 1
+    _issue_num, comment_body = fake_gh.added_comments[0]
+    assert "## Context" in comment_body
+    assert "## Steps" in comment_body
+    assert "## Testing" in comment_body
+    assert "First step" in comment_body
 
 
 def test_create_enriched_plan_issue_empty_plan() -> None:
@@ -177,7 +203,10 @@ def test_create_enriched_plan_issue_unicode() -> None:
 
 
 def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
-    """Test --plan-file with YAML frontmatter preserved."""
+    """Test --plan-file with YAML frontmatter preserved.
+
+    Schema v2: Plan content goes in first comment, body has metadata only.
+    """
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -196,18 +225,24 @@ def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
             obj=DotAgentContext.for_test(github_issues=fake_gh),
         )
 
-        assert result.exit_code == 0
+    assert result.exit_code == 0
 
-    # Verify plan content preserved
+    # Verify issue created with correct title
     assert len(fake_gh.created_issues) == 1
-    title, body, _labels = fake_gh.created_issues[0]
+    title, _body, _labels = fake_gh.created_issues[0]
     assert title == "Feature Plan"
-    # Body should contain plan content
-    assert "- Step 1" in body
+
+    # Verify plan content in first comment (schema v2)
+    assert len(fake_gh.added_comments) == 1
+    _issue_num, comment_body = fake_gh.added_comments[0]
+    assert "- Step 1" in comment_body
 
 
-def test_create_enriched_plan_formats_with_details_tags() -> None:
-    """Verify created issues have collapsible details tags (no update_issue_body call)."""
+def test_create_enriched_plan_schema_v2_format() -> None:
+    """Verify created issues follow schema v2 format.
+
+    Schema v2: Issue body has metadata block only, plan content in first comment.
+    """
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -223,17 +258,23 @@ def test_create_enriched_plan_formats_with_details_tags() -> None:
             obj=DotAgentContext.for_test(github_issues=fake_gh, repo_root=Path.cwd()),
         )
 
-        assert result.exit_code == 0
+    assert result.exit_code == 0
 
-    # Verify issue was created with pre-formatted body (no update call)
+    # Verify issue was created with metadata body (schema v2)
     assert len(fake_gh.created_issues) == 1
     _title, body, _labels = fake_gh.created_issues[0]
 
-    # Verify details tags are present in the created issue body
-    assert "<details>" in body
-    assert "</details>" in body
-    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in body
-    # Execution commands removed for optimization (shown in CLI output instead)
-    assert "## Execution Commands" not in body
-    assert "Step 1" in body
-    assert "Step 2" in body
+    # Body contains plan-header metadata block (schema v2)
+    assert "plan-header" in body
+    assert "schema_version: '2'" in body
+    # Body does NOT contain the plan content (that's in the comment now)
+    assert "Step 1" not in body
+    assert "Step 2" not in body
+
+    # Verify plan content in first comment with markers (schema v2)
+    assert len(fake_gh.added_comments) == 1
+    _issue_num, comment_body = fake_gh.added_comments[0]
+    assert "<!-- erk:plan-content -->" in comment_body
+    assert "Step 1" in comment_body
+    assert "Step 2" in comment_body
+    assert "<!-- /erk:plan-content -->" in comment_body

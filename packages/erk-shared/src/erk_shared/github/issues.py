@@ -231,6 +231,19 @@ class GitHubIssues(ABC):
         """
         ...
 
+    @abstractmethod
+    def get_current_username(self) -> str | None:
+        """Get the current authenticated GitHub username.
+
+        Returns:
+            GitHub username if authenticated, None if not authenticated
+
+        Note:
+            This is a global operation (not repository-specific).
+            Used for attribution in plan creation (created_by field).
+        """
+        ...
+
 
 class RealGitHubIssues(GitHubIssues):
     """Production implementation using gh CLI.
@@ -494,6 +507,24 @@ class RealGitHubIssues(GitHubIssues):
         cmd = ["gh", "issue", "close", str(number)]
         execute_gh_command(cmd, repo_root)
 
+    def get_current_username(self) -> str | None:
+        """Get current GitHub username via gh api user.
+
+        Returns:
+            GitHub username if authenticated, None otherwise
+        """
+        import subprocess
+
+        result = subprocess.run(
+            ["gh", "api", "user", "--jq", ".login"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()
+
 
 class FakeGitHubIssues(GitHubIssues):
     """In-memory fake implementation for testing.
@@ -508,6 +539,7 @@ class FakeGitHubIssues(GitHubIssues):
         next_issue_number: int = 1,
         labels: set[str] | None = None,
         comments: dict[int, list[str]] | None = None,
+        username: str | None = "testuser",
     ) -> None:
         """Create FakeGitHubIssues with pre-configured state.
 
@@ -516,11 +548,14 @@ class FakeGitHubIssues(GitHubIssues):
             next_issue_number: Next issue number to assign (for predictable testing)
             labels: Set of existing label names in the repository
             comments: Mapping of issue number -> list of comment bodies
+            username: GitHub username to return (default: "testuser", None means
+                not authenticated)
         """
         self._issues = issues or {}
         self._next_issue_number = next_issue_number
         self._labels = labels or set()
         self._comments = comments or {}
+        self._username = username
         self._created_issues: list[tuple[str, str, list[str]]] = []
         self._added_comments: list[tuple[int, str]] = []
         self._created_labels: list[tuple[str, str, str]] = []
@@ -777,6 +812,14 @@ class FakeGitHubIssues(GitHubIssues):
         )
         self._closed_issues.append(number)
 
+    def get_current_username(self) -> str | None:
+        """Return configured username from constructor.
+
+        Returns:
+            Username configured in constructor (default: "testuser")
+        """
+        return self._username
+
 
 class DryRunGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
@@ -858,3 +901,7 @@ class DryRunGitHubIssues(GitHubIssues):
     def close_issue(self, repo_root: Path, number: int) -> None:
         """No-op for closing issue in dry-run mode."""
         pass
+
+    def get_current_username(self) -> str | None:
+        """Delegate to wrapped implementation (read operation)."""
+        return self._wrapped.get_current_username()

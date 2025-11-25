@@ -7,16 +7,23 @@ The enrichment happens in the agent's logic (adding context, architectural notes
 before calling this command. This command simply creates the issue from whatever
 plan content it receives via the --plan-file option.
 
-OPTIMIZED: This command uses format_plan_issue_body_simple() to pre-format the
-issue body before creation, eliminating the need for a separate update_issue_body
-call. This reduces GitHub API calls from 3-4 to 1, providing ~67-75% latency reduction.
+SCHEMA VERSION 2: This command uses the new two-step creation flow:
+1. Create issue with metadata-only body (using format_plan_header_body())
+2. Add first comment with plan content (using format_plan_content_comment())
+
+This separates concerns: metadata in body (fast querying), content in comment.
 """
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
-from erk_shared.github.metadata import format_plan_issue_body_simple
+from erk_shared.github.metadata import (
+    format_plan_content_comment,
+    format_plan_header_body,
+)
+from erk_shared.naming import sanitize_worktree_name
 from erk_shared.plan_utils import extract_title_from_plan
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
@@ -34,7 +41,11 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
     """Create GitHub issue from enriched plan (via --plan-file option).
 
     Reads enriched plan content from file, extracts title,
-    formats body with collapsible details, and creates issue.
+    creates issue with metadata body, then adds plan as first comment.
+
+    Schema Version 2 format:
+    - Issue body: metadata-only (schema_version, created_at, created_by, worktree_name)
+    - First comment: plan content wrapped in markers
 
     The plan should already be enriched by the calling agent before being passed
     to this command.
@@ -66,9 +77,24 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
     # Extract title (pure function call)
     title = extract_title_from_plan(plan)
 
-    # Pre-format body with collapsible details (no issue number needed)
-    # This eliminates the need for update_issue_body after creation
-    formatted_body = format_plan_issue_body_simple(plan.strip())
+    # Get GitHub username for created_by field (via integration layer)
+    username = github.get_current_username()
+    if username is None:
+        click.echo("Error: Could not get GitHub username (gh CLI not authenticated?)", err=True)
+        raise SystemExit(1)
+
+    # Derive worktree name from title
+    worktree_name = sanitize_worktree_name(title)
+
+    # Generate timestamp
+    created_at = datetime.now(UTC).isoformat()
+
+    # Format metadata-only body (schema version 2)
+    formatted_body = format_plan_header_body(
+        created_at=created_at,
+        created_by=username,
+        worktree_name=worktree_name,
+    )
 
     # Ensure erk-plan label exists (required for erk submit validation)
     try:
@@ -82,11 +108,24 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
         click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
         raise SystemExit(1) from e
 
-    # Create issue with pre-formatted body and erk-plan label
+    # Step 1: Create issue with metadata-only body and erk-plan label
     try:
         result = github.create_issue(repo_root, title, formatted_body, labels=["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Step 2: Add first comment with plan content
+    plan_comment = format_plan_content_comment(plan.strip())
+    try:
+        github.add_comment(repo_root, result.number, plan_comment)
+    except RuntimeError as e:
+        # Issue was created but comment failed - provide recovery info
+        click.echo(
+            f"Error: Issue #{result.number} created but failed to add plan comment: {e}\n"
+            f"Please manually add plan content to: {result.url}",
+            err=True,
+        )
         raise SystemExit(1) from e
 
     # Output structured JSON

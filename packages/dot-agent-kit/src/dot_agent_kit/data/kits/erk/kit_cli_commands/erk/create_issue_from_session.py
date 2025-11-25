@@ -7,6 +7,10 @@ This command combines plan extraction from Claude session files with GitHub
 issue creation. It extracts the latest ExitPlanMode plan, ensures the erk-plan
 label exists, and creates a GitHub issue with the plan content.
 
+SCHEMA VERSION 2: This command uses the new two-step creation flow:
+1. Create issue with metadata-only body (using format_plan_header_body())
+2. Add first comment with plan content (using format_plan_content_comment())
+
 Output:
     JSON result on stdout: {"success": true, "issue_number": N, "issue_url": "..."}
     Error messages on stderr with exit code 1 on failure
@@ -18,8 +22,14 @@ Exit Codes:
 
 import json
 import subprocess
+from datetime import UTC, datetime
 
 import click
+from erk_shared.github.metadata import (
+    format_plan_content_comment,
+    format_plan_header_body,
+)
+from erk_shared.naming import sanitize_worktree_name
 
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan
@@ -63,6 +73,23 @@ def ensure_label_exists(label_name: str, label_color: str, label_description: st
         )
 
 
+def _get_github_username() -> str | None:
+    """Get current GitHub username from gh CLI.
+
+    Returns:
+        GitHub username or None if not authenticated
+    """
+    result = subprocess.run(
+        ["gh", "api", "user", "--jq", ".login"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
 @click.command(name="create-issue-from-session")
 @click.option(
     "--session-id",
@@ -72,6 +99,10 @@ def create_issue_from_session(session_id: str | None) -> None:
     """Extract plan from Claude session and create GitHub issue.
 
     Combines plan extraction with GitHub issue creation in a single operation.
+
+    Schema Version 2 format:
+    - Issue body: metadata-only (schema_version, created_at, created_by, worktree_name)
+    - First comment: plan content wrapped in markers
     """
     try:
         # Step 1: Check gh CLI availability
@@ -90,7 +121,14 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1) from None
 
-        # Step 3: Extract latest plan from session
+        # Step 3: Get GitHub username
+        username = _get_github_username()
+        if username is None:
+            result = {"success": False, "error": "Could not get GitHub username"}
+            click.echo(json.dumps(result))
+            raise SystemExit(1)
+
+        # Step 4: Extract latest plan from session
         import os
 
         cwd = os.getcwd()
@@ -101,10 +139,16 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1)
 
-        # Step 4: Extract title from plan
+        # Step 5: Extract title from plan
         title = extract_title_from_plan(plan_text)
 
-        # Step 5: Ensure erk-plan label exists
+        # Derive worktree name from title
+        worktree_name = sanitize_worktree_name(title)
+
+        # Generate timestamp
+        created_at = datetime.now(UTC).isoformat()
+
+        # Step 6: Ensure erk-plan label exists
         try:
             ensure_label_exists(
                 label_name="erk-plan",
@@ -119,9 +163,15 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1) from None
 
-        # Step 6: Create GitHub issue
+        # Step 7: Format metadata-only body (schema version 2)
+        formatted_body = format_plan_header_body(
+            created_at=created_at,
+            created_by=username,
+            worktree_name=worktree_name,
+        )
+
+        # Step 8: Create GitHub issue with metadata body
         try:
-            # Create issue with plan as body
             create_result = subprocess.run(
                 [
                     "gh",
@@ -130,7 +180,7 @@ def create_issue_from_session(session_id: str | None) -> None:
                     "--title",
                     title,
                     "--body",
-                    plan_text,
+                    formatted_body,
                     "--label",
                     "erk-plan",
                 ],
@@ -146,15 +196,6 @@ def create_issue_from_session(session_id: str | None) -> None:
             # URL format: https://github.com/owner/repo/issues/123
             issue_number = int(issue_url.rstrip("/").split("/")[-1])
 
-            # Return success result
-            result = {
-                "success": True,
-                "issue_number": issue_number,
-                "issue_url": issue_url,
-                "title": title,
-            }
-            click.echo(json.dumps(result))
-
         except subprocess.CalledProcessError as e:
             result = {
                 "success": False,
@@ -163,6 +204,46 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1) from None
 
+        # Step 9: Add first comment with plan content
+        plan_comment = format_plan_content_comment(plan_text.strip())
+        try:
+            subprocess.run(
+                [
+                    "gh",
+                    "issue",
+                    "comment",
+                    str(issue_number),
+                    "--body",
+                    plan_comment,
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # Issue was created but comment failed - provide recovery info
+            result = {
+                "success": False,
+                "error": (
+                    f"Issue #{issue_number} created but failed to add plan comment: "
+                    f"{e.stderr if e.stderr else str(e)}\n"
+                    f"Please manually add plan content to: {issue_url}"
+                ),
+            }
+            click.echo(json.dumps(result))
+            raise SystemExit(1) from None
+
+        # Return success result
+        result = {
+            "success": True,
+            "issue_number": issue_number,
+            "issue_url": issue_url,
+            "title": title,
+        }
+        click.echo(json.dumps(result))
+
+    except SystemExit:
+        raise
     except Exception as e:
         # Catch any unexpected errors
         result = {"success": False, "error": f"Unexpected error: {str(e)}"}

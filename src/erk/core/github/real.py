@@ -985,10 +985,15 @@ query {{
         # Get all workflow runs
         all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
 
-        # Filter to requested titles
+        # Filter to requested titles, excluding skipped runs
+        # Skipped runs indicate conditions weren't met (path filters, conditionals)
+        # and shouldn't hide previous meaningful runs
         title_set = set(titles)
         runs_by_title: dict[str, list[WorkflowRun]] = {}
         for run in all_runs:
+            # Skip runs with "skipped" conclusion - they're not meaningful for tracking
+            if run.status == "completed" and run.conclusion == "skipped":
+                continue
             if run.display_title in title_set:
                 if run.display_title not in runs_by_title:
                     runs_by_title[run.display_title] = []

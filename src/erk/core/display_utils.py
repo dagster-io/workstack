@@ -170,11 +170,69 @@ def format_workflow_run_id(workflow_run: WorkflowRun | None, workflow_url: str |
 
     run_id_text = workflow_run.run_id
 
-    # Use Rich markup for proper column width calculation in Rich tables
+    # Use Rich markup for proper rendering in Rich tables
+    # Note: [cyan] must wrap [link], not vice versa, for Rich to render both correctly
     if workflow_url:
-        return f"[link={workflow_url}][cyan]{run_id_text}[/cyan][/link]"
+        return f"[cyan][link={workflow_url}]{run_id_text}[/link][/cyan]"
     else:
         return f"[cyan]{run_id_text}[/cyan]"
+
+
+def get_workflow_run_state(workflow_run: WorkflowRun) -> str:
+    """Get normalized state string for a workflow run.
+
+    Combines status and conclusion into a single state string suitable for
+    filtering and display.
+
+    Args:
+        workflow_run: Workflow run information
+
+    Returns:
+        One of: "queued", "in_progress", "success", "failure", "cancelled"
+    """
+    if workflow_run.status == "completed":
+        if workflow_run.conclusion == "success":
+            return "success"
+        if workflow_run.conclusion == "failure":
+            return "failure"
+        if workflow_run.conclusion == "cancelled":
+            return "cancelled"
+        # Other conclusions (skipped, timed_out, etc.) map to failure
+        return "failure"
+    if workflow_run.status == "in_progress":
+        return "in_progress"
+    # status == "queued" or unknown
+    return "queued"
+
+
+def format_workflow_outcome(workflow_run: WorkflowRun | None) -> str:
+    """Format workflow run outcome as emoji + text with Rich markup.
+
+    Args:
+        workflow_run: Workflow run information (None if no workflow run)
+
+    Returns:
+        Formatted outcome string with Rich markup (e.g., "[green]✅ Success[/green]")
+        or "[dim]-[/dim]" if no workflow run
+    """
+    if workflow_run is None:
+        return "[dim]-[/dim]"
+
+    state = get_workflow_run_state(workflow_run)
+
+    if state == "queued":
+        return "[yellow]⧗ Queued[/yellow]"
+    if state == "in_progress":
+        return "[blue]⟳ Running[/blue]"
+    if state == "success":
+        return "[green]✅ Success[/green]"
+    if state == "failure":
+        return "[red]❌ Failure[/red]"
+    if state == "cancelled":
+        return "[dim]⛔ Cancelled[/dim]"
+
+    # Fallback (shouldn't happen)
+    return "[dim]-[/dim]"
 
 
 def format_branch_without_worktree(

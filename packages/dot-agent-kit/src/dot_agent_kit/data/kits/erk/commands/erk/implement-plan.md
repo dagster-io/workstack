@@ -201,12 +201,23 @@ If issue tracking is not enabled (no valid issue.json), this will output an info
 
 ### Step 4: Execute Each Phase Sequentially
 
+**🔴 MANDATORY: Tests Required With All Changes**
+
+Every implementation phase that modifies code MUST include corresponding tests. This is non-negotiable:
+
+- **No code change is complete without tests** - If you modify behavior, you must test it
+- **Write tests alongside code** - Not as a separate "testing phase" at the end
+- **Load `fake-driven-testing` skill FIRST** before writing any test code
+- **Follow the 5-layer strategy** - Most tests should be Layer 4 (business logic over fakes)
+
+If a plan phase does not explicitly mention tests, you MUST still write them. The absence of test requirements in a plan step does not excuse omitting tests.
+
 For each phase in the plan:
 
 1. **Mark phase as in_progress** before starting
 2. **Read task requirements** carefully
 3. **Check relevant coding standards** from project documentation (if available)
-4. **Implement the code** following these standards:
+4. **Implement the code AND tests together** following these standards:
    - NEVER use try/except for control flow - use LBYL (Look Before You Leap)
    - Use Python 3.13+ type syntax (list[str], str | None, NOT List[str] or Optional[str])
    - NEVER use `from __future__ import annotations`
@@ -216,7 +227,14 @@ For each phase in the plan:
    - Use click.echo() in CLI code, not print()
    - Add check=True to subprocess.run()
    - Keep indentation to max 4 levels - extract helpers if deeper
-   - If plan mentions tests, follow patterns in project test documentation (if available)
+   - **When writing tests**: Load the `fake-driven-testing` skill FIRST, then follow these principles:
+     - Use the 5-layer defense-in-depth strategy (70% of tests should be Layer 4: business logic over fakes)
+     - Write tests over in-memory fakes, not real implementations
+     - Use `tmp_path` fixture - NEVER hardcode paths
+     - Use `CliRunner` for CLI tests, not subprocess
+     - Update all layers (ABC/Real/Fake/DryRun) when changing interfaces
+     - No speculative tests - only test actively implemented code
+     - Consult `fake-driven-testing` skill references for patterns, workflows, and anti-patterns
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done:
    - Edit `.impl/progress.md` to change checkbox from `- [ ]` to `- [x]`
@@ -301,6 +319,15 @@ Key standards:
 - CLI: Use click.echo()
 - Code style: Max 4 indentation levels
 
+Testing standards (load `fake-driven-testing` skill for complete guidance):
+
+- Layer distribution: 5% fake tests / 10% integration sanity / 10% pure unit / 70% business logic over fakes / 5% e2e
+- Always use fakes: Write business logic tests over in-memory fakes (FakeGit, FakeGh, etc.)
+- Never hardcode paths: Use `tmp_path` fixture exclusively
+- CLI testing: Use `CliRunner`, never subprocess
+- Integration layer changes: Update ABC → Real → Fake → DryRun (all four)
+- No speculative tests: Only test code that is actively being implemented
+
 ### Step 6: Report Progress
 
 After completing each major phase, provide an update:
@@ -312,8 +339,14 @@ Changes made:
 - [Change 1]
 - [Change 2]
 
+Tests added:
+- [Test 1]
+- [Test 2]
+
 Next: [What's coming next]
 ```
+
+**🔴 IMPORTANT**: If you cannot list tests in your progress report, the phase is NOT complete. Go back and add tests before marking complete.
 
 ### Step 7: Final Verification
 

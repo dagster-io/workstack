@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from erk_shared.plan_store.fake import FakePlanStore
+from erk_shared.plan_store.types import Plan, PlanState
 
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue import (
     create_erp_from_issue,
 )
-from erk.core.plan_store.fake import FakePlanStore
-from erk.core.plan_store.types import Plan, PlanState
 
 
 def test_create_erp_from_issue_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -36,18 +36,15 @@ def test_create_erp_from_issue_success(tmp_path: Path, monkeypatch: pytest.Monke
 
     fake_plan_store = FakePlanStore(plans={"1028": plan})
 
-    # Mock create_context to return context with fake plan store
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        # Return a minimal context object with just the plan_store
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
+    # Mock GitHubPlanStore to return our fake
     monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.GitHubPlanStore",
+        lambda github_issues: fake_plan_store,
+    )
+    # Mock RealGitHubIssues (not used since GitHubPlanStore is mocked)
+    monkeypatch.setattr(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.RealGitHubIssues",
+        lambda: None,
     )
 
     # Act: Run command
@@ -85,17 +82,15 @@ def test_create_erp_from_issue_plan_not_found(
     # Arrange: Set up fake plan store with no plans
     fake_plan_store = FakePlanStore()
 
-    # Mock create_context to return context with empty plan store
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
+    # Mock GitHubPlanStore to return our empty fake
     monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.GitHubPlanStore",
+        lambda github_issues: fake_plan_store,
+    )
+    # Mock RealGitHubIssues (not used since GitHubPlanStore is mocked)
+    monkeypatch.setattr(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.RealGitHubIssues",
+        lambda: None,
     )
 
     # Act: Run command with non-existent issue
@@ -140,17 +135,15 @@ def test_create_erp_from_issue_uses_cwd_when_no_repo_root(
 
     fake_plan_store = FakePlanStore(plans={"100": plan})
 
-    # Mock create_context
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
+    # Mock GitHubPlanStore to return our fake
     monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.GitHubPlanStore",
+        lambda github_issues: fake_plan_store,
+    )
+    # Mock RealGitHubIssues (not used since GitHubPlanStore is mocked)
+    monkeypatch.setattr(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.RealGitHubIssues",
+        lambda: None,
     )
 
     # Mock Path.cwd() to return tmp_path

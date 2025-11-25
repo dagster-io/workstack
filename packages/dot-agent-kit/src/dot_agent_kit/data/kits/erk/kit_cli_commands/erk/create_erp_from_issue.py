@@ -26,8 +26,8 @@ from pathlib import Path
 
 import click
 from erk_shared.erp_folder import create_erp_folder
-
-from erk.core.context import create_context
+from erk_shared.github.issues import RealGitHubIssues
+from erk_shared.plan_store.github import GitHubPlanStore
 
 
 @click.command(name="create-erp-from-issue")
@@ -56,13 +56,14 @@ def create_erp_from_issue(
     if repo_root is None:
         repo_root = Path.cwd()
 
-    # Create context to access plan store
-    # Use script=True to suppress diagnostic output in CI environments
-    ctx = create_context(dry_run=False, script=True)
+    # Direct instantiation of required dependencies (avoids erk import)
+    # This allows the command to work when run via dot-agent without uv
+    github_issues = RealGitHubIssues()
+    plan_store = GitHubPlanStore(github_issues)
 
     # Fetch plan from GitHub (raises RuntimeError if not found)
     try:
-        plan = ctx.plan_store.get_plan(repo_root, str(issue_number))
+        plan = plan_store.get_plan(repo_root, str(issue_number))
     except RuntimeError as e:
         error_output = {
             "success": False,

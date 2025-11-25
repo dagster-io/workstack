@@ -1,8 +1,4 @@
-"""Unit tests for plan utility functions.
-
-Note: The actual tests are now in packages/erk-shared/tests/unit/test_plan_utils.py.
-This file imports from the erk_shared package to verify the re-exports work correctly.
-"""
+"""Unit tests for plan utility functions."""
 
 from erk_shared.naming import generate_filename_from_title
 from erk_shared.plan_utils import (

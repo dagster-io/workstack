@@ -552,7 +552,7 @@ FakeConfigStore(
 # Pattern 1: Config exists with values
 config_store = FakeConfigStore(
     exists=True,
-    erks_root=Path("/tmp/erks"),
+    erks_root=Path("<temp-dir>/erks"),
     use_graphite=True,
 )
 
@@ -561,8 +561,8 @@ config_store = FakeConfigStore(exists=False)
 
 # Pattern 3: Test config mutations
 config_store = FakeConfigStore(exists=False)
-config_store.set(erks_root=Path("/tmp/ws"), use_graphite=True)
-assert config_store.get_erks_root() == Path("/tmp/ws")
+config_store.set(erks_root=Path("<temp-dir>/ws"), use_graphite=True)
+assert config_store.get_erks_root() == Path("<temp-dir>/ws")
 ```
 
 ### 3. GitHub - GitHub API Interactions
@@ -1471,7 +1471,7 @@ ctx = create_test_context(
 # Custom config_store
 ctx = create_test_context(
     config_store=FakeConfigStore(
-        erks_root=Path("/tmp/ws")
+        erks_root=Path("<temp-dir>/ws")
     )
 )
 

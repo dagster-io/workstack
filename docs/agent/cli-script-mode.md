@@ -168,7 +168,7 @@ To activate environment and run implementation, use:
 
 ```bash
 $ erk implement 123 --script
-/tmp/erk-activation-scripts/implement-20250123-142530.sh
+$TMPDIR/erk-activation-scripts/implement-20250123-142530.sh
 ```
 
 Clean stdout with only the script path - perfect for shell integration.
@@ -213,7 +213,7 @@ def test_implement_outputs_script_path_in_script_mode() -> None:
 
     # Assert: Only script path in output, no diagnostics
     assert result.exit_code == 0
-    assert "/tmp/erk-activation-scripts/" in result.output
+    assert "erk-activation-scripts/" in result.output
     assert "Fetching issue" not in result.output
     assert "Created worktree" not in result.output
 ```

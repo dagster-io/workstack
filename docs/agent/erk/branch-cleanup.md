@@ -19,7 +19,8 @@ All three need coordinated cleanup. Deleting a branch that has a worktree will f
 Rebases update committer date but not author date. Use author date for true activity:
 
 ```bash
-git branch --format='%(refname:short)' | grep -v '^master$' > /tmp/branches.txt
+branches_file=$(mktemp)
+git branch --format='%(refname:short)' | grep -v '^master$' > "$branches_file"
 while IFS= read -r branch; do
   base=$(git merge-base master "$branch" 2>/dev/null)
   if [ -n "$base" ]; then
@@ -28,7 +29,8 @@ while IFS= read -r branch; do
     last_author_relative=$(git log --format='%ar' --author-date-order -1 "$branch" 2>/dev/null)
     echo "$last_author_date|$branch|$commits_ahead|$last_author_relative"
   fi
-done < /tmp/branches.txt | sort
+done < "$branches_file" | sort
+rm "$branches_file"
 ```
 
 Output columns: `date | branch | commits_ahead | relative_time`

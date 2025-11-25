@@ -394,8 +394,8 @@ git -C /path/to/repo status
 
 ```bash
 # ❌ WRONG - Triggers permission prompts
-echo "$message" > /tmp/commit_msg.txt
-git commit -F /tmp/commit_msg.txt
+echo "$message" > "${TMPDIR:-/tmp}/commit_msg.txt"
+git commit -F "${TMPDIR:-/tmp}/commit_msg.txt"
 
 # ✅ CORRECT - In-memory heredoc
 git commit -m "$(cat <<'EOF'

@@ -467,8 +467,8 @@ git -C /path/to/repo status
 
 ```bash
 # ❌ WRONG - Triggers permission prompts
-echo "$message" > /tmp/commit_msg.txt
-dot-agent run ... --commit-message "$(cat /tmp/commit_msg.txt)"
+echo "$message" > "${TMPDIR:-/tmp}/commit_msg.txt"
+dot-agent run ... --commit-message "$(cat "${TMPDIR:-/tmp}/commit_msg.txt")"
 
 # ✅ CORRECT - In-memory heredoc
 dot-agent run ... --commit-message "$(cat <<'EOF'

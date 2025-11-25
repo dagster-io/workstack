@@ -178,7 +178,7 @@ def test_retry_logic():
 ```python
 def test_retry_logic():
     fake_time = FakeTime()
-    ctx = ErkContext.minimal(git=FakeGit(...), cwd=Path("/tmp"))
+    ctx = ErkContext.minimal(git=FakeGit(...), cwd=Path("<temp-dir>"))
     ctx = dataclasses.replace(ctx, time=fake_time)
 
     retry_operation(ctx, max_attempts=3, delay=2.0)

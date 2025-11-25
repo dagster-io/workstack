@@ -71,11 +71,12 @@ def test_real_filesystem_io(tmp_path: Path) -> None:
 
     # Write real config file
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[erk]\nroot = /tmp/ws\n")
+    test_root = tmp_path / "ws"
+    config_file.write_text(f"[erk]\nroot = {test_root}\n")
 
     # Load and verify
     config = config_store.load_from_path(config_file)
-    assert config.root == Path("/tmp/ws")
+    assert config.root == test_root
 ```
 
 ## See Also

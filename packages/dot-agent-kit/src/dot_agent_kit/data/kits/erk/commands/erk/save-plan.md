@@ -549,7 +549,7 @@ Common causes:
 **Cause:** Cannot create temporary file (permissions, disk space)
 **Solution:**
 
-- Check `/tmp/` directory permissions
+- Check temporary directory (`${TMPDIR:-/tmp}` on Unix, `%TEMP%` on Windows) permissions
 - Ensure disk space available
 - Check `mktemp` command availability
 

@@ -480,7 +480,7 @@ echo "$plan_content" | dot-agent run erk validate-plan-content 2>&1
 
 ```bash
 # ❌ WRONG - You don't have Write tool
-echo "$plan" > /tmp/plan.md
+echo "$plan" > "${TMPDIR:-/tmp}/plan.md"
 
 # ✅ CORRECT - Return in JSON
 {

@@ -94,15 +94,6 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")
 
-    # Trigger workflow via direct dispatch
-    user_output("Triggering dispatch-erk-queue workflow...")
-    run_id = ctx.github.trigger_workflow(
-        repo_root=repo.root,
-        workflow="dispatch-erk-queue.yml",
-        inputs={"issue_number": str(issue_number)},
-    )
-    user_output(click.style("✓", fg="green") + " Workflow triggered.")
-
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()
 
@@ -121,6 +112,18 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
 
     if not submitted_by:
         submitted_by = "unknown"
+
+    # Trigger workflow via direct dispatch
+    user_output("Triggering dispatch-erk-queue workflow...")
+    run_id = ctx.github.trigger_workflow(
+        repo_root=repo.root,
+        workflow="dispatch-erk-queue.yml",
+        inputs={
+            "issue_number": str(issue_number),
+            "submitted_by": submitted_by,
+        },
+    )
+    user_output(click.style("✓", fg="green") + " Workflow triggered.")
 
     validation_results = {
         "issue_is_open": True,

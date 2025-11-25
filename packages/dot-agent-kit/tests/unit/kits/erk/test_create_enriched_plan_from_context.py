@@ -39,8 +39,8 @@ def test_create_enriched_plan_issue_success() -> None:
     assert len(fake_gh.created_issues) == 1
     title, body, labels = fake_gh.created_issues[0]
     assert title == "My Feature"
-    # No labels added (erk-plan label removed for optimization)
-    assert labels == []
+    # erk-plan label required for erk submit validation
+    assert labels == ["erk-plan"]
     assert "Step 1" in body
 
 
@@ -121,8 +121,8 @@ def test_create_enriched_plan_issue_missing_option() -> None:
     assert "--plan-file" in result.output or "plan-file" in result.output
 
 
-def test_create_enriched_plan_issue_no_labels() -> None:
-    """Test that command does NOT create or apply labels (optimization)."""
+def test_create_enriched_plan_issue_has_label() -> None:
+    """Test that command creates and applies erk-plan label (required for erk submit)."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -140,13 +140,17 @@ def test_create_enriched_plan_issue_no_labels() -> None:
 
         assert result.exit_code == 0
 
-    # Verify no labels were created (optimization: removed ensure_label_exists call)
-    assert len(fake_gh.created_labels) == 0
+    # Verify label was created (ensure_label_exists called)
+    assert len(fake_gh.created_labels) == 1
+    label_name, label_desc, label_color = fake_gh.created_labels[0]
+    assert label_name == "erk-plan"
+    assert label_desc == "Implementation plan for manual execution"
+    assert label_color == "0E8A16"
 
-    # Verify issue was created without labels
+    # Verify issue was created with erk-plan label
     assert len(fake_gh.created_issues) == 1
     _title, _body, labels = fake_gh.created_issues[0]
-    assert labels == []
+    assert labels == ["erk-plan"]
 
 
 def test_create_enriched_plan_issue_unicode() -> None:

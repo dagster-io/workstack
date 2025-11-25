@@ -151,13 +151,13 @@ def test_format_pr_cell_with_pr_and_graphite_url() -> None:
     result = _format_pr_cell(
         pr,
         use_graphite=True,
-        graphite_url="https://app.graphite.com/github/pr/owner/repo/123",
+        graphite_url="https://app.graphite.dev/github/pr/owner/repo/123",
     )
 
     assert "#123" in result
     assert "👀" in result  # Default open PR emoji
     assert "[link=" in result  # Has Rich link markup
-    assert "graphite.com" in result  # Uses Graphite URL
+    assert "https://app.graphite.dev/github/pr/owner/repo/123" in result
 
 
 def test_format_pr_cell_with_pr_github_url() -> None:
@@ -178,7 +178,7 @@ def test_format_pr_cell_with_pr_github_url() -> None:
     assert "#123" in result
     assert "👀" in result  # Default open PR emoji
     assert "[link=" in result  # Has Rich link markup
-    assert "github.com" in result  # Uses GitHub URL
+    assert "https://github.com/owner/repo/pull/123" in result
 
 
 def test_format_pr_cell_with_draft_pr() -> None:
@@ -232,7 +232,7 @@ def test_format_impl_cell_with_url() -> None:
 
     assert "#42" in result
     assert "[link=" in result
-    assert "github.com" in result
+    assert "https://github.com/owner/repo/issues/42" in result
 
 
 def test_format_impl_cell_without_url() -> None:

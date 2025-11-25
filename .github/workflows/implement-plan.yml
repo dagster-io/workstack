@@ -40,6 +40,11 @@ jobs:
             echo "has_worker_impl=false" >> $GITHUB_OUTPUT
           fi
 
+      - uses: actions/setup-python@v5
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
+        with:
+          python-version: "3.13"
+
       - name: Setup environment
         if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
@@ -48,6 +53,9 @@ jobs:
           source $HOME/.cargo/env
 
           cd $GITHUB_WORKSPACE
+
+          # Install dev dependencies (pytest, pyright, ruff, etc.)
+          uv sync
 
           # Install workspace packages in dependency order (bottom-up)
           # Step 1: Install erk-shared first (no workspace dependencies)
@@ -64,6 +72,9 @@ jobs:
 
           # Install Prettier
           npm install -g prettier
+
+          # Install Graphite CLI (needed for gt:submit-pr command)
+          npm install -g @withgraphite/graphite-cli
 
           # Install erk kit for Claude Code
           dot-agent kit install erk
@@ -94,7 +105,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push implementation changes
-        if: steps.check_submission.outputs.has_submission == 'true'
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
           # Check if there are any changes to commit
           if [[ -n $(git status --porcelain) ]]; then

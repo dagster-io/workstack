@@ -37,7 +37,7 @@ def test_consolidate_no_other_worktrees() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "No other worktrees found" in result.output
@@ -64,7 +64,7 @@ def test_consolidate_no_other_worktrees_with_script_flag() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "--script", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # This would have caught the bug: output should display even with --script flag
@@ -102,7 +102,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "🗑️  Removing worktrees..." in result.output
@@ -140,7 +140,7 @@ def test_consolidate_preserves_current_worktree() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Only wt1 should be removed, not cwd
@@ -182,7 +182,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Uncommitted changes detected" in result.output
@@ -217,7 +217,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "--dry-run"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "[DRY RUN]" in result.output
@@ -255,7 +255,7 @@ def test_consolidate_confirmation_prompt() -> None:
         )
 
         # Test saying "no" to prompt
-        result = runner.invoke(cli, ["consolidate"], input="n\n", obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate"], input="n\n", obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Proceed with removal?" in result.output
@@ -286,7 +286,7 @@ def test_consolidate_detached_head_error() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "detached HEAD state" in result.output
@@ -313,7 +313,7 @@ def test_consolidate_not_tracked_by_graphite() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "not tracked by Graphite" in result.output
@@ -351,7 +351,7 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Only wt1 (main) should be removed, wt2 (stack-b) should remain
@@ -400,7 +400,7 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         # Command should succeed despite uncommitted changes in non-stack worktree
         assert result.exit_code == 0, result.output
@@ -465,7 +465,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         )
 
         # Context already has cwd=wt2_path, no need for os.chdir() in pure mode
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         # Command should succeed
         assert result.exit_code == 0, result.output
@@ -523,7 +523,7 @@ def test_consolidate_partial_stack() -> None:
 
         # Run consolidate with branch argument: consolidate feat-2
         # Should consolidate main → feat-2 only, keeping feat-3 separate
-        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "feat-2", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should remove wt1 (feat-1) and wt2 (feat-2), but NOT wt3 (feat-3, current)
@@ -556,7 +556,7 @@ def test_consolidate_branch_not_in_stack() -> None:
         )
 
         # Try to consolidate to a branch not in the stack
-        result = runner.invoke(cli, ["consolidate", "feat-99", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "feat-99", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "not in the current stack" in result.output
@@ -611,7 +611,7 @@ def test_consolidate_preserves_upstack_branches() -> None:
 
         # Consolidate feat-2 (from current=feat-4)
         # Should remove feat-1 and feat-2, but keep feat-3 and feat-4
-        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "feat-2", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should remove wt1 (feat-1) and wt2 (feat-2)
@@ -652,7 +652,7 @@ def test_consolidate_shows_output_with_script_flag() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "--script", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Verify output is shown even with --script flag
@@ -691,7 +691,7 @@ def test_consolidate_shows_output_without_script_flag() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Verify output is shown
@@ -733,7 +733,7 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
             git=git_ops,
             graphite=graphite_ops,
         )
-        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "--script", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -779,7 +779,7 @@ def test_consolidate_outputs_to_stderr() -> None:
             graphite=graphite_ops,
         )
         result = runner.invoke(
-            cli, ["consolidate", "--script", "-f"], obj=test_ctx, catch_exceptions=False
+            cli, ["stack", "consolidate", "--script", "-f"], obj=test_ctx, catch_exceptions=False
         )
 
         assert result.exit_code == 0
@@ -865,7 +865,7 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         # Consolidate feat-2 (from current=feat-4)
         # This consolidates main → feat-1 → feat-2, but NOT feat-3 or feat-4
         # Should succeed despite uncommitted changes in root and feat-3
-        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "consolidate", "feat-2", "-f"], obj=test_ctx)
 
         # Command should succeed
         assert result.exit_code == 0, result.output
@@ -912,7 +912,9 @@ def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
         )
 
         # Run consolidate with --name flag to create new worktree
-        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "consolidate", "--name", "my-stack", "-f"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
 
@@ -961,7 +963,7 @@ def test_consolidate_with_name_changes_directory_before_removal() -> None:
 
         # Run consolidate with --name flag in script mode
         result = runner.invoke(
-            cli, ["consolidate", "--name", "my-stack", "--script", "-f"], obj=test_ctx
+            cli, ["stack", "consolidate", "--name", "my-stack", "--script", "-f"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -1013,7 +1015,9 @@ def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
         )
 
         # Run consolidate with --name flag WITHOUT script mode
-        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "consolidate", "--name", "my-stack", "-f"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
 

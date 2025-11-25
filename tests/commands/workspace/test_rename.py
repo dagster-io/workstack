@@ -40,7 +40,7 @@ def test_rename_successful() -> None:
             dry_run=False,
             existing_paths={old_wt},
         )
-        result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "rename", "old-name", "new-name"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "new-name" in result.output
@@ -58,7 +58,7 @@ def test_rename_old_worktree_not_found() -> None:
             shell=FakeShell(),
             dry_run=False,
         )
-        result = runner.invoke(cli, ["rename", "nonexistent", "new-name"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "rename", "nonexistent", "new-name"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Worktree not found" in result.output
@@ -89,7 +89,7 @@ def test_rename_new_name_already_exists() -> None:
             dry_run=False,
             existing_paths={old_wt, existing_wt},
         )
-        result = runner.invoke(cli, ["rename", "old-name", "existing"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "rename", "old-name", "existing"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "already exists" in result.output
@@ -122,7 +122,7 @@ def test_rename_with_graphite_enabled() -> None:
             existing_paths={old_wt},
         )
 
-        result = runner.invoke(cli, ["rename", "old-branch", "new-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "rename", "old-branch", "new-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "new-branch" in result.output
@@ -153,7 +153,7 @@ def test_rename_dry_run() -> None:
             dry_run=True,
             existing_paths={old_wt},
         )
-        result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "rename", "old-name", "new-name"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "Would rename" in result.output or "DRY RUN" in result.output

@@ -42,7 +42,7 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
         # Act: Create worktree from current branch with --script flag
         result = runner.invoke(
             cli,
-            ["create", "--from-current-branch", "--script"],
+            ["wt", "create", "--from-current-branch", "--script"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -113,7 +113,7 @@ def test_create_from_issue_with_valid_issue() -> None:
         # Act: Run create --from-issue 123
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "123"],
+            ["wt", "create", "--from-issue", "123"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -194,7 +194,7 @@ def test_create_from_issue_missing_label() -> None:
         # Act: Run create --from-issue 456
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "456"],
+            ["wt", "create", "--from-issue", "456"],
             obj=test_ctx,
         )
 
@@ -243,7 +243,7 @@ def test_create_from_issue_url_parsing() -> None:
         # Act: Run with full GitHub URL
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "https://github.com/owner/repo/issues/789"],
+            ["wt", "create", "--from-issue", "https://github.com/owner/repo/issues/789"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -294,7 +294,7 @@ def test_create_from_issue_name_derivation() -> None:
         # Act
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "111"],
+            ["wt", "create", "--from-issue", "111"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -334,7 +334,7 @@ def test_create_from_issue_not_found() -> None:
         # Act: Request non-existent issue
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "999"],
+            ["wt", "create", "--from-issue", "999"],
             obj=test_ctx,
         )
 
@@ -383,7 +383,7 @@ def test_create_from_issue_readonly_operation() -> None:
         # Act
         result = runner.invoke(
             cli,
-            ["create", "--from-issue", "222"],
+            ["wt", "create", "--from-issue", "222"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -424,7 +424,10 @@ def test_create_with_from_branch_trunk_errors() -> None:
 
         # Try to create worktree from trunk branch - should error
         result = runner.invoke(
-            cli, ["create", "foo", "--from-branch", "main"], obj=test_ctx, catch_exceptions=False
+            cli,
+            ["wt", "create", "foo", "--from-branch", "main"],
+            obj=test_ctx,
+            catch_exceptions=False,
         )
 
         # Should fail with error

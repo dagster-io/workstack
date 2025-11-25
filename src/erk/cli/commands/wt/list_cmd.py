@@ -250,11 +250,3 @@ def list_wt(ctx: ErkContext) -> None:
     - impl: Implementation issue number
     """
     _list_worktrees(ctx)
-
-
-# Register ls as a hidden alias (won't show in help)
-@click.command("ls", hidden=True)
-@click.pass_obj
-def ls_wt(ctx: ErkContext) -> None:
-    """List worktrees with branch, PR, sync, and implementation info (alias of 'list')."""
-    _list_worktrees(ctx)

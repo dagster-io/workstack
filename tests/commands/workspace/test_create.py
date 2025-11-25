@@ -30,7 +30,7 @@ def test_create_basic_worktree() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Verify worktree creation from output
@@ -55,7 +55,7 @@ def test_create_with_custom_branch_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "feature", "--branch", "my-custom-branch"], obj=test_ctx
+            cli, ["wt", "create", "feature", "--branch", "my-custom-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -93,7 +93,7 @@ def test_create_with_plan_file() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "--from-plan", str(plan_file)], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-plan", str(plan_file)], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
@@ -153,7 +153,9 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             plan_file = env.cwd / plan_filename
             plan_file.write_text(f"# {plan_filename}\n", encoding="utf-8")
 
-            result = runner.invoke(cli, ["create", "--from-plan", str(plan_file)], obj=test_ctx)
+            result = runner.invoke(
+                cli, ["wt", "create", "--from-plan", str(plan_file)], obj=test_ctx
+            )
 
             assert result.exit_code == 0, f"Failed for {plan_filename}: {result.output}"
             # Worktree name includes date suffix
@@ -186,7 +188,7 @@ def test_create_sanitizes_worktree_name() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "Test_Feature!!"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # The actual sanitization is tested in test_naming.py
@@ -211,7 +213,7 @@ def test_create_sanitizes_branch_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Branch name should be sanitized differently than worktree name
-        result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "Test_Feature!!"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -234,7 +236,7 @@ def test_create_detects_default_branch() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "new-feature", "--from-current-branch"], obj=test_ctx
+            cli, ["wt", "create", "new-feature", "--from-current-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -271,7 +273,7 @@ def test_create_from_current_branch_in_worktree() -> None:
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -301,7 +303,7 @@ def test_create_fails_if_worktree_exists() -> None:
         # Tell context that wt_path exists
         test_ctx = env.build_context(git=git_ops, existing_paths={wt_path})
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "already exists" in result.output
@@ -334,7 +336,7 @@ def test_create_runs_post_create_commands() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Running post-create commands" in result.output
@@ -367,7 +369,7 @@ def test_create_sets_env_variables() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         wt_path = repo_dir / "worktrees" / "test-feature"
@@ -419,7 +421,7 @@ def test_create_uses_graphite_when_enabled() -> None:
             repo=repo,
         )
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Verify worktree was created successfully
@@ -460,7 +462,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             repo=repo,
         )
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Staged changes detected." in result.output
@@ -484,7 +486,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -504,7 +506,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -518,12 +520,12 @@ def test_create_invalid_worktree_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Test reserved name "root"
-        result = runner.invoke(cli, ["create", "root"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "root"], obj=test_ctx)
         assert result.exit_code == 1
         assert "reserved" in result.output.lower()
 
         # Test trunk branch rejection (default is "main")
-        result = runner.invoke(cli, ["create", "main"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "main"], obj=test_ctx)
         assert result.exit_code == 1
         assert "cannot be used" in result.output.lower()
 
@@ -539,7 +541,7 @@ def test_create_plan_file_not_found() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "--from-plan", "nonexistent.md"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-plan", "nonexistent.md"], obj=test_ctx)
 
         # Click should fail validation before reaching our code
         assert result.exit_code != 0
@@ -565,7 +567,7 @@ def test_create_no_post_flag_skips_commands() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature", "--no-post"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Running post-create commands" not in result.output
@@ -588,7 +590,9 @@ def test_create_from_current_branch() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "feature", "--from-current-branch"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
 
@@ -610,7 +614,7 @@ def test_create_from_branch() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "feature", "--from-branch", "existing-branch"], obj=test_ctx
+            cli, ["wt", "create", "feature", "--from-branch", "existing-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -624,7 +628,7 @@ def test_create_requires_name_or_flag() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Must provide NAME" in result.output
@@ -646,7 +650,9 @@ def test_create_from_current_branch_on_main_fails() -> None:
         )
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "feature", "--from-current-branch"], obj=test_ctx
+        )
 
         assert result.exit_code == 1
         assert "Cannot use --from-current-branch when on 'main'" in result.output
@@ -680,7 +686,7 @@ def test_create_detects_branch_already_checked_out() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "new-feature", "--from-branch", "feature-branch"], obj=test_ctx
+            cli, ["wt", "create", "new-feature", "--from-branch", "feature-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 1
@@ -706,7 +712,9 @@ def test_create_from_current_branch_on_master_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "feature", "--from-current-branch"], obj=test_ctx
+        )
 
         assert result.exit_code == 1
         assert "Cannot use --from-current-branch when on 'master'" in result.output
@@ -744,7 +752,7 @@ def test_create_with_keep_plan_flag() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         result = runner.invoke(
-            cli, ["create", "--from-plan", str(plan_file), "--keep-plan"], obj=test_ctx
+            cli, ["wt", "create", "--from-plan", str(plan_file), "--keep-plan"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -770,7 +778,7 @@ def test_create_keep_plan_without_plan_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--keep-plan"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature", "--keep-plan"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "--keep-plan requires --from-plan" in result.output
@@ -848,7 +856,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             cwd=current_worktree,
         )
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout feature-1 (the Graphite parent), not main
@@ -915,7 +923,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since both main and feature-1 are in use
@@ -974,7 +982,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout main since no Graphite parent exists
@@ -1030,7 +1038,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since no parent and main is in use
@@ -1055,7 +1063,7 @@ def test_create_with_json_output() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -1092,7 +1100,7 @@ def test_create_existing_worktree_with_json() -> None:
         # Tell context that existing_wt exists
         test_ctx = env.build_context(git=git_ops, existing_paths={existing_wt})
 
-        result = runner.invoke(cli, ["create", "existing-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "existing-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 1, result.output
 
@@ -1120,7 +1128,9 @@ def test_create_json_and_script_mutually_exclusive() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "test-feature", "--json", "--script"], obj=test_ctx
+        )
 
         # Should fail with validation error
         assert result.exit_code == 1
@@ -1161,7 +1171,7 @@ def test_create_with_json_and_plan_file() -> None:
         # Don't provide NAME - it's derived from plan filename
         result = runner.invoke(
             cli,
-            ["create", "--json", "--from-plan", str(plan_file)],
+            ["wt", "create", "--json", "--from-plan", str(plan_file)],
             obj=test_ctx,
         )
 
@@ -1202,7 +1212,7 @@ def test_create_with_json_no_plan() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -1228,7 +1238,9 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "test-feature", "--script", "--stay"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
@@ -1254,7 +1266,9 @@ def test_create_with_stay_and_json() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "test-feature", "--json", "--stay"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
 
@@ -1298,7 +1312,7 @@ def test_create_with_stay_and_plan() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         result = runner.invoke(
-            cli, ["create", "--from-plan", str(plan_file), "--script", "--stay"], obj=test_ctx
+            cli, ["wt", "create", "--from-plan", str(plan_file), "--script", "--stay"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -1332,7 +1346,7 @@ def test_create_default_behavior_generates_script() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "test-feature", "--script"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should generate script path in output
@@ -1359,7 +1373,7 @@ def test_create_with_long_name_truncation() -> None:
 
         # Create with name that exceeds 30 characters
         long_name = "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters"
-        result = runner.invoke(cli, ["create", long_name], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", long_name], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Worktree base name should be truncated to 31 chars
@@ -1391,7 +1405,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Create first worktree from plan
-        result1 = runner.invoke(cli, ["create", "--from-plan", str(plan_file)], obj=test_ctx)
+        result1 = runner.invoke(cli, ["wt", "create", "--from-plan", str(plan_file)], obj=test_ctx)
         assert result1.exit_code == 0, result1.output
 
         # Check that first worktree has date suffix
@@ -1407,7 +1421,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         plan_file.write_text("# My Feature Plan - Round 2\n", encoding="utf-8")
 
         # Create second worktree from same plan (same day)
-        result2 = runner.invoke(cli, ["create", "--from-plan", str(plan_file)], obj=test_ctx)
+        result2 = runner.invoke(cli, ["wt", "create", "--from-plan", str(plan_file)], obj=test_ctx)
         assert result2.exit_code == 0, result2.output
 
         # Check that second worktree has -2 after date suffix
@@ -1465,7 +1479,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         # Create worktree from long plan filename
-        result = runner.invoke(cli, ["create", "--from-plan", str(plan_file)], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "--from-plan", str(plan_file)], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Get the created worktree (should be only directory in worktrees_dir)
@@ -1530,7 +1544,7 @@ def test_create_fails_when_branch_exists_on_remote() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "existing-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "existing-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "already exists on remote" in result.output
@@ -1554,7 +1568,7 @@ def test_create_succeeds_when_branch_not_on_remote() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "new-feature"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "new-feature" in result.output
@@ -1579,7 +1593,7 @@ def test_create_with_skip_remote_check_flag() -> None:
 
         result = runner.invoke(
             cli,
-            ["create", "existing-feature", "--skip-remote-check"],
+            ["wt", "create", "existing-feature", "--skip-remote-check"],
             obj=test_ctx,
         )
 
@@ -1610,7 +1624,7 @@ def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "new-feature"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "Warning:" in result.output

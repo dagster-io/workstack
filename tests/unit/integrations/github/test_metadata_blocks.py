@@ -1238,3 +1238,210 @@ def example():
     assert "1. Step one" in result
     assert "```python" in result
     assert "def example():" in result
+
+
+# === Block Replacement Tests ===
+
+
+def test_replace_metadata_block_in_body_simple() -> None:
+    """Test replacing a metadata block in body."""
+    from erk_shared.github.metadata import replace_metadata_block_in_body
+
+    body = """Some preamble
+
+<!-- erk:metadata-block:test-key -->
+<details>
+<summary><code>test-key</code></summary>
+```yaml
+old: value
+```
+</details>
+<!-- /erk:metadata-block:test-key -->
+
+Some suffix"""
+
+    new_block = """<!-- erk:metadata-block:test-key -->
+<details>
+<summary><code>test-key</code></summary>
+```yaml
+new: value
+```
+</details>
+<!-- /erk:metadata-block:test-key -->"""
+
+    result = replace_metadata_block_in_body(body, "test-key", new_block)
+
+    assert "Some preamble" in result
+    assert "Some suffix" in result
+    assert "new: value" in result
+    assert "old: value" not in result
+
+
+def test_replace_metadata_block_in_body_preserves_surrounding_content() -> None:
+    """Test that content before and after block is preserved."""
+    from erk_shared.github.metadata import replace_metadata_block_in_body
+
+    body = """# Plan Issue
+
+Some description here.
+
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+```yaml
+schema_version: '2'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+## Implementation Steps
+
+- Step 1
+- Step 2"""
+
+    new_block = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+```yaml
+schema_version: '3'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = replace_metadata_block_in_body(body, "plan-header", new_block)
+
+    assert "# Plan Issue" in result
+    assert "Some description here." in result
+    assert "## Implementation Steps" in result
+    assert "- Step 1" in result
+    assert "- Step 2" in result
+    assert "schema_version: '3'" in result
+    assert "schema_version: '2'" not in result
+
+
+def test_replace_metadata_block_not_found_raises() -> None:
+    """Test that ValueError is raised when block not found."""
+    from erk_shared.github.metadata import replace_metadata_block_in_body
+
+    body = "No metadata blocks here"
+
+    with pytest.raises(ValueError, match="Metadata block 'test-key' not found"):
+        replace_metadata_block_in_body(body, "test-key", "new content")
+
+
+def test_replace_metadata_block_handles_generic_closing_tag() -> None:
+    """Test replacing block with generic closing tag (<!-- /erk:metadata-block -->)."""
+    from erk_shared.github.metadata import replace_metadata_block_in_body
+
+    body = """<!-- erk:metadata-block:test-key -->
+content
+<!-- /erk:metadata-block -->"""
+
+    new_block = "NEW BLOCK"
+    result = replace_metadata_block_in_body(body, "test-key", new_block)
+
+    assert result == "NEW BLOCK"
+
+
+# === update_plan_header_dispatch Tests ===
+
+
+def test_update_plan_header_dispatch_basic() -> None:
+    """Test update_plan_header_dispatch updates dispatch fields."""
+    from erk_shared.github.metadata import update_plan_header_dispatch
+
+    body = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-11-25T14:37:43.513418+00:00'
+created_by: testuser
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Plan Content"""
+
+    result = update_plan_header_dispatch(
+        issue_body=body,
+        run_id="12345678",
+        dispatched_at="2025-11-25T15:00:00Z",
+    )
+
+    # Should preserve surrounding content
+    assert "# Plan Content" in result
+
+    # Should have updated dispatch fields (YAML may or may not quote values)
+    has_run_id = (
+        "last_dispatched_run_id: '12345678'" in result
+        or "last_dispatched_run_id: 12345678" in result
+    )
+    has_timestamp = (
+        "last_dispatched_at: '2025-11-25T15:00:00Z'" in result
+        or "last_dispatched_at: 2025-11-25T15:00:00Z" in result
+    )
+    assert has_run_id
+    assert has_timestamp
+
+
+def test_update_plan_header_dispatch_no_block_raises() -> None:
+    """Test update_plan_header_dispatch raises when no plan-header block."""
+    from erk_shared.github.metadata import update_plan_header_dispatch
+
+    body = "No plan-header block here"
+
+    with pytest.raises(ValueError, match="plan-header block not found"):
+        update_plan_header_dispatch(
+            issue_body=body,
+            run_id="12345678",
+            dispatched_at="2025-11-25T15:00:00Z",
+        )
+
+
+def test_update_plan_header_dispatch_returns_full_body() -> None:
+    """Test that update_plan_header_dispatch returns full body, not just block."""
+    from erk_shared.github.metadata import update_plan_header_dispatch
+
+    body = """Preamble content
+
+<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-11-25T14:37:43.513418+00:00'
+created_by: testuser
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+Suffix content"""
+
+    result = update_plan_header_dispatch(
+        issue_body=body,
+        run_id="run-123",
+        dispatched_at="2025-11-25T16:00:00Z",
+    )
+
+    # Should have both preamble and suffix
+    assert "Preamble content" in result
+    assert "Suffix content" in result
+    # Should have the updated block
+    assert "plan-header" in result

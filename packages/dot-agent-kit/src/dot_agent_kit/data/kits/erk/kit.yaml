@@ -76,6 +76,9 @@ kit_cli_commands:
   - name: create-erp-from-issue
     path: kit_cli_commands/erk/create_erp_from_issue.py
     description: Create .erp/ folder from GitHub issue with plan content
+  - name: update-dispatch-info
+    path: kit_cli_commands/erk/update_dispatch_info.py
+    description: Update dispatch info in GitHub issue plan-header metadata
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

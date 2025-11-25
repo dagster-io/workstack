@@ -1301,6 +1301,44 @@ def extract_plan_from_comment(comment_body: str) -> str | None:
     return match.group(1).strip()
 
 
+def replace_metadata_block_in_body(
+    body: str,
+    key: str,
+    new_block_content: str,
+) -> str:
+    """Replace a metadata block in the body with new content.
+
+    Uses the HTML comment markers to locate and replace the block.
+    This is used internally by update functions to replace individual blocks.
+
+    Args:
+        body: Full issue body
+        key: Metadata block key (e.g., "plan-header")
+        new_block_content: New rendered block content (from render_metadata_block())
+
+    Returns:
+        Updated body with block replaced
+
+    Raises:
+        ValueError: If block not found
+    """
+    # Pattern to match the entire metadata block from opening to closing comment.
+    # Supports both closing tag formats:
+    #   - <!-- /erk:metadata-block:key -->
+    #   - <!-- /erk:metadata-block -->
+    escaped_key = re.escape(key)
+    pattern = (
+        rf"<!-- erk:metadata-block:{escaped_key} -->"
+        rf"(.+?)"
+        rf"<!-- /erk:metadata-block(?::{escaped_key})? -->"
+    )
+
+    if not re.search(pattern, body, re.DOTALL):
+        raise ValueError(f"Metadata block '{key}' not found in body")
+
+    return re.sub(pattern, new_block_content, body, flags=re.DOTALL)
+
+
 def update_plan_header_dispatch(
     issue_body: str,
     run_id: str,
@@ -1339,7 +1377,10 @@ def update_plan_header_dispatch(
 
     # Create new block and render
     new_block = MetadataBlock(key="plan-header", data=updated_data)
-    return render_metadata_block(new_block)
+    new_block_content = render_metadata_block(new_block)
+
+    # Replace block in full body
+    return replace_metadata_block_in_body(issue_body, "plan-header", new_block_content)
 
 
 def extract_plan_header_dispatch_info(

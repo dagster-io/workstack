@@ -337,71 +337,15 @@ jobs:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          source $HOME/.cargo/env
           WORKFLOW_RUN_ID="${{ github.run_id }}"
           DISPATCHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          # Get current issue body
-          CURRENT_BODY=$(gh issue view "$ISSUE_NUMBER" --json body -q .body)
-
-          # Update plan-header block with dispatch info using Python YAML parsing
-          # This is robust against format changes and handles YAML quoting correctly
-          UPDATED_BODY=$(python3 << 'PYTHON_SCRIPT'
-import re
-import sys
-import yaml
-
-body = """$CURRENT_BODY"""
-run_id = "$WORKFLOW_RUN_ID"
-dispatched_at = "$DISPATCHED_AT"
-
-# Pattern to match plan-header metadata block
-pattern = r'(<!-- erk:metadata-block:plan-header -->.*?```yaml\n)(.*?)(```.*?<!-- /erk:metadata-block:plan-header -->)'
-match = re.search(pattern, body, re.DOTALL)
-
-if not match:
-    # No plan-header block found (old format issue) - skip update
-    print(body)
-    sys.exit(0)
-
-yaml_content = match.group(2)
-
-try:
-    metadata = yaml.safe_load(yaml_content)
-except yaml.YAMLError:
-    # Invalid YAML - skip update
-    print(body)
-    sys.exit(0)
-
-if not isinstance(metadata, dict):
-    # Not a dict - skip update
-    print(body)
-    sys.exit(0)
-
-# Update dispatch fields
-metadata['last_dispatched_run_id'] = run_id
-metadata['last_dispatched_at'] = dispatched_at
-
-# Re-render YAML
-new_yaml = yaml.dump(metadata, default_flow_style=False, allow_unicode=True, sort_keys=False)
-
-# Rebuild body with updated YAML
-updated_body = re.sub(
-    pattern,
-    lambda m: m.group(1) + new_yaml + m.group(3),
-    body,
-    flags=re.DOTALL
-)
-
-print(updated_body)
-PYTHON_SCRIPT
-)
-
-          # Update issue body only if plan-header block was found and updated
-          if [ -n "$UPDATED_BODY" ]; then
-            gh issue edit "$ISSUE_NUMBER" --body "$UPDATED_BODY"
+          # Use kit CLI command for robust YAML handling
+          if dot-agent run erk update-dispatch-info "$ISSUE_NUMBER" "$WORKFLOW_RUN_ID" "$DISPATCHED_AT"; then
             echo "✅ Updated issue body with dispatch info (run_id: $WORKFLOW_RUN_ID)"
           else
-            echo "⚠️ No plan-header block found - skipping issue body update (old format issue)"
+            echo "⚠️ Issue does not have plan-header block (old format) - skipping update"
           fi
 
   implement:

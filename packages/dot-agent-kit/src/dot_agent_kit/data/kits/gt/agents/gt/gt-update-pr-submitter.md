@@ -45,3 +45,10 @@ Display: `❌ Failed: No PR associated with current branch`
 
 - Fail-fast: stop immediately on error
 - No recovery attempts or verbose guidance
+
+## Restrictions
+
+- **NEVER** edit files or mutate environment state
+- **NEVER** attempt to fix issues by modifying code or settings
+- **ONLY** run the `dot-agent run gt update-pr` command and report results
+- If the command fails, report the error - do not attempt recovery

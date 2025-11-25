@@ -15,6 +15,7 @@ from erk.cli.commands.plan.get import get_plan
 from erk.cli.commands.plan.list_cmd import list_plans
 from erk.cli.commands.plan.log_cmd import plan_log
 from erk.cli.commands.plan.retry_cmd import retry_plan
+from erk.cli.commands.pr import pr_group
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from erk.cli.commands.runs import runs_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
@@ -75,6 +76,7 @@ cli.add_command(init_cmd)
 cli.add_command(list_plans, name="list")  # Plan command
 cli.add_command(plan_log, name="log")  # Plan command
 cli.add_command(ls_cmd)  # Unified ls command (plans by default, --worktrees for worktrees)
+cli.add_command(pr_group)
 cli.add_command(retry_plan, name="retry")  # Plan command
 cli.add_command(runs_cmd)
 cli.add_command(stack_group)

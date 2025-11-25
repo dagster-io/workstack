@@ -50,15 +50,18 @@ class FakeClaudeExecutor(ClaudeExecutor):
         *,
         claude_available: bool = True,
         command_should_fail: bool = False,
+        simulated_pr_url: str | None = None,
     ) -> None:
         """Initialize fake with predetermined behavior.
 
         Args:
             claude_available: Whether Claude CLI should appear available
             command_should_fail: Whether execute_command should raise RuntimeError
+            simulated_pr_url: PR URL to return in CommandResult (simulates successful PR creation)
         """
         self._claude_available = claude_available
         self._command_should_fail = command_should_fail
+        self._simulated_pr_url = simulated_pr_url
         self._executed_commands: list[tuple[str, Path, bool, bool]] = []
         self._interactive_calls: list[tuple[Path, bool]] = []
 
@@ -101,6 +104,10 @@ class FakeClaudeExecutor(ClaudeExecutor):
         yield StreamEvent("spinner_update", f"Running {command}...")
         yield StreamEvent("text", "Execution complete")
 
+        # Yield PR URL if configured
+        if self._simulated_pr_url is not None:
+            yield StreamEvent("pr_url", self._simulated_pr_url)
+
     def execute_command(
         self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False
     ) -> CommandResult:
@@ -134,7 +141,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
 
         return CommandResult(
             success=True,
-            pr_url=None,
+            pr_url=self._simulated_pr_url,
             duration_seconds=0.0,
             error_message=None,
             filtered_messages=[],

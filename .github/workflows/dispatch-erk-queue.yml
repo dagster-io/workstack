@@ -278,7 +278,7 @@ jobs:
           else
             # Create PR body
             cat > pr_body.md <<EOF
-          Implementation of plan from issue #$ISSUE_NUMBER
+          Closes #$ISSUE_NUMBER
 
           $ISSUE_URL
 

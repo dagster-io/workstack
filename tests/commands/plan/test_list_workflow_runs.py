@@ -96,7 +96,7 @@ def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify workflow run ID appears
@@ -172,7 +172,7 @@ def test_list_linkifies_workflow_run_id_with_owner_repo() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify run ID and OSC 8 link present
@@ -244,7 +244,7 @@ def test_list_displays_plain_run_id_without_owner_repo() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify run ID displays (without link)
@@ -305,7 +305,7 @@ def test_list_handles_missing_workflow_run() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify "-" appears in run-id column
@@ -482,7 +482,7 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify both run IDs appear

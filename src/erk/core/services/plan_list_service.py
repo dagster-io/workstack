@@ -49,6 +49,7 @@ class PlanListService:
         workflow_name: str,
         state: str | None = None,
         limit: int | None = None,
+        skip_workflow_runs: bool = False,
     ) -> PlanListData:
         """Batch fetch all data needed for plan listing.
 
@@ -58,6 +59,7 @@ class PlanListService:
             workflow_name: Workflow filename for run lookup (e.g., "dispatch-erk-queue.yml")
             state: Filter by state ("open", "closed", or None for all)
             limit: Maximum number of issues to return (None for no limit)
+            skip_workflow_runs: If True, skip fetching workflow runs (for performance)
 
         Returns:
             PlanListData containing issues, comments, PR linkages, and workflow runs
@@ -74,11 +76,15 @@ class PlanListService:
         # Batch fetch PR linkages for all issues
         pr_linkages = self._github.get_prs_linked_to_issues(repo_root, issue_numbers)
 
-        # Extract issue titles for workflow run matching
-        titles = [issue.title for issue in issues]
-
-        # Fetch workflow runs by title
-        workflow_runs = self._github.get_workflow_runs_by_titles(repo_root, workflow_name, titles)
+        # Conditionally fetch workflow runs (skip for performance when not needed)
+        if skip_workflow_runs:
+            workflow_runs: dict[str, WorkflowRun | None] = {}
+        else:
+            # Extract issue titles for workflow run matching
+            titles = [issue.title for issue in issues]
+            workflow_runs = self._github.get_workflow_runs_by_titles(
+                repo_root, workflow_name, titles
+            )
 
         return PlanListData(
             issues=issues,

@@ -569,3 +569,449 @@ def test_get_current_username_strips_whitespace(monkeypatch: MonkeyPatch) -> Non
         result = issues.get_current_username()
 
         assert result == "username-with-spaces"
+
+
+# ============================================================================
+# update_issue_body() tests
+# ============================================================================
+
+
+def test_update_issue_body_success(monkeypatch: MonkeyPatch) -> None:
+    """Test update_issue_body calls gh CLI with correct command structure."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.update_issue_body(Path("/repo"), 42, "Updated body content")
+
+        # Verify command structure
+        cmd = created_commands[0]
+        assert cmd[0] == "gh"
+        assert cmd[1] == "issue"
+        assert cmd[2] == "edit"
+        assert cmd[3] == "42"
+        assert "--body" in cmd
+        assert "Updated body content" in cmd
+
+
+def test_update_issue_body_multiline(monkeypatch: MonkeyPatch) -> None:
+    """Test update_issue_body handles multiline body content."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        multiline_body = """# Heading
+
+Paragraph with **bold** text.
+
+- List item 1
+- List item 2"""
+        issues.update_issue_body(Path("/repo"), 10, multiline_body)
+
+        cmd = created_commands[0]
+        assert multiline_body in cmd
+
+
+def test_update_issue_body_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test update_issue_body raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("Issue not found")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="Issue not found"):
+            issues.update_issue_body(Path("/repo"), 999, "New body")
+
+
+# ============================================================================
+# get_issue_comments() tests
+# ============================================================================
+
+
+def test_get_issue_comments_success(monkeypatch: MonkeyPatch) -> None:
+    """Test get_issue_comments parses comment bodies correctly."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="First comment\nSecond comment\nThird comment\n",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        result = issues.get_issue_comments(Path("/repo"), 42)
+
+        assert result == ["First comment", "Second comment", "Third comment"]
+
+
+def test_get_issue_comments_empty(monkeypatch: MonkeyPatch) -> None:
+    """Test get_issue_comments handles no comments."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        result = issues.get_issue_comments(Path("/repo"), 42)
+
+        assert result == []
+
+
+def test_get_issue_comments_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test get_issue_comments raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("Issue not found")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="Issue not found"):
+            issues.get_issue_comments(Path("/repo"), 999)
+
+
+# ============================================================================
+# get_multiple_issue_comments() tests
+# ============================================================================
+
+
+def test_get_multiple_issue_comments_success(monkeypatch: MonkeyPatch) -> None:
+    """Test get_multiple_issue_comments parses batch GraphQL response."""
+    call_count = [0]
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        call_count[0] += 1
+        # First call: get repo info
+        if "repo" in cmd and "view" in cmd:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout=json.dumps({"owner": {"login": "testowner"}, "name": "testrepo"}),
+                stderr="",
+            )
+        # Second call: GraphQL query
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "data": {
+                        "repository": {
+                            "issue0": {
+                                "number": 1,
+                                "comments": {"nodes": [{"body": "Comment on 1"}]},
+                            },
+                            "issue1": {
+                                "number": 2,
+                                "comments": {
+                                    "nodes": [{"body": "First on 2"}, {"body": "Second on 2"}]
+                                },
+                            },
+                        }
+                    }
+                }
+            ),
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        result = issues.get_multiple_issue_comments(Path("/repo"), [1, 2])
+
+        assert result == {
+            1: ["Comment on 1"],
+            2: ["First on 2", "Second on 2"],
+        }
+
+
+def test_get_multiple_issue_comments_empty_input(monkeypatch: MonkeyPatch) -> None:
+    """Test get_multiple_issue_comments handles empty issue list."""
+    call_count = [0]
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        call_count[0] += 1
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="{}",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        result = issues.get_multiple_issue_comments(Path("/repo"), [])
+
+        assert result == {}
+        # Should not make any API calls for empty input
+        assert call_count[0] == 0
+
+
+def test_get_multiple_issue_comments_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test get_multiple_issue_comments raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # First call (repo info) succeeds
+        if "repo" in cmd and "view" in cmd:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout=json.dumps({"owner": {"login": "testowner"}, "name": "testrepo"}),
+                stderr="",
+            )
+        # Second call (GraphQL) fails
+        raise RuntimeError("GraphQL query failed")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="GraphQL query failed"):
+            issues.get_multiple_issue_comments(Path("/repo"), [1, 2, 3])
+
+
+# ============================================================================
+# ensure_label_exists() tests
+# ============================================================================
+
+
+def test_ensure_label_exists_creates_new(monkeypatch: MonkeyPatch) -> None:
+    """Test ensure_label_exists creates label when it doesn't exist."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        # First call: label list (returns empty - label doesn't exist)
+        if "label" in cmd and "list" in cmd:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+        # Second call: label create
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.ensure_label_exists(
+            Path("/repo"),
+            label="erk-plan",
+            description="Implementation plan",
+            color="0E8A16",
+        )
+
+        # Should have made 2 calls: list then create
+        assert len(created_commands) == 2
+
+        # Verify create command structure
+        create_cmd = created_commands[1]
+        assert create_cmd[0] == "gh"
+        assert create_cmd[1] == "label"
+        assert create_cmd[2] == "create"
+        assert "erk-plan" in create_cmd
+        assert "--description" in create_cmd
+        assert "Implementation plan" in create_cmd
+        assert "--color" in create_cmd
+        assert "0E8A16" in create_cmd
+
+
+def test_ensure_label_exists_already_exists(monkeypatch: MonkeyPatch) -> None:
+    """Test ensure_label_exists is no-op when label already exists."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        # Label already exists
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="erk-plan",  # Non-empty output means label exists
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.ensure_label_exists(
+            Path("/repo"),
+            label="erk-plan",
+            description="Implementation plan",
+            color="0E8A16",
+        )
+
+        # Should have made only 1 call: list (no create needed)
+        assert len(created_commands) == 1
+        assert "list" in created_commands[0]
+
+
+def test_ensure_label_exists_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test ensure_label_exists raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("gh not authenticated")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="not authenticated"):
+            issues.ensure_label_exists(Path("/repo"), "label", "desc", "color")
+
+
+# ============================================================================
+# ensure_label_on_issue() tests
+# ============================================================================
+
+
+def test_ensure_label_on_issue_success(monkeypatch: MonkeyPatch) -> None:
+    """Test ensure_label_on_issue calls gh CLI with correct command structure."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.ensure_label_on_issue(Path("/repo"), 42, "erk-plan")
+
+        cmd = created_commands[0]
+        assert cmd[0] == "gh"
+        assert cmd[1] == "issue"
+        assert cmd[2] == "edit"
+        assert cmd[3] == "42"
+        assert "--add-label" in cmd
+        assert "erk-plan" in cmd
+
+
+def test_ensure_label_on_issue_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test ensure_label_on_issue raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("Issue not found")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="Issue not found"):
+            issues.ensure_label_on_issue(Path("/repo"), 999, "label")
+
+
+# ============================================================================
+# remove_label_from_issue() tests
+# ============================================================================
+
+
+def test_remove_label_from_issue_success(monkeypatch: MonkeyPatch) -> None:
+    """Test remove_label_from_issue calls gh CLI with correct command structure."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.remove_label_from_issue(Path("/repo"), 42, "bug")
+
+        cmd = created_commands[0]
+        assert cmd[0] == "gh"
+        assert cmd[1] == "issue"
+        assert cmd[2] == "edit"
+        assert cmd[3] == "42"
+        assert "--remove-label" in cmd
+        assert "bug" in cmd
+
+
+def test_remove_label_from_issue_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test remove_label_from_issue raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("Issue not found")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="Issue not found"):
+            issues.remove_label_from_issue(Path("/repo"), 999, "label")
+
+
+# ============================================================================
+# close_issue() tests
+# ============================================================================
+
+
+def test_close_issue_success(monkeypatch: MonkeyPatch) -> None:
+    """Test close_issue calls gh CLI with correct command structure."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.close_issue(Path("/repo"), 42)
+
+        cmd = created_commands[0]
+        assert cmd[0] == "gh"
+        assert cmd[1] == "issue"
+        assert cmd[2] == "close"
+        assert cmd[3] == "42"
+
+
+def test_close_issue_command_failure(monkeypatch: MonkeyPatch) -> None:
+    """Test close_issue raises RuntimeError on gh CLI failure."""
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise RuntimeError("Issue not found")
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+
+        with pytest.raises(RuntimeError, match="Issue not found"):
+            issues.close_issue(Path("/repo"), 999)

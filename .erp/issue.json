@@ -1,5 +1,0 @@
-{
-  "number": 1119,
-  "url": "https://github.com/dagster-io/erk/issues/1119",
-  "title": "Optimize plan-extractor Agent: Prevent Wasteful Session File Reading"
-}

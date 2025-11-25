@@ -97,17 +97,17 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()
 
-    # Get submitter from git config
+    # Get GitHub username from gh CLI (requires authentication)
     try:
         result = subprocess.run(
-            ["git", "config", "user.name"],
+            ["gh", "api", "user", "--jq", ".login"],
             capture_output=True,
             text=True,
             check=True,
         )
         submitted_by = result.stdout.strip()
     except subprocess.CalledProcessError:
-        # Fall back to "unknown" if git config fails
+        # Fall back to "unknown" if gh API fails
         submitted_by = "unknown"
 
     if not submitted_by:

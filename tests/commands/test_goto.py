@@ -34,7 +34,7 @@ def test_goto_named_worktree() -> None:
         # Act: Navigate to feature-work worktree
         result = runner.invoke(
             cli,
-            ["goto", "feature-work", "--script"],
+            ["wt", "goto", "feature-work", "--script"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -75,7 +75,7 @@ def test_goto_root() -> None:
         # Act: Navigate to root using special keyword
         result = runner.invoke(
             cli,
-            ["goto", "root", "--script"],
+            ["wt", "goto", "root", "--script"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -113,7 +113,7 @@ def test_goto_nonexistent_worktree() -> None:
         # Act: Try to navigate to non-existent worktree
         result = runner.invoke(
             cli,
-            ["goto", "nonexistent"],
+            ["wt", "goto", "nonexistent"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -153,7 +153,7 @@ def test_goto_shows_branch_info() -> None:
         # (but shell integration not detected, so will show manual instructions)
         result = runner.invoke(
             cli,
-            ["goto", "feature-work"],
+            ["wt", "goto", "feature-work"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -190,7 +190,7 @@ def test_goto_script_mode() -> None:
         # Act: Navigate with --script flag
         result = runner.invoke(
             cli,
-            ["goto", "my-feature", "--script"],
+            ["wt", "goto", "my-feature", "--script"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -230,7 +230,7 @@ def test_goto_branch_name_hint() -> None:
         # Act: Try to navigate using a branch-like name (contains '/')
         result = runner.invoke(
             cli,
-            ["goto", "feature/branch-name"],
+            ["wt", "goto", "feature/branch-name"],
             obj=test_ctx,
             catch_exceptions=False,
         )

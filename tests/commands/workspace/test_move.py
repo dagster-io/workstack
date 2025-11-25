@@ -29,7 +29,7 @@ def test_move_from_current_to_new_worktree() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["move", "target-wt"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "target-wt"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Moving 'feature-x'" in result.output
@@ -58,7 +58,7 @@ def test_move_with_explicit_current_flag() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["move", "--current", "new-wt"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "--current", "new-wt"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "Moving 'feature-y'" in result.output
@@ -85,7 +85,9 @@ def test_move_with_branch_flag_auto_detect() -> None:
 
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt})
 
-        result = runner.invoke(cli, ["move", "--branch", "feature-auth", "new-wt"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--branch", "feature-auth", "new-wt"], obj=test_ctx
+        )
 
         assert result.exit_code == 0
         assert "Moving 'feature-auth'" in result.output
@@ -112,7 +114,9 @@ def test_move_with_worktree_flag() -> None:
 
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt})
 
-        result = runner.invoke(cli, ["move", "--worktree", "source-wt", "target-wt"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--worktree", "source-wt", "target-wt"], obj=test_ctx
+        )
 
         assert result.exit_code == 0
         assert "Moving 'feature-db'" in result.output
@@ -141,7 +145,9 @@ def test_move_swap_between_two_worktrees() -> None:
 
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt, target_wt})
 
-        result = runner.invoke(cli, ["move", "--worktree", "wt1", "wt2", "--force"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--worktree", "wt1", "wt2", "--force"], obj=test_ctx
+        )
 
         assert result.exit_code == 0
         assert "Swapping branches between 'wt1' and 'wt2'" in result.output
@@ -171,7 +177,9 @@ def test_move_swap_requires_confirmation() -> None:
 
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt, target_wt})
 
-        result = runner.invoke(cli, ["move", "--worktree", "wt1", "wt2"], input="n\n", obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--worktree", "wt1", "wt2"], input="n\n", obj=test_ctx
+        )
 
         assert result.exit_code == 0
         assert "This will swap branches between worktrees:" in result.output
@@ -196,7 +204,7 @@ def test_move_with_custom_ref() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["move", "new-wt", "--ref", "develop"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "new-wt", "--ref", "develop"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "Moving 'feature-x'" in result.output
@@ -216,7 +224,7 @@ def test_move_error_multiple_source_flags() -> None:
 
         result = runner.invoke(
             cli,
-            ["move", "--current", "--branch", "feature", "target"],
+            ["stack", "move", "--current", "--branch", "feature", "target"],
             obj=test_ctx,
         )
 
@@ -243,7 +251,7 @@ def test_move_error_branch_not_found() -> None:
 
         result = runner.invoke(
             cli,
-            ["move", "--branch", "nonexistent", "target"],
+            ["stack", "move", "--branch", "nonexistent", "target"],
             obj=test_ctx,
         )
 
@@ -266,7 +274,7 @@ def test_move_error_worktree_not_found() -> None:
 
         result = runner.invoke(
             cli,
-            ["move", "--worktree", "nonexistent", "target"],
+            ["stack", "move", "--worktree", "nonexistent", "target"],
             obj=test_ctx,
         )
 
@@ -296,7 +304,7 @@ def test_move_error_source_and_target_same() -> None:
 
         result = runner.invoke(
             cli,
-            ["move", "--worktree", "same-wt", "same-wt"],
+            ["stack", "move", "--worktree", "same-wt", "same-wt"],
             obj=test_ctx,
         )
 
@@ -322,7 +330,7 @@ def test_move_error_source_in_detached_head() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["move", "target"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "target"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Source worktree is in detached HEAD state" in result.output
@@ -351,7 +359,9 @@ def test_move_to_existing_worktree_in_detached_head() -> None:
 
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt, target_wt})
 
-        result = runner.invoke(cli, ["move", "--worktree", "source", "target"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--worktree", "source", "target"], obj=test_ctx
+        )
 
         assert result.exit_code == 0
         assert "Moving 'feature-x'" in result.output
@@ -382,7 +392,7 @@ def test_move_to_root() -> None:
 
         # Move from feature-wt to root (should swap branches)
         result = runner.invoke(
-            cli, ["move", "--worktree", "feature-wt", "root", "--force"], obj=test_ctx
+            cli, ["stack", "move", "--worktree", "feature-wt", "root", "--force"], obj=test_ctx
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
@@ -413,7 +423,7 @@ def test_move_to_root_with_explicit_current() -> None:
         # Simulate being in source_wt by setting cwd
         test_ctx = env.build_context(git=git_ops, cwd=source_wt, existing_paths={source_wt})
 
-        result = runner.invoke(cli, ["move", "root", "--force"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "root", "--force"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Swapping branches" in result.output or "Moved" in result.output
@@ -442,7 +452,9 @@ def test_move_to_root_when_root_is_detached_head() -> None:
         test_ctx = env.build_context(git=git_ops, existing_paths={source_wt})
 
         # Move from feature-wt to root (should be a move, not swap, since root is detached)
-        result = runner.invoke(cli, ["move", "--worktree", "feature-wt", "root"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["stack", "move", "--worktree", "feature-wt", "root"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Moving 'feature-x'" in result.output
@@ -468,7 +480,7 @@ def test_move_error_source_is_root_target_is_root() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Try to move root to root (should fail)
-        result = runner.invoke(cli, ["move", "root"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "move", "root"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Source and target worktrees are the same" in result.output

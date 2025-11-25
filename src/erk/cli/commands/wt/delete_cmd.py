@@ -271,32 +271,9 @@ def _delete_worktree(
 )
 @click.pass_obj
 def delete_wt(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
-    """Delete the worktree directory (alias: del).
+    """Delete the worktree directory.
 
     With `-f/--force`, skips the confirmation prompt.
     Attempts `git worktree remove` before deleting the directory.
     """
-    _delete_worktree(ctx, name, force, delete_stack, dry_run)
-
-
-# Register del as a hidden alias (won't show in help)
-@click.command("del", hidden=True)
-@click.argument("name", metavar="NAME", shell_complete=complete_worktree_names)
-@click.option("-f", "--force", is_flag=True, help="Do not prompt for confirmation.")
-@click.option(
-    "-s",
-    "--delete-stack",
-    is_flag=True,
-    help="Delete all branches in the Graphite stack (requires Graphite).",
-)
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    # dry_run=False: Allow destructive operations by default
-    default=False,
-    help="Print what would be done without executing destructive operations.",
-)
-@click.pass_obj
-def del_wt(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
-    """Delete the worktree directory (alias of 'delete')."""
     _delete_worktree(ctx, name, force, delete_stack, dry_run)

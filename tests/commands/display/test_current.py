@@ -47,7 +47,7 @@ def test_current_returns_worktree_name() -> None:
         test_ctx = env.build_context(git=git_ops, cwd=feature_x_path, repo=env.repo)
 
         # Run current command
-        result = runner.invoke(cli, ["current"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert result.output.strip() == "feature-x"
@@ -73,7 +73,7 @@ def test_current_returns_root_in_root_repository() -> None:
         test_ctx = env.build_context(git=git_ops, cwd=env.cwd, repo=env.repo)
 
         # Run current command
-        result = runner.invoke(cli, ["current"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert result.output.strip() == "root"
@@ -102,7 +102,7 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
         test_ctx = env.build_context(git=git_ops, cwd=outside_dir, repo=None)
 
         # Run current command from outside directory (no os.chdir needed)
-        result = runner.invoke(cli, ["current"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert result.output.strip() == ""
@@ -141,7 +141,7 @@ def test_current_works_from_subdirectory() -> None:
         test_ctx = env.build_context(git=git_ops, cwd=subdir, repo=env.repo)
 
         # Run current command from subdirectory (no os.chdir needed)
-        result = runner.invoke(cli, ["current"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert result.output.strip() == "feature-y"
@@ -174,7 +174,7 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     )
 
     runner = CliRunner()
-    result = runner.invoke(cli, ["current"], obj=ctx)
+    result = runner.invoke(cli, ["wt", "current"], obj=ctx)
 
     assert result.exit_code == 1
     assert result.output.strip() == ""
@@ -225,7 +225,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     )
 
     runner = CliRunner()
-    result = runner.invoke(cli, ["current"], obj=ctx)
+    result = runner.invoke(cli, ["wt", "current"], obj=ctx)
 
     # Should return the deepest (most specific) worktree
     assert result.exit_code == 0

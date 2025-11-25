@@ -39,7 +39,7 @@ def test_create_copy_plan_success() -> None:
         # Act: Create worktree with --copy-plan
         result = runner.invoke(
             cli,
-            ["create", "new-feature", "--copy-plan"],
+            ["wt", "create", "new-feature", "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -92,7 +92,7 @@ def test_create_copy_plan_missing_plan_error() -> None:
         # Act: Try to create worktree with --copy-plan
         result = runner.invoke(
             cli,
-            ["create", "new-feature", "--copy-plan"],
+            ["wt", "create", "new-feature", "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -133,7 +133,7 @@ def test_create_copy_plan_mutual_exclusion_with_plan() -> None:
         # Act: Try to use both --copy-plan and --from-plan
         result = runner.invoke(
             cli,
-            ["create", "--from-plan", str(plan_file), "--copy-plan"],
+            ["wt", "create", "--from-plan", str(plan_file), "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -188,7 +188,7 @@ total_steps: 6
         # Act: Create worktree with --copy-plan
         result = runner.invoke(
             cli,
-            ["create", "phase-2", "--copy-plan"],
+            ["wt", "create", "phase-2", "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -241,7 +241,7 @@ custom_field: some_value
         # Act: Create worktree with --copy-plan
         result = runner.invoke(
             cli,
-            ["create", "next-phase", "--copy-plan"],
+            ["wt", "create", "next-phase", "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )

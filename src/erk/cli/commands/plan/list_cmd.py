@@ -443,19 +443,3 @@ def list_plans(
         erk plan list --with-run
     """
     _list_plans_impl(ctx, label, state, run_state, with_run, limit)
-
-
-# Register ls as a hidden alias (won't show in help)
-@click.command("ls", hidden=True)
-@plan_list_options
-@click.pass_obj
-def ls_plans(
-    ctx: ErkContext,
-    label: tuple[str, ...],
-    state: str | None,
-    run_state: str | None,
-    with_run: bool,
-    limit: int | None,
-) -> None:
-    """List plans with optional filters (alias of 'list')."""
-    _list_plans_impl(ctx, label, state, run_state, with_run, limit)

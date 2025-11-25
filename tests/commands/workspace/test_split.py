@@ -34,7 +34,7 @@ def test_split_full_stack() -> None:
 
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Will create:" in result.output
@@ -60,7 +60,7 @@ def test_split_excludes_trunk() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Main should be marked as staying in root
@@ -84,7 +84,7 @@ def test_split_excludes_current_branch() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # feat-1 should be marked as current/already checked out
@@ -113,7 +113,7 @@ def test_split_preserves_existing_worktrees() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # feat-1 should be marked as already having a worktree
@@ -140,7 +140,7 @@ def test_split_with_up_flag() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "--up", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "--up", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Only feat-3 should be created (upstack from feat-2)
@@ -164,7 +164,7 @@ def test_split_with_down_flag() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "--down", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "--down", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Only feat-1 should be created (downstack from feat-2, main excluded)
@@ -188,7 +188,7 @@ def test_split_up_and_down_conflict() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "--up", "--down"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "--up", "--down"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Cannot use --up and --down together" in result.output
@@ -210,7 +210,7 @@ def test_split_with_force_flag() -> None:
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         # Without -f, would need interactive confirmation
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Split complete:" in result.output
@@ -231,7 +231,7 @@ def test_split_with_dry_run() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "--dry-run"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "[DRY RUN] Would create:" in result.output
@@ -259,7 +259,7 @@ def test_split_detached_head_state() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should split feat-1 and feat-2 (main excluded as trunk)
@@ -285,7 +285,7 @@ def test_split_untracked_branch() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["split"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "not tracked by Graphite" in result.output
@@ -308,7 +308,7 @@ def test_split_no_graphite_init() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["split"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "not tracked by Graphite" in result.output
@@ -331,7 +331,7 @@ def test_split_uncommitted_changes() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Uncommitted changes detected" in result.output
@@ -354,7 +354,7 @@ def test_split_uncommitted_changes_with_force() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should proceed with split
@@ -380,7 +380,7 @@ def test_split_all_branches_have_worktrees() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "All branches already have worktrees" in result.output
@@ -410,7 +410,7 @@ def test_split_output_formatting() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Check for expected markers
@@ -435,7 +435,7 @@ def test_split_dry_run_output() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "--dry-run"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "[DRY RUN] Would create:" in result.output
@@ -460,7 +460,7 @@ def test_split_success_messages() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "✅ Created worktree for" in result.output
@@ -483,7 +483,7 @@ def test_split_with_master_as_trunk() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Master should be marked as trunk
@@ -507,7 +507,7 @@ def test_split_empty_stack() -> None:
         )
         test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
-        result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["stack", "split", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "All branches already have worktrees or are excluded" in result.output

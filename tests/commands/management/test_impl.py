@@ -40,7 +40,7 @@ def test_create_with_plan_file() -> None:
 
         # Run erk create with --from-plan
         result = runner.invoke(
-            cli, ["create", "--from-plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
+            cli, ["wt", "create", "--from-plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -92,7 +92,7 @@ def test_create_with_plan_name_sanitization() -> None:
 
         # Run erk create with --from-plan
         result = runner.invoke(
-            cli, ["create", "--from-plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
+            cli, ["wt", "create", "--from-plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -149,7 +149,9 @@ def test_create_with_both_name_and_plan_fails() -> None:
         )
 
         # Run erk create with both NAME and --from-plan
-        result = runner.invoke(cli, ["create", "myname", "--from-plan", "plan.md"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["wt", "create", "myname", "--from-plan", "plan.md"], obj=test_ctx
+        )
 
         # Should fail
         assert result.exit_code != 0
@@ -191,7 +193,7 @@ def test_create_rejects_reserved_name_root() -> None:
         )
 
         # Try to create a worktree named "root"
-        result = runner.invoke(cli, ["create", "root", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "root", "--no-post"], obj=test_ctx)
 
         # Should fail with reserved name error
         assert result.exit_code != 0
@@ -240,7 +242,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
 
         # Test various cases of "root"
         for name_variant in ["ROOT", "Root", "RoOt"]:
-            result = runner.invoke(cli, ["create", name_variant, "--no-post"], obj=test_ctx)
+            result = runner.invoke(cli, ["wt", "create", name_variant, "--no-post"], obj=test_ctx)
 
             # Should fail with reserved name error
             assert result.exit_code != 0, f"Expected failure for name '{name_variant}'"
@@ -287,7 +289,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
         )
 
         # Try to create a worktree named "main"
-        result = runner.invoke(cli, ["create", "main", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "main", "--no-post"], obj=test_ctx)
 
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
@@ -336,7 +338,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
         )
 
         # Try to create a worktree named "master"
-        result = runner.invoke(cli, ["create", "master", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "create", "master", "--no-post"], obj=test_ctx)
 
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
@@ -383,7 +385,7 @@ def test_create_with_script_flag() -> None:
 
         # Run erk create with --script flag
         result = runner.invoke(
-            cli, ["create", "test-worktree", "--no-post", "--script"], obj=test_ctx
+            cli, ["wt", "create", "test-worktree", "--no-post", "--script"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -409,17 +411,27 @@ def test_create_with_script_flag() -> None:
         script_path.unlink(missing_ok=True)
 
 
-def test_hidden_shell_cmd_create_passthrough_on_help() -> None:
-    """Shell integration command signals passthrough for help."""
+def test_hidden_shell_cmd_checkout_passthrough_on_help() -> None:
+    """Shell integration command signals passthrough for help.
+
+    Note: The 'create' top-level alias was removed. Now testing the 'checkout'
+    command help passthrough behavior instead, which is still active in shell
+    integration.
+    """
     runner = CliRunner()
-    result = runner.invoke(hidden_shell_cmd, ["create", "--help"])
+    result = runner.invoke(hidden_shell_cmd, ["checkout", "--help"])
 
     assert result.exit_code == 0
     assert result.output.strip() == "__ERK_PASSTHROUGH__"
 
 
 def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
-    """Shell integration command signals passthrough for errors."""
+    """Shell integration command signals passthrough for errors.
+
+    Note: The 'create' top-level alias was removed. Now testing the 'checkout'
+    command error passthrough behavior instead, which is still active in shell
+    integration.
+    """
     # Set up isolated environment without erk config
     # This ensures create_context() won't find a real repo
     env_vars = os.environ.copy()
@@ -429,8 +441,8 @@ def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
 
     # Create isolated filesystem without git repo or config
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        # Try to create without any setup - should error
-        result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
+        # Try to checkout without any setup - should error
+        result = runner.invoke(hidden_shell_cmd, ["checkout", "test-branch"])
 
         # Should passthrough on error
         assert result.exit_code != 0

@@ -92,7 +92,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
                 original_cwd = os.getcwd()
                 try:
                     os.chdir(test_env.repo)
-                    result = runner.invoke(cli, ["create", "feature"])
+                    result = runner.invoke(cli, ["wt", "create", "feature"])
                     assert result.exit_code == 0
                 finally:
                     os.chdir(original_cwd)
@@ -109,7 +109,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
                 # Much simpler! No HOME setup, no os.chdir, uses fakes
                 git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 test_ctx = ErkContext.for_test(git=git_ops, cwd=env.cwd)
-                result = runner.invoke(cli, ["create", "feature"], obj=test_ctx)
+                result = runner.invoke(cli, ["wt", "create", "feature"], obj=test_ctx)
         ```
 
     See Also:
@@ -159,7 +159,7 @@ def assert_cli_success(result: Result, *expected_messages: str) -> None:
 
         def test_create_command() -> None:
             runner = CliRunner()
-            result = runner.invoke(cli, ["create", "feature"])
+            result = runner.invoke(cli, ["wt", "create", "feature"])
 
             # Before (3 lines with generic error messages):
             assert result.exit_code == 0
@@ -205,7 +205,7 @@ def assert_cli_error(
 
         def test_create_invalid_branch() -> None:
             runner = CliRunner()
-            result = runner.invoke(cli, ["create", "invalid@name"])
+            result = runner.invoke(cli, ["wt", "create", "invalid@name"])
 
             # Before (3 lines):
             assert result.exit_code == 1

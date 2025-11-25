@@ -924,6 +924,23 @@ erk implement {issue_number} --dangerous
 ```"""
 
 
+def format_plan_issue_body_simple(plan_content: str) -> str:
+    """Format issue body with plan in collapsible block, no execution commands.
+
+    This is an optimized version that doesn't require the issue number,
+    allowing issue creation without a subsequent body update call.
+    Execution commands are shown in CLI output instead of the issue body.
+
+    Args:
+        plan_content: The plan markdown content
+
+    Returns:
+        Issue body with plan wrapped in collapsible <details> block
+    """
+    plan_block = create_plan_body_block(plan_content)
+    return render_plan_body_block(plan_block)
+
+
 def format_plan_issue_body(plan_content: str, issue_number: int) -> str:
     """Format the complete issue body for a plan issue.
 

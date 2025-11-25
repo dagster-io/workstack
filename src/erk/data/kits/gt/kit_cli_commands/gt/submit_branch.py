@@ -58,7 +58,7 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
-from erk_shared.impl_folder import has_issue_reference, read_issue_reference
+from erk_shared.impl_folder import has_issue_reference, read_issue_reference, read_plan_author
 
 from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
@@ -378,7 +378,7 @@ def execute_post_analysis(
     pr_title = lines[0]
     pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 
-    # Check for issue reference in .impl/issue.json
+    # Check for issue reference and plan author in .impl/
     cwd = Path.cwd()
     impl_dir = cwd / ".impl"
 
@@ -388,6 +388,12 @@ def execute_post_analysis(
             # Prepend "Closes #N" to PR body
             closing_text = f"Closes #{issue_ref.issue_number}\n\n"
             pr_body = closing_text + pr_body
+
+    # Add plan author attribution if available
+    plan_author = read_plan_author(impl_dir)
+    if plan_author is not None:
+        author_attribution = f"\n\n---\n📋 Plan created by @{plan_author}"
+        pr_body = pr_body + author_attribution
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()

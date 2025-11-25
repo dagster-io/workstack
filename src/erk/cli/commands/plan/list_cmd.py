@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
+from erk_shared.github.status_history import extract_workflow_run_id
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
 from rich.console import Console
@@ -15,6 +16,7 @@ from rich.table import Table
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
+from erk.core.display_utils import format_workflow_run_id
 from erk.core.plan_store import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
@@ -342,6 +344,7 @@ def _list_plans_impl(
     table.add_column("Checks", no_wrap=True)
     table.add_column("State", no_wrap=True)
     table.add_column("Action", no_wrap=True, width=12)
+    table.add_column("Run ID", no_wrap=True)
     table.add_column("Title", no_wrap=True)
     table.add_column("Local Worktree", style="yellow", no_wrap=True)
 
@@ -413,8 +416,35 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
+        # Extract workflow run ID from comments
+        run_id_cell = "-"
+        if isinstance(issue_number, int) and issue_number in all_comments:
+            comments = all_comments[issue_number]
+            run_id = extract_workflow_run_id(comments)
+            if run_id is not None:
+                # Fetch workflow run details
+                workflow_run = ctx.github.get_workflow_run(repo_root, run_id)
+                if workflow_run is not None:
+                    # Build workflow URL
+                    workflow_url = None
+                    # Try to extract owner/repo from plan metadata
+                    plan_url = plan.metadata.get("url")
+                    if isinstance(plan_url, str):
+                        # Parse owner/repo from URL like https://github.com/owner/repo/issues/123
+                        parts = plan_url.split("/")
+                        if len(parts) >= 5:
+                            owner = parts[-4]
+                            repo_name = parts[-3]
+                            workflow_url = (
+                                f"https://github.com/{owner}/{repo_name}/actions/runs/{run_id}"
+                            )
+                    # Format the run ID with linkification
+                    run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
+
         # Add row to table
-        table.add_row(issue_id, pr_cell, checks_cell, state_str, action_str, title, worktree_name)
+        table.add_row(
+            issue_id, pr_cell, checks_cell, state_str, action_str, run_id_cell, title, worktree_name
+        )
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation

@@ -6,6 +6,48 @@ Pure functions for constructing status history from metadata blocks.
 from erk_shared.github.metadata import parse_metadata_blocks
 
 
+def extract_workflow_run_id(comment_bodies: list[str]) -> str | None:
+    """Extract workflow run ID from workflow-started metadata blocks.
+
+    Searches through comment bodies for workflow-started metadata blocks and
+    extracts the most recent workflow_run_id.
+
+    Args:
+        comment_bodies: List of comment body strings from GitHub issue
+
+    Returns:
+        Workflow run ID string if found, None otherwise
+
+    Example:
+        >>> comment_bodies = [
+        ...     "<!-- erk:metadata-block:workflow-started -->...",
+        ... ]
+        >>> run_id = extract_workflow_run_id(comment_bodies)
+        >>> run_id
+        '123456789'
+    """
+    workflow_run_id: str | None = None
+    latest_timestamp: str | None = None
+
+    # Parse all metadata blocks from all comments
+    for comment_body in comment_bodies:
+        blocks = parse_metadata_blocks(comment_body)
+
+        for block in blocks:
+            # Extract workflow-started event
+            if block.key == "workflow-started":
+                run_id = block.data.get("workflow_run_id")
+                started_at = block.data.get("started_at")
+
+                # Keep track of most recent workflow run
+                if run_id and started_at:
+                    if latest_timestamp is None or started_at > latest_timestamp:
+                        workflow_run_id = run_id
+                        latest_timestamp = started_at
+
+    return workflow_run_id
+
+
 def build_status_history(
     comment_bodies: list[str],
     completion_timestamp: str,

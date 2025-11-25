@@ -238,6 +238,21 @@ class FakeGitHub(GitHub):
         """
         return self._workflow_runs
 
+    def get_workflow_run(self, repo_root: Path, run_id: str) -> WorkflowRun | None:
+        """Get details for a specific workflow run by ID (returns pre-configured data).
+
+        Args:
+            repo_root: Repository root directory (ignored in fake)
+            run_id: GitHub Actions run ID to lookup
+
+        Returns:
+            WorkflowRun if found in pre-configured data, None otherwise
+        """
+        for run in self._workflow_runs:
+            if run.run_id == run_id:
+                return run
+        return None
+
     def get_run_logs(self, repo_root: Path, run_id: str) -> str:
         """Return pre-configured log string for run_id.
 

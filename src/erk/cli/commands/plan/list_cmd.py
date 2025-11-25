@@ -311,10 +311,10 @@ def _list_plans_impl(
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
+    table.add_column("impl-wt", style="yellow", no_wrap=True)
     if with_run:
         table.add_column("run-id", no_wrap=True)
         table.add_column("run-state", no_wrap=True, width=12)
-    table.add_column("impl-wt", style="yellow", no_wrap=True)
 
     # Populate table rows
     for plan in plans:
@@ -400,9 +400,9 @@ def _list_plans_impl(
                 title,
                 pr_cell,
                 checks_cell,
+                worktree_name,
                 run_id_cell,
                 run_outcome_cell,
-                worktree_name,
             )
         else:
             table.add_row(

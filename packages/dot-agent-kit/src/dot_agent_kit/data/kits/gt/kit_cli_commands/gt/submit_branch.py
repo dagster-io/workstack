@@ -38,6 +38,7 @@ Error Types:
     - submit_timeout: Submit command timed out
     - submit_merged_parent: Parent branches merged but not in main trunk
     - submit_diverged: Branch has diverged from remote
+    - submit_empty_parent: Stack contains empty parent branch (already merged)
     - pr_update_failed: Failed to update PR metadata
 
 Examples:
@@ -87,6 +88,7 @@ PostAnalysisErrorType = Literal[
     "submit_merged_parent",
     "submit_diverged",
     "submit_conflict",
+    "submit_empty_parent",
     "pr_update_failed",
 ]
 
@@ -400,6 +402,27 @@ def execute_post_analysis(
 
     # Step 3: Submit branch
     result = ops.graphite().submit(publish=True, restack=True)
+
+    # Check for empty parent branch (Graphite returns success but nothing submitted)
+    # This MUST be checked even on success since gt returns exit code 0
+    combined_output = result.stdout + result.stderr
+    nothing_to_submit = "Nothing to submit!" in combined_output
+    no_changes = "does not introduce any changes" in combined_output
+    if nothing_to_submit or no_changes:
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_empty_parent",
+            message=(
+                "Stack contains an empty parent branch that was already merged. "
+                "Run 'gt track --parent <trunk>' to reparent this branch, then 'gt restack'."
+            ),
+            details={
+                "branch_name": branch_name,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            },
+        )
+
     if not result.success:
         # Combine stdout and stderr for pattern matching
         combined_output = result.stdout + result.stderr

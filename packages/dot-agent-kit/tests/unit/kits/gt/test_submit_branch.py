@@ -484,6 +484,26 @@ class TestPostAnalysisExecution:
         assert result.error_type == "submit_diverged"
         assert "Branch has diverged from remote" in result.message
 
+    def test_post_analysis_submit_empty_parent(self) -> None:
+        """Test error when parent branch is empty (already merged)."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_submit_success_but_nothing_submitted()
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "submit_empty_parent"
+        assert "empty parent branch" in result.message.lower()
+        assert "gt track" in result.message
+
     def test_post_analysis_pr_update_fails(self) -> None:
         """Test error when gh pr edit fails."""
         # Setup: branch with PR and PR update configured to fail

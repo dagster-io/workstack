@@ -523,3 +523,26 @@ class FakeGtKitOps(GtKit):
             gh_state, pr_delay_attempts_until_visible=attempts_until_visible
         )
         return self
+
+    def with_submit_success_but_nothing_submitted(self) -> "FakeGtKitOps":
+        """Configure submit to succeed but with 'Nothing to submit!' warning.
+
+        Simulates the case where a parent branch is empty/already merged.
+        Graphite returns exit code 0 but with warning text.
+
+        Returns:
+            Self for chaining
+        """
+        gt_state = self._graphite.get_state()
+        self._graphite._state = replace(
+            gt_state,
+            submit_success=True,
+            submit_stdout=(
+                "WARNING: This branch does not introduce any changes:\n"
+                "▸ stale-parent-branch\n"
+                "WARNING: This branch and any dependent branches will not be submitted.\n"
+                "Nothing to submit!"
+            ),
+            submit_stderr="",
+        )
+        return self

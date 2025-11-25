@@ -80,6 +80,9 @@ kit_cli_commands:
   - name: update-dispatch-info
     path: kit_cli_commands/erk/update_dispatch_info.py
     description: Update dispatch info in GitHub issue plan-header metadata
+  - name: post-pr-comment
+    path: kit_cli_commands/erk/post_pr_comment.py
+    description: Post PR link comment to GitHub issue after PR publication
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

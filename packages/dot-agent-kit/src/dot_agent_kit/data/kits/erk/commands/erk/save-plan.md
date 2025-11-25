@@ -237,7 +237,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 {
   "subagent_type": "plan-extractor",
   "description": "Enrich plan with context",
-  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
+  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from the plan content\n4. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
   "model": "haiku"
 }
 ```
@@ -248,7 +248,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 {
   "subagent_type": "plan-extractor",
   "description": "Extract and enrich plan",
-  "prompt": "Extract implementation plan from conversation context, then enrich with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nSession log extraction failed. Search conversation context for implementation plan.\nPlans typically appear after discussion. Your job:\n1. Find plan in conversation\n2. Apply guidance if provided (in-memory)\n3. Ask clarifying questions via AskUserQuestion tool\n4. Extract semantic understanding (8 categories) from conversation context\n5. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
+  "prompt": "Extract implementation plan from conversation context, then enrich with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nSession log extraction failed. Search YOUR conversation messages for implementation plan (not session files).\nPlans typically appear after discussion. Your job:\n1. Find plan in conversation\n2. Apply guidance if provided (in-memory)\n3. Ask clarifying questions via AskUserQuestion tool\n4. Extract semantic understanding (8 categories) from conversation context\n5. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
   "model": "haiku"
 }
 ```
@@ -260,7 +260,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 1. Receives pre-extracted plan from kit CLI
 2. Applies guidance if provided (in-memory)
 3. Asks clarifying questions via AskUserQuestion tool
-4. Extracts semantic understanding (8 categories) from conversation
+4. Extracts semantic understanding (8 categories) from plan content
 5. Returns JSON output
 
 **Fallback path (conversation_search):**
@@ -268,7 +268,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 1. Searches conversation for plan
 2. Applies guidance if provided (in-memory)
 3. Asks clarifying questions via AskUserQuestion tool
-4. Extracts semantic understanding (8 categories) from conversation
+4. Extracts semantic understanding (8 categories) from plan content
 5. Returns JSON output
 
 **Agent tool restrictions (enforced in YAML):**

@@ -1,4 +1,4 @@
-"""Create GitHub issue from enriched plan (via --plan-file option) with erk-plan label.
+"""Create GitHub issue from enriched plan (via --plan-file option).
 
 This kit CLI command is used by the /erk:save-plan slash command which handles
 plan enrichment before passing the enriched plan to this command via a file.
@@ -6,13 +6,17 @@ plan enrichment before passing the enriched plan to this command via a file.
 The enrichment happens in the agent's logic (adding context, architectural notes, etc.)
 before calling this command. This command simply creates the issue from whatever
 plan content it receives via the --plan-file option.
+
+OPTIMIZED: This command uses format_plan_issue_body_simple() to pre-format the
+issue body before creation, eliminating the need for a separate update_issue_body
+call. This reduces GitHub API calls from 3-4 to 1, providing ~67-75% latency reduction.
 """
 
 import json
 from pathlib import Path
 
 import click
-from erk_shared.github.metadata import format_plan_issue_body
+from erk_shared.github.metadata import format_plan_issue_body_simple
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
@@ -30,7 +34,7 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
     """Create GitHub issue from enriched plan (via --plan-file option).
 
     Reads enriched plan content from file, extracts title,
-    ensures erk-plan label exists, creates issue, and returns JSON result.
+    formats body with collapsible details, and creates issue.
 
     The plan should already be enriched by the calling agent before being passed
     to this command.
@@ -62,36 +66,16 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
     # Extract title (pure function call)
     title = extract_title_from_plan(plan)
 
-    # Plan content is used as-is for the issue body
-    body = plan.strip()
+    # Pre-format body with collapsible details (no issue number needed)
+    # This eliminates the need for update_issue_body after creation
+    formatted_body = format_plan_issue_body_simple(plan.strip())
 
-    # Ensure label exists (ABC interface with EAFP pattern)
+    # Create issue with pre-formatted body, no labels
+    # Labels removed as erk-plan label is no longer used
     try:
-        github.ensure_label_exists(
-            repo_root=repo_root,
-            label="erk-plan",
-            description="Implementation plan for manual execution",
-            color="0E8A16",
-        )
-    except RuntimeError as e:
-        click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
-        raise SystemExit(1) from e
-
-    # Create issue (ABC interface with EAFP pattern)
-    try:
-        result = github.create_issue(repo_root, title, body, ["erk-plan"])
+        result = github.create_issue(repo_root, title, formatted_body, labels=[])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
-        raise SystemExit(1) from e
-
-    # Format body with collapsible details and execution commands
-    formatted_body = format_plan_issue_body(plan.strip(), result.number)
-
-    # Update issue with formatted body
-    try:
-        github.update_issue_body(repo_root, result.number, formatted_body)
-    except RuntimeError as e:
-        click.echo(f"Error: Failed to update issue body: {e}", err=True)
         raise SystemExit(1) from e
 
     # Output structured JSON

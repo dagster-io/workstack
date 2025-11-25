@@ -39,7 +39,8 @@ def test_create_enriched_plan_issue_success() -> None:
     assert len(fake_gh.created_issues) == 1
     title, body, labels = fake_gh.created_issues[0]
     assert title == "My Feature"
-    assert "erk-plan" in labels
+    # No labels added (erk-plan label removed for optimization)
+    assert labels == []
     assert "Step 1" in body
 
 
@@ -120,8 +121,8 @@ def test_create_enriched_plan_issue_missing_option() -> None:
     assert "--plan-file" in result.output or "plan-file" in result.output
 
 
-def test_create_enriched_plan_issue_ensures_label() -> None:
-    """Test that command ensures erk-plan label exists."""
+def test_create_enriched_plan_issue_no_labels() -> None:
+    """Test that command does NOT create or apply labels (optimization)."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -139,12 +140,13 @@ def test_create_enriched_plan_issue_ensures_label() -> None:
 
         assert result.exit_code == 0
 
-    # Verify label was created
-    assert len(fake_gh.created_labels) == 1
-    label, description, color = fake_gh.created_labels[0]
-    assert label == "erk-plan"
-    assert description == "Implementation plan for manual execution"
-    assert color == "0E8A16"
+    # Verify no labels were created (optimization: removed ensure_label_exists call)
+    assert len(fake_gh.created_labels) == 0
+
+    # Verify issue was created without labels
+    assert len(fake_gh.created_issues) == 1
+    _title, _body, labels = fake_gh.created_issues[0]
+    assert labels == []
 
 
 def test_create_enriched_plan_issue_unicode() -> None:
@@ -201,7 +203,7 @@ def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
 
 
 def test_create_enriched_plan_formats_with_details_tags() -> None:
-    """Verify created issues have collapsible details tags."""
+    """Verify created issues have collapsible details tags (no update_issue_body call)."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -218,17 +220,16 @@ def test_create_enriched_plan_formats_with_details_tags() -> None:
         )
 
         assert result.exit_code == 0
-        output_json = json.loads(result.output)
-        issue_number = output_json["issue_number"]
 
-    # Get the updated issue body from fake storage
-    updated_issue = fake_gh.get_issue(Path.cwd(), issue_number)
-    updated_body = updated_issue.body
+    # Verify issue was created with pre-formatted body (no update call)
+    assert len(fake_gh.created_issues) == 1
+    _title, body, _labels = fake_gh.created_issues[0]
 
-    # Verify details tags are present
-    assert "<details>" in updated_body
-    assert "</details>" in updated_body
-    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in updated_body
-    assert "## Execution Commands" in updated_body
-    assert "Step 1" in updated_body
-    assert "Step 2" in updated_body
+    # Verify details tags are present in the created issue body
+    assert "<details>" in body
+    assert "</details>" in body
+    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in body
+    # Execution commands removed for optimization (shown in CLI output instead)
+    assert "## Execution Commands" not in body
+    assert "Step 1" in body
+    assert "Step 2" in body

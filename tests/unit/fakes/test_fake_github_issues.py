@@ -701,3 +701,30 @@ def test_get_multiple_issue_comments_single_issue() -> None:
     result = fake.get_multiple_issue_comments(sentinel_path(), [42])
 
     assert result == {42: ["Single comment"]}
+
+
+def test_get_current_username_default() -> None:
+    """Test get_current_username returns default 'testuser'."""
+    fake = FakeGitHubIssues()
+
+    result = fake.get_current_username()
+
+    assert result == "testuser"
+
+
+def test_get_current_username_custom() -> None:
+    """Test get_current_username returns custom username from constructor."""
+    fake = FakeGitHubIssues(username="custom-user")
+
+    result = fake.get_current_username()
+
+    assert result == "custom-user"
+
+
+def test_get_current_username_none() -> None:
+    """Test get_current_username returns None when simulating unauthenticated state."""
+    fake = FakeGitHubIssues(username=None)
+
+    result = fake.get_current_username()
+
+    assert result is None

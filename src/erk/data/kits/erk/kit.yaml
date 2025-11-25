@@ -72,3 +72,9 @@ hooks:
     invocation: dot-agent kit-command erk session-id-injector-hook
     description: Injects session ID into context when /erk:save-plan is invoked
     timeout: 30
+  - id: set-tab-title-hook
+    lifecycle: SessionStart
+    matcher: "*"
+    invocation: erk wt current | xargs -I {} printf '\033]0;erk-wt: {}\007'
+    description: Sets terminal tab title to current worktree name
+    timeout: 5

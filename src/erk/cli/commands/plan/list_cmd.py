@@ -432,7 +432,6 @@ def list_plans(
     Examples:
         erk plan list
         erk plan list --label erk-plan --state open
-        erk plan list --label erk-plan --label erk-queue
         erk plan list --limit 10
         erk plan list --run-state in_progress
         erk plan list --run-state success --state open

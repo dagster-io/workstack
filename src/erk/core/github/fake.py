@@ -200,6 +200,10 @@ class FakeGitHub(GitHub):
     ) -> str:
         """Record workflow trigger in mutation tracking list.
 
+        Note: In production, trigger_workflow() generates a distinct_id internally
+        and adds it to the inputs. Tests should verify the workflow was called
+        with expected inputs; the distinct_id is an internal implementation detail.
+
         Returns:
             A fake run ID for testing
         """

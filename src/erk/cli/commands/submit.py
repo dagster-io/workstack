@@ -1,6 +1,5 @@
 """Submit issue for remote AI implementation via GitHub Actions."""
 
-import re
 import subprocess
 from datetime import UTC, datetime
 
@@ -12,36 +11,7 @@ from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 
-# Label used to queue issues for automated implementation
-ERK_QUEUE_LABEL = "erk-queue"
 ERK_PLAN_LABEL = "erk-plan"
-
-
-def _derive_branch_name_from_issue_title(title: str) -> str:
-    """Derive branch name from issue title matching dispatch-erk-queue.yml logic.
-
-    This must match the branch naming logic in .github/workflows/dispatch-erk-queue.yml
-    to ensure we can find the correct workflow run.
-
-    Args:
-        title: Issue title to convert
-
-    Returns:
-        Sanitized branch name (max 30 chars, matching workflow logic)
-    """
-    # Lowercase
-    lowered = title.lower()
-    # Replace non-alphanumeric characters with hyphens
-    replaced = re.sub(r"[^a-z0-9-]+", "-", lowered)
-    # Collapse consecutive hyphens
-    collapsed = re.sub(r"-+", "-", replaced)
-    # Strip leading/trailing hyphens
-    trimmed = collapsed.strip("-")
-    # Truncate to 30 characters (matching workflow)
-    branch_name = trimmed[:30]
-    # Strip trailing hyphens after truncation
-    branch_name = branch_name.rstrip("-")
-    return branch_name
 
 
 def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
@@ -70,8 +40,8 @@ def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
 def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     """Submit issue for remote AI implementation via GitHub Actions.
 
-    Adds the erk-queue label to the specified GitHub issue, which triggers
-    the dispatch-erk-queue.yml GitHub Actions workflow for automated implementation.
+    Triggers the dispatch-erk-queue.yml GitHub Actions workflow via direct
+    workflow dispatch for automated implementation.
 
     The workflow will:
     - Create a branch from the trunk branch
@@ -85,7 +55,6 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     Requires:
         - Issue must have erk-plan label
         - Issue must be OPEN
-        - Issue must not already have erk-queue label
     """
     # Get repository context
     if isinstance(ctx.repo, RepoContext):
@@ -118,16 +87,6 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
         )
         raise SystemExit(1)
 
-    # Validate: must not already have erk-queue label
-    if ERK_QUEUE_LABEL in issue.labels:
-        user_output(
-            click.style("Error: ", fg="red")
-            + f"Issue #{issue_number} already has {ERK_QUEUE_LABEL} label\n\n"
-            "This issue has already been submitted for automated implementation.\n"
-            f"View issue: {issue.url}"
-        )
-        raise SystemExit(1)
-
     # Display issue details
     user_output("Submitting issue for automated implementation:")
     user_output(f"  Number: {click.style(f'#{issue_number}', fg='cyan')}")
@@ -135,13 +94,14 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")
 
-    # Add erk-queue label to trigger workflow via webhook
-    user_output(f"Adding {ERK_QUEUE_LABEL} label...")
-    ctx.issues.ensure_label_on_issue(repo.root, issue_number, ERK_QUEUE_LABEL)
-    user_output(
-        click.style("✓", fg="green")
-        + " Label added. Workflow will start via webhook (typically <1 second)."
+    # Trigger workflow via direct dispatch
+    user_output("Triggering dispatch-erk-queue workflow...")
+    run_id = ctx.github.trigger_workflow(
+        repo_root=repo.root,
+        workflow="dispatch-erk-queue.yml",
+        inputs={"issue_number": str(issue_number)},
     )
+    user_output(click.style("✓", fg="green") + " Workflow triggered.")
 
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()
@@ -165,10 +125,10 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     validation_results = {
         "issue_is_open": True,
         "has_erk_plan_label": True,
-        "no_erk_queue_label_before": True,
     }
 
     # Create and post queued event comment
+    workflow_url = _construct_workflow_run_url(issue.url, run_id)
     try:
         metadata_block = create_submission_queued_block(
             queued_at=queued_at,
@@ -183,14 +143,13 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             metadata=metadata_block,
             description=(
                 f"Issue submitted by **{submitted_by}** at {queued_at}.\n\n"
-                f"The `{ERK_QUEUE_LABEL}` label has been added. The GitHub Actions workflow "
-                f"`dispatch-erk-queue` will be triggered automatically via webhook.\n\n"
+                f"The `dispatch-erk-queue` workflow has been triggered via direct dispatch.\n\n"
+                f"**Workflow run:** {workflow_url}\n\n"
                 f"The workflow will:\n"
                 f"- Create a branch from trunk\n"
                 f"- Create `.erp/` folder with plan content\n"
                 f"- Create a draft PR\n"
-                f"- Run the implementation\n\n"
-                f"Watch for the workflow start comment with a link to the action run."
+                f"- Run the implementation"
             ),
         )
 
@@ -198,23 +157,12 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
         ctx.issues.add_comment(repo.root, issue_number, comment_body)
         user_output(click.style("✓", fg="green") + " Queued event comment posted")
     except Exception as e:
-        # Log warning but don't block workflow - label still triggers it
+        # Log warning but don't block - workflow is already triggered
         user_output(
             click.style("Warning: ", fg="yellow")
             + f"Failed to post queued comment: {e}\n"
-            + "Workflow will still be triggered by label."
+            + "Workflow is already running."
         )
-
-    # Poll for workflow run URL
-    user_output("Polling for workflow run...")
-    branch_name = _derive_branch_name_from_issue_title(issue.title)
-    run_id = ctx.github.poll_for_workflow_run(
-        repo_root=repo.root,
-        workflow="dispatch-erk-queue.yml",
-        branch_name=branch_name,
-        timeout=30,
-        poll_interval=2,
-    )
 
     # Success output
     user_output("")
@@ -222,13 +170,5 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output("")
     user_output("Next steps:")
     user_output(f"  • View issue: {issue.url}")
-
-    if run_id:
-        # Construct and display workflow run URL
-        workflow_url = _construct_workflow_run_url(issue.url, run_id)
-        user_output(f"  • View workflow run: {workflow_url}")
-    else:
-        # Explicit fallback message when polling times out
-        user_output("  • (workflow run URL will be available shortly)")
-
+    user_output(f"  • View workflow run: {workflow_url}")
     user_output("")

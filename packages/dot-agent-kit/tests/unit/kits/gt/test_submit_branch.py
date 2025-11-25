@@ -775,6 +775,197 @@ worktree_name: test-worktree
         # Author attribution should come after the body content
         assert pr_body.index("Full description") < pr_body.index("📋 Plan created by")
 
+    def test_post_analysis_with_github_actions_run_link(self, tmp_path: Path) -> None:
+        """Test that PR body includes GitHub Actions run link when run ID exists."""
+        # Create .impl/issue.json with issue URL (used to extract owner/repo)
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 123, "issue_url": "https://github.com/dagster-io/erk/issues/123", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
+        # Create .impl/plan.md with plan-header containing run ID
+        plan_md = impl_dir / "plan.md"
+        plan_md.write_text(
+            """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+last_dispatched_run_id: '12345678901'
+last_dispatched_at: '2025-01-15T11:00:00+00:00'
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+""",
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        pr_body = github_state.pr_bodies[456]
+        # Should include run link with correct URL
+        assert "🔗 [View GitHub Actions Run]" in pr_body
+        assert "https://github.com/dagster-io/erk/actions/runs/12345678901" in pr_body
+
+    def test_post_analysis_no_run_link_when_run_id_null(self, tmp_path: Path) -> None:
+        """Test that PR body has no run link when run ID is null."""
+        # Create .impl/issue.json
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 123, "issue_url": "https://github.com/dagster-io/erk/issues/123", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
+        # Create .impl/plan.md with null run ID
+        plan_md = impl_dir / "plan.md"
+        plan_md.write_text(
+            """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+""",
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        pr_body = github_state.pr_bodies[456]
+        # Should NOT include run link when run ID is null
+        assert "View GitHub Actions Run" not in pr_body
+        assert "/actions/runs/" not in pr_body
+
+    def test_post_analysis_no_run_link_without_issue_reference(self, tmp_path: Path) -> None:
+        """Test that PR body has no run link when issue.json is missing."""
+        # Create .impl/plan.md with run ID but no issue.json
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        plan_md = impl_dir / "plan.md"
+        plan_md.write_text(
+            """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+last_dispatched_run_id: '12345678901'
+last_dispatched_at: '2025-01-15T11:00:00+00:00'
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+""",
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        pr_body = github_state.pr_bodies[456]
+        # Should NOT include run link without issue reference (can't extract owner/repo)
+        assert "View GitHub Actions Run" not in pr_body
+        assert "/actions/runs/" not in pr_body
+
 
 class TestSubmitBranchCLI:
     """Tests for submit_branch CLI commands."""

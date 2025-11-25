@@ -242,3 +242,76 @@ class GitHub(ABC):
             Returns empty dict if no PRs link to any of the issues.
         """
         ...
+
+    @abstractmethod
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each branch.
+
+        Queries GitHub Actions for workflow runs and returns the most relevant
+        run for each requested branch. Priority order:
+        1. In-progress or queued runs (active runs take precedence)
+        2. Failed completed runs (failures are more actionable than successes)
+        3. Successful completed runs (most recent)
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branches: List of branch names to query
+
+        Returns:
+            Mapping of branch name -> WorkflowRun or None if no runs found.
+            Only includes entries for branches that have matching workflow runs.
+        """
+        ...
+
+    @abstractmethod
+    def get_workflow_runs_by_titles(
+        self, repo_root: Path, workflow: str, titles: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each display title.
+
+        Queries GitHub Actions for workflow runs and returns the most relevant
+        run for each requested display title. This is useful for workflows
+        triggered by issue events where the headBranch is always the default
+        branch but the display_title contains the issue title.
+
+        Priority order:
+        1. In-progress or queued runs (active runs take precedence)
+        2. Failed completed runs (failures are more actionable than successes)
+        3. Successful completed runs (most recent)
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            titles: List of display titles to match (e.g., issue titles)
+
+        Returns:
+            Mapping of title -> WorkflowRun or None if no runs found.
+            Only includes entries for titles that have matching workflow runs.
+        """
+        ...
+
+    @abstractmethod
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Poll for a workflow run matching branch name within timeout.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branch_name: Expected branch name to match
+            timeout: Maximum seconds to poll (default: 30)
+            poll_interval: Seconds between poll attempts (default: 2)
+
+        Returns:
+            Run ID as string if found within timeout, None otherwise
+        """
+        ...

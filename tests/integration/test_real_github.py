@@ -734,7 +734,7 @@ def test_list_workflow_runs_success() -> None:
             "--workflow",
             "implement-plan.yml",
             "--json",
-            "databaseId,status,conclusion,headBranch,headSha",
+            "databaseId,status,conclusion,headBranch,headSha,displayTitle",
             "--limit",
             "50",
         ]

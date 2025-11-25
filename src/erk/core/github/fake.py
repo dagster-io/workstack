@@ -28,6 +28,7 @@ class FakeGitHub(GitHub):
         workflow_runs: list[WorkflowRun] | None = None,
         run_logs: dict[str, str] | None = None,
         pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
+        polled_run_id: str | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -40,6 +41,7 @@ class FakeGitHub(GitHub):
             workflow_runs: List of WorkflowRun objects to return from list_workflow_runs
             run_logs: Mapping of run_id -> log string
             pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
+            polled_run_id: Run ID to return from poll_for_workflow_run (None for timeout)
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -73,11 +75,13 @@ class FakeGitHub(GitHub):
         self._workflow_runs = workflow_runs or []
         self._run_logs = run_logs or {}
         self._pr_issue_linkages = pr_issue_linkages or {}
+        self._polled_run_id = polled_run_id
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
         self._get_pr_status_calls: list[tuple[Path, str]] = []
         self._triggered_workflows: list[tuple[str, dict[str, str]]] = []
+        self._poll_attempts: list[tuple[str, str, int, int]] = []
 
     @property
     def merged_prs(self) -> list[int]:
@@ -276,3 +280,149 @@ class FakeGitHub(GitHub):
             if issue_num in self._pr_issue_linkages:
                 result[issue_num] = self._pr_issue_linkages[issue_num]
         return result
+
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each branch.
+
+        Returns a mapping of branch name -> WorkflowRun for branches that have
+        matching workflow runs. Uses priority: in_progress/queued > failed > success > other.
+
+        The workflow parameter is accepted but ignored - fake returns runs from
+        all pre-configured workflow runs regardless of workflow name.
+        """
+        if not branches:
+            return {}
+
+        # Group runs by branch
+        runs_by_branch: dict[str, list[WorkflowRun]] = {}
+        for run in self._workflow_runs:
+            if run.branch in branches:
+                if run.branch not in runs_by_branch:
+                    runs_by_branch[run.branch] = []
+                runs_by_branch[run.branch].append(run)
+
+        # Select most relevant run for each branch
+        result: dict[str, WorkflowRun | None] = {}
+        for branch in branches:
+            if branch not in runs_by_branch:
+                continue
+
+            branch_runs = runs_by_branch[branch]
+
+            # Priority 1: in_progress or queued (active runs)
+            active_runs = [r for r in branch_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[branch] = active_runs[0]
+                continue
+
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in branch_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
+            if failed_runs:
+                result[branch] = failed_runs[0]
+                continue
+
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in branch_runs if r.status == "completed"]
+            if completed_runs:
+                result[branch] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
+            if branch_runs:
+                result[branch] = branch_runs[0]
+
+        return result
+
+    def get_workflow_runs_by_titles(
+        self, repo_root: Path, workflow: str, titles: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each display title.
+
+        Returns a mapping of title -> WorkflowRun for titles that have
+        matching workflow runs. Uses priority: in_progress/queued > failed > success > other.
+
+        The workflow parameter is accepted but ignored - fake returns runs from
+        all pre-configured workflow runs regardless of workflow name.
+        """
+        if not titles:
+            return {}
+
+        # Group runs by display_title
+        runs_by_title: dict[str, list[WorkflowRun]] = {}
+        for run in self._workflow_runs:
+            if run.display_title in titles:
+                if run.display_title not in runs_by_title:
+                    runs_by_title[run.display_title] = []
+                runs_by_title[run.display_title].append(run)
+
+        # Select most relevant run for each title
+        result: dict[str, WorkflowRun | None] = {}
+        for title in titles:
+            if title not in runs_by_title:
+                continue
+
+            title_runs = runs_by_title[title]
+
+            # Priority 1: in_progress or queued (active runs)
+            active_runs = [r for r in title_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[title] = active_runs[0]
+                continue
+
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in title_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
+            if failed_runs:
+                result[title] = failed_runs[0]
+                continue
+
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in title_runs if r.status == "completed"]
+            if completed_runs:
+                result[title] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
+            if title_runs:
+                result[title] = title_runs[0]
+
+        return result
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Return pre-configured run ID without sleeping.
+
+        Tracks poll attempts for test assertions but returns immediately
+        without actual polling delays.
+
+        Args:
+            repo_root: Repository root directory (ignored)
+            workflow: Workflow filename (ignored)
+            branch_name: Expected branch name (ignored)
+            timeout: Maximum seconds to poll (ignored)
+            poll_interval: Seconds between poll attempts (ignored)
+
+        Returns:
+            Pre-configured run ID or None for timeout simulation
+        """
+        self._poll_attempts.append((workflow, branch_name, timeout, poll_interval))
+        return self._polled_run_id
+
+    @property
+    def poll_attempts(self) -> list[tuple[str, str, int, int]]:
+        """Read-only access to tracked poll attempts for test assertions.
+
+        Returns list of (workflow, branch_name, timeout, poll_interval) tuples.
+        """
+        return self._poll_attempts

@@ -594,7 +594,8 @@ def test_down_delete_current_no_pr() -> None:
         )
 
         # Assert: Command succeeded with warning about no PR
-        assert result.exit_code == 0, f"Expected exit 0, got {result.exit_code}: {result.output}"
+        exit_msg = f"Expected exit code 0, got {result.exit_code}: {result.output}"
+        assert result.exit_code == 0, exit_msg
         assert "Warning:" in result.output
         assert "No pull request found for branch 'feature-2'" in result.output
         assert "Proceeding with deletion without PR verification" in result.output

@@ -41,9 +41,6 @@ kit_cli_commands:
   - name: post-completion-comment
     path: kit_cli_commands/erk/post_completion_comment.py
     description: Post completion tracking comment to GitHub issue with structured YAML
-  - name: post-workflow-started-comment
-    path: kit_cli_commands/erk/post_workflow_started_comment.py
-    description: Post workflow started comment to GitHub issue with run URL
   - name: post-plan-comment
     path: kit_cli_commands/erk/post_plan_comment.py
     description: Post plan issue comment with workflow instructions

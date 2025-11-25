@@ -121,3 +121,28 @@ class DryRunGitHub(GitHub):
     ) -> dict[int, list[PullRequestInfo]]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_prs_linked_to_issues(repo_root, issue_numbers)
+
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_workflow_runs_by_branches(repo_root, workflow, branches)
+
+    def get_workflow_runs_by_titles(
+        self, repo_root: Path, workflow: str, titles: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_workflow_runs_by_titles(repo_root, workflow, titles)
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.poll_for_workflow_run(
+            repo_root, workflow, branch_name, timeout, poll_interval
+        )

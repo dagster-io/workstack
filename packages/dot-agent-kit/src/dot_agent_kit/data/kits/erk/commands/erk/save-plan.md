@@ -300,6 +300,7 @@ The agent returns markdown in this format:
 ## Enrichment Details
 
 ### Process Summary
+
 - **Mode**: enriched
 - **Guidance applied**: yes/no
 - **Questions asked**: N
@@ -310,6 +311,7 @@ The agent returns markdown in this format:
 [Full plan content...]
 
 ## Context & Understanding
+
 [Context sections...]
 ```
 

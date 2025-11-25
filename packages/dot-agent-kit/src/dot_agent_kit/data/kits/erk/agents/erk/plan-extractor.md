@@ -364,6 +364,7 @@ Combine plan content, applied guidance, clarifications, and context into structu
 ## Enrichment Details
 
 ### Process Summary
+
 - **Mode**: enriched/raw
 - **Guidance applied**: yes/no
 - **Guidance text**: "[original guidance if provided]"
@@ -371,12 +372,16 @@ Combine plan content, applied guidance, clarifications, and context into structu
 - **Context categories extracted**: N of 8
 
 ### Clarifications Made
+
 [If questions were asked]
+
 1. **[Question topic]**: [User's answer and how it was incorporated]
 2. **[Question topic]**: [User's answer and how it was incorporated]
 
 ### Context Categories Populated
+
 [List which of the 8 categories had content extracted]
+
 - ✅ API/Tool Quirks
 - ✅ Architectural Insights
 - ✅ Domain Logic & Business Rules
@@ -393,21 +398,27 @@ Combine plan content, applied guidance, clarifications, and context into structu
 ## Context & Understanding
 
 ### API/Tool Quirks
+
 [Detailed content extracted during planning]
 
 ### Architectural Insights
+
 [Detailed content extracted during planning]
 
 ### Domain Logic & Business Rules
+
 [Detailed content extracted during planning]
 
 ### Known Pitfalls
+
 [Detailed content extracted during planning]
 
 ### Raw Discoveries Log
+
 [Everything discovered during planning]
 
 ### Planning Artifacts
+
 [Code examined, commands run, configurations discovered]
 ```
 
@@ -460,7 +471,7 @@ No implementation plan found. Create a plan first using ExitPlanMode or present 
 ```markdown
 ## Error: session_not_found
 
-Session file not found: ~/.claude/projects/<session_id>/data/*.jsonl
+Session file not found: ~/.claude/projects/<session_id>/data/\*.jsonl
 ```
 
 ### Guidance Without Plan

@@ -206,6 +206,7 @@ The agent returns markdown in this format:
 ## Enrichment Details
 
 ### Process Summary
+
 - **Mode**: raw
 - **Guidance applied**: no
 - **Questions asked**: 0

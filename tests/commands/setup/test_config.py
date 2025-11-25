@@ -425,3 +425,102 @@ def test_config_key_with_multiple_dots() -> None:
 
         assert result.exit_code == 1
         assert "Invalid key" in result.output
+
+
+def test_config_get_post_create_shell_not_found() -> None:
+    """Test that getting post_create.shell when not set fails with Ensure error."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+        # Pass local config with no shell set
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "get", "post_create.shell"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+        assert "Key not found" in result.output
+
+
+def test_config_get_post_create_invalid_subkey() -> None:
+    """Test that getting invalid post_create subkey fails with Ensure error."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "get", "post_create.invalid"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+        assert "Key not found" in result.output
+
+
+def test_config_get_post_create_invalid_key_format() -> None:
+    """Test that invalid post_create key format fails with Ensure error."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "get", "post_create"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+        assert "Invalid key" in result.output

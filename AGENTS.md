@@ -11,6 +11,8 @@
 
 **CRITICAL: NEVER search, read, or access `/Users/schrockn/` directory**
 
+**CRITICAL: NEVER use raw `pip install`. Always use `uv` for package management.**
+
 **Load these skills FIRST:**
 
 - **Python code** → `dignified-python-313` skill (LBYL, modern types, ABC interfaces)

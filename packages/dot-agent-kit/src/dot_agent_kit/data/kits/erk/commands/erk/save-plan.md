@@ -66,7 +66,7 @@ This command uses a **specialized agent** for plan extraction/enrichment instead
   ├─→ Launch plan-extractor agent (Task tool) with pre-extracted plan
   │     ↓
   │     Agent enriches plan with context + guidance + questions
-  │     Agent returns JSON: {plan_title, plan_content, enrichment: {...}}
+  │     Agent returns markdown: # Plan: ... with Enrichment Details section
   │     (Agent has NO Edit/Write tools - structurally safe)
   ├─→ Save plan to temp file
   ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
@@ -94,7 +94,7 @@ When you run this command, these steps occur:
 2. **Extract Plan** - Use kit CLI to extract plan from session logs (ExitPlanMode markers)
 3. **Launch Agent** - Delegate to plan-extractor agent with pre-extracted plan
 4. **Enrich Plan** - Agent applies guidance, extracts context, asks questions
-5. **Receive JSON** - Agent returns structured enriched plan data
+5. **Receive Markdown** - Agent returns markdown with enrichment details
 6. **Create Issue** - Use kit CLI to create GitHub issue
 7. **Display Results** - Show issue URL and next-step commands
 
@@ -237,7 +237,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 {
   "subagent_type": "plan-extractor",
   "description": "Enrich plan with context",
-  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
+  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
   "model": "haiku"
 }
 ```
@@ -248,7 +248,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 {
   "subagent_type": "plan-extractor",
   "description": "Extract and enrich plan",
-  "prompt": "Extract implementation plan from conversation context, then enrich with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nSession log extraction failed. Search conversation context for implementation plan.\nPlans typically appear after discussion. Your job:\n1. Find plan in conversation\n2. Apply guidance if provided (in-memory)\n3. Ask clarifying questions via AskUserQuestion tool\n4. Extract semantic understanding (8 categories) from conversation context\n5. Return JSON with plan_title, plan_content, and enrichment metadata.\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
+  "prompt": "Extract implementation plan from conversation context, then enrich with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nSession log extraction failed. Search conversation context for implementation plan.\nPlans typically appear after discussion. Your job:\n1. Find plan in conversation\n2. Apply guidance if provided (in-memory)\n3. Ask clarifying questions via AskUserQuestion tool\n4. Extract semantic understanding (8 categories) from conversation context\n5. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
   "model": "haiku"
 }
 ```
@@ -261,7 +261,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 2. Applies guidance if provided (in-memory)
 3. Asks clarifying questions via AskUserQuestion tool
 4. Extracts semantic understanding (8 categories) from conversation
-5. Returns JSON output
+5. Returns markdown output
 
 **Fallback path (conversation_search):**
 
@@ -269,7 +269,7 @@ Use the Task tool to launch the specialized agent. The prompt varies based on ex
 2. Applies guidance if provided (in-memory)
 3. Asks clarifying questions via AskUserQuestion tool
 4. Extracts semantic understanding (8 categories) from conversation
-5. Returns JSON output
+5. Returns markdown output
 
 **Agent tool restrictions (enforced in YAML):**
 
@@ -292,34 +292,63 @@ If agent returns error JSON:
 
 ### Step 3: Parse Agent Response
 
-The agent returns JSON in this format:
+The agent returns markdown in this format:
 
-```json
-{
-  "success": true,
-  "plan_title": "Add user authentication",
-  "plan_content": "## Overview\n\n...",
-  "enrichment": {
-    "guidance_applied": true,
-    "questions_asked": 2,
-    "clarifications": ["..."],
-    "context_extracted": true
-  }
-}
+```markdown
+# Plan: [title extracted from plan]
+
+## Enrichment Details
+
+### Process Summary
+- **Mode**: enriched
+- **Guidance applied**: yes/no
+- **Questions asked**: N
+- **Context categories extracted**: N of 8
+
+---
+
+[Full plan content...]
+
+## Context & Understanding
+[Context sections...]
 ```
 
-**Validate response:**
+**Parse markdown response:**
 
-- Check `success` field is true
-- Ensure `plan_title` and `plan_content` are present
-- Verify `plan_content` is non-empty
+```bash
+# Check for error
+if echo "$result" | grep -q "^## Error:"; then
+    # Extract error message
+    error_msg=$(echo "$result" | sed -n 's/^## Error: //p')
+    echo "❌ Error: $error_msg"
+    exit 1
+fi
+
+# Extract title from first heading
+plan_title=$(echo "$result" | grep -m1 "^# Plan:" | sed 's/^# Plan: //')
+
+# Use full content for issue
+plan_content="$result"
+```
+
+**Validation:**
+
+- Check for `## Error:` prefix (indicates error)
+- Ensure `# Plan:` heading exists
+- Verify content is non-empty
 
 **Error handling:**
 
-If `success` is false or fields missing:
+If error prefix found:
 
 ```
-❌ Error: Agent returned invalid response
+❌ Error: [error message from markdown]
+```
+
+If no `# Plan:` heading:
+
+```
+❌ Error: Agent returned invalid markdown (missing # Plan: heading)
 
 [Display agent response for debugging]
 ```
@@ -435,18 +464,9 @@ Submit plan to erk queue:
 - Each command should be on its own line with proper indentation
 - Commands should be copy-pastable (no markdown formatting inside)
 
-### Step 7: Enrichment Summary (Optional)
+### Step 7: Note on Enrichment Details
 
-If the agent asked questions or applied guidance, show a summary:
-
-```
-**Enrichment applied:**
-
-- Guidance: [guidance text]
-- Questions asked: [count]
-- Clarifications: [list]
-- Context extracted: [yes/no]
-```
+The enrichment details (guidance applied, questions asked, clarifications, context categories) are now embedded in the markdown output from the agent in the "Enrichment Details" section. No separate summary is needed - the GitHub issue will contain these details.
 
 ## Error Scenarios
 

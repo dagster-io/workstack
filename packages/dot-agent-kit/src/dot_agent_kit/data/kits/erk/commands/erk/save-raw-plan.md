@@ -47,7 +47,7 @@ This command uses the same **plan-extractor agent** but in `raw` mode:
   │     ↓
   │     Agent reads session JSONL files
   │     Agent extracts ExitPlanMode content
-  │     Agent returns JSON: {plan_title, plan_content}
+  │     Agent returns markdown: # Plan: ... (raw mode - minimal enrichment)
   │     (Agent has NO Edit/Write tools - structurally safe)
   ├─→ Save plan to temp file
   ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
@@ -157,7 +157,7 @@ Use the Task tool to launch the agent in raw mode:
 {
   "subagent_type": "plan-extractor",
   "description": "Extract raw plan from session",
-  "prompt": "Extract the implementation plan from session files WITHOUT enrichment.\n\nInput:\n- Mode: raw\n- Session ID: [session_id]\n\nFind the session JSONL files at ~/.claude/projects/[session_id]/data/*.jsonl and extract the latest ExitPlanMode tool use content.\n\nExpected output: JSON with plan_title and plan_content (raw, no enrichment).",
+  "prompt": "Extract the implementation plan from session files WITHOUT enrichment.\n\nInput:\n- Mode: raw\n- Session ID: [session_id]\n\nFind the session JSONL files at ~/.claude/projects/[session_id]/data/*.jsonl and extract the latest ExitPlanMode tool use content.\n\nExpected output: Markdown with # Plan: title and minimal enrichment details (raw mode).",
   "model": "haiku"
 }
 ```
@@ -167,7 +167,7 @@ Use the Task tool to launch the agent in raw mode:
 1. Reads session JSONL files from `~/.claude/projects/<session_id>/data/*.jsonl`
 2. Finds latest ExitPlanMode tool use
 3. Extracts plan content
-4. Returns JSON (no enrichment, no questions)
+4. Returns markdown (no enrichment, no questions)
 
 **Agent tool restrictions (same as enriched mode):**
 
@@ -198,35 +198,60 @@ Try:
 
 ### Step 4: Parse Agent Response
 
-The agent returns JSON in this format:
+The agent returns markdown in this format:
 
-```json
-{
-  "success": true,
-  "mode": "raw",
-  "plan_title": "Add user authentication",
-  "plan_content": "## Overview\n\n...",
-  "enrichment": {
-    "guidance_applied": false,
-    "questions_asked": 0,
-    "context_extracted": false
-  }
-}
+```markdown
+# Plan: [title extracted from plan]
+
+## Enrichment Details
+
+### Process Summary
+- **Mode**: raw
+- **Guidance applied**: no
+- **Questions asked**: 0
+- **Context categories extracted**: 0 of 8
+
+---
+
+[Full plan content...]
 ```
 
-**Validate response:**
+**Parse markdown response:**
 
-- Check `success` field is true
-- Ensure `plan_title` and `plan_content` are present
-- Verify `plan_content` is non-empty
-- Confirm `mode` is "raw"
+```bash
+# Check for error
+if echo "$result" | grep -q "^## Error:"; then
+    # Extract error message
+    error_msg=$(echo "$result" | sed -n 's/^## Error: //p')
+    echo "❌ Error: $error_msg"
+    exit 1
+fi
+
+# Extract title from first heading
+plan_title=$(echo "$result" | grep -m1 "^# Plan:" | sed 's/^# Plan: //')
+
+# Use full content for issue
+plan_content="$result"
+```
+
+**Validation:**
+
+- Check for `## Error:` prefix (indicates error)
+- Ensure `# Plan:` heading exists
+- Verify content is non-empty
 
 **Error handling:**
 
-If `success` is false or fields missing:
+If error prefix found:
 
 ```
-❌ Error: Agent returned invalid response
+❌ Error: [error message from markdown]
+```
+
+If no `# Plan:` heading:
+
+```
+❌ Error: Agent returned invalid markdown (missing # Plan: heading)
 
 [Display agent response for debugging]
 ```

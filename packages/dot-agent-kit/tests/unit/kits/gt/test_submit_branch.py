@@ -651,6 +651,130 @@ class TestPostAnalysisExecution:
         assert github_state.pr_titles[456] == "Add feature"
         assert github_state.pr_bodies[456] == "Closes #789\n\n"
 
+    def test_post_analysis_with_plan_author(self, tmp_path: Path) -> None:
+        """Test that PR body includes plan author attribution when plan.md has created_by."""
+        # Create .impl/plan.md with plan-header metadata block
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        plan_md = impl_dir / "plan.md"
+        plan_md.write_text(
+            """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: plan-author-user
+worktree_name: test-worktree
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+""",
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        # Verify that update_pr_metadata was called with author attribution appended
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        assert github_state.pr_titles[456] == "Add feature"
+        assert "Full description" in github_state.pr_bodies[456]
+        assert "📋 Plan created by @plan-author-user" in github_state.pr_bodies[456]
+
+    def test_post_analysis_with_issue_and_plan_author(self, tmp_path: Path) -> None:
+        """Test that PR body includes both issue reference and plan author attribution."""
+        # Create .impl/issue.json
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 123, "issue_url": "https://github.com/repo/issues/123", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
+        # Create .impl/plan.md with plan-header metadata block
+        plan_md = impl_dir / "plan.md"
+        plan_md.write_text(
+            """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: combined-author
+worktree_name: test-worktree
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+""",
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        # Should have both issue reference at start and author at end
+        pr_body = github_state.pr_bodies[456]
+        assert pr_body.startswith("Closes #123")
+        assert "Full description" in pr_body
+        assert "📋 Plan created by @combined-author" in pr_body
+        # Author attribution should come after the body content
+        assert pr_body.index("Full description") < pr_body.index("📋 Plan created by")
+
 
 class TestSubmitBranchCLI:
     """Tests for submit_branch CLI commands."""

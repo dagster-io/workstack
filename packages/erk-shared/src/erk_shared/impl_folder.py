@@ -403,6 +403,39 @@ def has_issue_reference(impl_dir: Path) -> bool:
     return issue_file.exists()
 
 
+def read_plan_author(impl_dir: Path) -> str | None:
+    """Read the plan author from .impl/plan.md metadata.
+
+    Extracts the 'created_by' field from the plan-header metadata block
+    embedded in the plan.md file.
+
+    Args:
+        impl_dir: Path to .impl/ directory
+
+    Returns:
+        The plan author username, or None if not found or file doesn't exist
+    """
+    plan_file = impl_dir / "plan.md"
+
+    if not plan_file.exists():
+        return None
+
+    plan_content = plan_file.read_text(encoding="utf-8")
+
+    # Use existing metadata parsing infrastructure
+    from erk_shared.github.metadata import find_metadata_block
+
+    block = find_metadata_block(plan_content, "plan-header")
+    if block is None:
+        return None
+
+    created_by = block.data.get("created_by")
+    if created_by is None or not isinstance(created_by, str):
+        return None
+
+    return created_by
+
+
 def add_worktree_creation_comment(
     github_issues,
     repo_root: Path,

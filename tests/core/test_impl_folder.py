@@ -19,6 +19,7 @@ from erk_shared.impl_folder import (
     has_issue_reference,
     parse_progress_frontmatter,
     read_issue_reference,
+    read_plan_author,
     remove_worker_impl_folder,
     save_issue_reference,
     update_progress,
@@ -836,3 +837,114 @@ def test_add_worktree_creation_comment_issue_not_found(tmp_path: Path) -> None:
     # Should raise RuntimeError (simulating gh CLI error)
     with pytest.raises(RuntimeError, match="Issue #999 not found"):
         add_worktree_creation_comment(issues, tmp_path, 999, "feature-name", "feature-branch")
+
+
+# ============================================================================
+# Plan Author Attribution Tests
+# ============================================================================
+
+
+def test_read_plan_author_success(tmp_path: Path) -> None:
+    """Test reading plan author from plan.md with valid plan-header block."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md with plan-header metadata block
+    plan_content = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+2. Step two
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    # Read author
+    author = read_plan_author(impl_dir)
+
+    assert author == "test-user"
+
+
+def test_read_plan_author_no_plan_file(tmp_path: Path) -> None:
+    """Test read_plan_author returns None when plan.md doesn't exist."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    author = read_plan_author(impl_dir)
+
+    assert author is None
+
+
+def test_read_plan_author_no_impl_dir(tmp_path: Path) -> None:
+    """Test read_plan_author returns None when .impl/ directory doesn't exist."""
+    impl_dir = tmp_path / ".impl"
+    # Don't create the directory
+
+    author = read_plan_author(impl_dir)
+
+    assert author is None
+
+
+def test_read_plan_author_no_metadata_block(tmp_path: Path) -> None:
+    """Test read_plan_author returns None when plan.md has no plan-header block."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md without metadata block
+    plan_content = """# Simple Plan
+
+1. Step one
+2. Step two
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    author = read_plan_author(impl_dir)
+
+    assert author is None
+
+
+def test_read_plan_author_missing_created_by_field(tmp_path: Path) -> None:
+    """Test read_plan_author returns None when created_by field is missing."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md with plan-header but no created_by
+    plan_content = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+worktree_name: test-worktree
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    author = read_plan_author(impl_dir)
+
+    assert author is None

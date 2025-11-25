@@ -8,22 +8,16 @@ from pathlib import Path
 
 from dot_agent_kit.data.kits.erk.session_plan_extractor import (
     construct_claude_project_name,
-    extract_plan_from_session_line,
     get_claude_project_dir,
     get_latest_plan,
-    get_latest_plan_from_session,
+    get_plan_from_slug,
+    get_plan_slug_from_session,
+    get_plans_dir,
 )
 from tests.unit.kits.erk.fixtures import (
-    EXPECTED_PLAN_TEXT,
-    EXPECTED_PLAN_TEXT_LATER,
-    JSONL_ASSISTANT_EXIT_PLAN_MODE,
-    JSONL_ASSISTANT_EXIT_PLAN_MODE_EARLIER,
-    JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER,
-    JSONL_ASSISTANT_TEXT,
-    JSONL_USER_MESSAGE_STRING,
-    SESSION_AGENT_FILE_PLAN,
-    SESSION_MULTIPLE_PLANS,
-    SESSION_WITH_PLAN,
+    JSONL_SESSION_WITH_SLUG,
+    JSONL_SESSION_WITHOUT_SLUG,
+    SAMPLE_PLAN_CONTENT,
     create_session_file,
 )
 
@@ -112,209 +106,130 @@ def test_get_claude_project_dir_ends_with_home() -> None:
 
 
 # ===============================================
-# Tests for extract_plan_from_session_line()
+# Tests for get_plans_dir()
 # ===============================================
 
 
-def test_extract_plan_from_session_line_with_exit_plan_mode() -> None:
-    """Test extracting plan from ExitPlanMode entry."""
-    data = json.loads(JSONL_ASSISTANT_EXIT_PLAN_MODE)
-    result = extract_plan_from_session_line(data)
-
-    assert result == EXPECTED_PLAN_TEXT
+def test_get_plans_dir_returns_path() -> None:
+    """Test that get_plans_dir returns a Path object."""
+    result = get_plans_dir()
+    assert isinstance(result, Path)
 
 
-def test_extract_plan_from_session_line_with_later_plan() -> None:
-    """Test extracting plan from later timestamp entry."""
-    data = json.loads(JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER)
-    result = extract_plan_from_session_line(data)
-
-    assert result == EXPECTED_PLAN_TEXT_LATER
+def test_get_plans_dir_has_correct_structure() -> None:
+    """Test that get_plans_dir returns correct path structure."""
+    result = get_plans_dir()
+    assert result.parts[-2:] == (".claude", "plans")
 
 
-def test_extract_plan_from_session_line_with_earlier_plan() -> None:
-    """Test extracting plan from earlier timestamp entry."""
-    data = json.loads(JSONL_ASSISTANT_EXIT_PLAN_MODE_EARLIER)
-    result = extract_plan_from_session_line(data)
-
-    # Should still extract the plan (timestamp sorting happens at higher level)
-    assert result is not None
-    assert "Old Plan" in result
-
-
-def test_extract_plan_from_session_line_no_exit_plan_mode() -> None:
-    """Test with assistant message without ExitPlanMode."""
-    data = json.loads(JSONL_ASSISTANT_TEXT)
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_missing_message() -> None:
-    """Test with entry missing message field."""
-    data = {"type": "assistant", "timestamp": "2025-11-23T10:00:00.000Z"}
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_missing_content() -> None:
-    """Test with message missing content array."""
-    data = {"type": "assistant", "message": {"role": "assistant"}}
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_non_list_content() -> None:
-    """Test with content that is not a list."""
-    data = {"type": "assistant", "message": {"role": "assistant", "content": "string content"}}
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_missing_input() -> None:
-    """Test with ExitPlanMode missing input field."""
-    data = {
-        "type": "assistant",
-        "message": {"content": [{"type": "tool_use", "name": "ExitPlanMode", "id": "tool123"}]},
-    }
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_missing_plan_field() -> None:
-    """Test with input missing plan field."""
-    data = {
-        "type": "assistant",
-        "message": {
-            "content": [
-                {"type": "tool_use", "name": "ExitPlanMode", "input": {"other_field": "value"}}
-            ]
-        },
-    }
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_empty_plan() -> None:
-    """Test with empty plan string."""
-    data = {
-        "type": "assistant",
-        "message": {
-            "content": [{"type": "tool_use", "name": "ExitPlanMode", "input": {"plan": ""}}]
-        },
-    }
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
-
-
-def test_extract_plan_from_session_line_non_string_plan() -> None:
-    """Test with plan that is not a string."""
-    data = {
-        "type": "assistant",
-        "message": {
-            "content": [{"type": "tool_use", "name": "ExitPlanMode", "input": {"plan": 123}}]
-        },
-    }
-    result = extract_plan_from_session_line(data)
-
-    assert result is None
+def test_get_plans_dir_starts_with_home() -> None:
+    """Test that plans dir starts with home directory."""
+    result = get_plans_dir()
+    assert str(result).startswith(str(Path.home()))
 
 
 # ===============================================
-# Tests for get_latest_plan_from_session()
+# Tests for get_plan_slug_from_session()
 # ===============================================
 
 
-def test_get_latest_plan_from_session_nonexistent_directory(tmp_path: Path) -> None:
+def test_get_plan_slug_from_session_nonexistent_directory(tmp_path: Path) -> None:
     """Test returns None when project directory doesn't exist."""
     nonexistent = tmp_path / "nonexistent"
-    result = get_latest_plan_from_session(nonexistent)
+    result = get_plan_slug_from_session(nonexistent)
 
     assert result is None
 
 
-def test_get_latest_plan_from_session_single_session_file(tmp_path: Path) -> None:
-    """Test extracts plan from a single session file."""
+def test_get_plan_slug_from_session_with_slug(tmp_path: Path) -> None:
+    """Test extracts slug from session with slug field."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
     session_file = project_dir / "session-123.jsonl"
-    create_session_file(session_file, SESSION_WITH_PLAN)
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
 
-    result = get_latest_plan_from_session(project_dir)
+    result = get_plan_slug_from_session(project_dir)
 
-    assert result == EXPECTED_PLAN_TEXT
-
-
-def test_get_latest_plan_from_session_multiple_sessions(tmp_path: Path) -> None:
-    """Test extracts most recent plan from multiple session files."""
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-
-    # Create two session files
-    session1 = project_dir / "session-123.jsonl"
-    create_session_file(session1, [JSONL_ASSISTANT_EXIT_PLAN_MODE_EARLIER])
-
-    session2 = project_dir / "session-456.jsonl"
-    create_session_file(session2, [JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER])
-
-    result = get_latest_plan_from_session(project_dir)
-
-    # Should return the later plan based on timestamp
-    assert result == EXPECTED_PLAN_TEXT_LATER
+    assert result == "joyful-munching-hammock"
 
 
-def test_get_latest_plan_from_session_agent_file(tmp_path: Path) -> None:
-    """Test extracts plans from agent subprocess files."""
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-
-    agent_file = project_dir / "agent-abc123.jsonl"
-    create_session_file(agent_file, SESSION_AGENT_FILE_PLAN)
-
-    result = get_latest_plan_from_session(project_dir)
-
-    assert result == EXPECTED_PLAN_TEXT
-
-
-def test_get_latest_plan_from_session_filters_by_session_id(tmp_path: Path) -> None:
-    """Test filters plans by specific session ID."""
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-
-    # Create two sessions with different plans
-    session1 = project_dir / "session-123.jsonl"
-    create_session_file(session1, [JSONL_ASSISTANT_EXIT_PLAN_MODE])
-
-    session2 = project_dir / "session-456.jsonl"
-    create_session_file(session2, [JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER])
-
-    # Request specific session
-    result = get_latest_plan_from_session(project_dir, session_id="session-456")
-
-    assert result == EXPECTED_PLAN_TEXT_LATER
-
-
-def test_get_latest_plan_from_session_no_plans_found(tmp_path: Path) -> None:
-    """Test returns None when no plans exist in session files."""
+def test_get_plan_slug_from_session_without_slug(tmp_path: Path) -> None:
+    """Test returns None when session has no slug field."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
     session_file = project_dir / "session-123.jsonl"
-    create_session_file(session_file, [JSONL_USER_MESSAGE_STRING, JSONL_ASSISTANT_TEXT])
+    create_session_file(session_file, [JSONL_SESSION_WITHOUT_SLUG])
 
-    result = get_latest_plan_from_session(project_dir)
+    result = get_plan_slug_from_session(project_dir)
 
     assert result is None
 
 
-def test_get_latest_plan_from_session_skips_malformed_json(tmp_path: Path) -> None:
+def test_get_plan_slug_from_session_first_slug_wins(tmp_path: Path) -> None:
+    """Test returns first slug encountered (most recent file first)."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    # Create first session with slug
+    session1 = project_dir / "session-123.jsonl"
+    create_session_file(session1, [JSONL_SESSION_WITH_SLUG])
+
+    # Create second session entry with different slug
+    session2 = project_dir / "session-456.jsonl"
+    different_slug_entry = """{
+      "type": "assistant",
+      "slug": "different-slug-name",
+      "message": {"role": "assistant", "content": []},
+      "timestamp": "2025-11-23T12:00:00.000Z"
+    }"""
+    create_session_file(session2, [different_slug_entry])
+
+    # Make session2 more recent
+    import time
+
+    time.sleep(0.01)
+    session2.touch()
+
+    result = get_plan_slug_from_session(project_dir)
+
+    # Should return slug from most recently modified file
+    assert result == "different-slug-name"
+
+
+def test_get_plan_slug_from_session_filters_by_session_id(tmp_path: Path) -> None:
+    """Test filters by specific session ID."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    # Create session with slug
+    session_file = project_dir / "target-session.jsonl"
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
+
+    # Create another session without slug
+    other_session = project_dir / "other-session.jsonl"
+    create_session_file(other_session, [JSONL_SESSION_WITHOUT_SLUG])
+
+    result = get_plan_slug_from_session(project_dir, session_id="target-session")
+
+    assert result == "joyful-munching-hammock"
+
+
+def test_get_plan_slug_from_session_nonexistent_session_id(tmp_path: Path) -> None:
+    """Test returns None when specified session ID doesn't exist."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    session_file = project_dir / "session-123.jsonl"
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
+
+    result = get_plan_slug_from_session(project_dir, session_id="nonexistent")
+
+    assert result is None
+
+
+def test_get_plan_slug_from_session_skips_malformed_json(tmp_path: Path) -> None:
     """Test gracefully handles malformed JSON lines."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -323,30 +238,73 @@ def test_get_latest_plan_from_session_skips_malformed_json(tmp_path: Path) -> No
     with open(session_file, "w", encoding="utf-8") as f:
         # Write malformed JSON line
         f.write("not valid json\n")
-        # Write valid plan as compact single-line JSON
-        plan_data = json.loads(JSONL_ASSISTANT_EXIT_PLAN_MODE)
-        f.write(json.dumps(plan_data) + "\n")
-        # Write another malformed line
-        f.write("{incomplete json\n")
+        # Write valid entry with slug
+        data = json.loads(JSONL_SESSION_WITH_SLUG)
+        f.write(json.dumps(data) + "\n")
 
-    result = get_latest_plan_from_session(project_dir)
+    result = get_plan_slug_from_session(project_dir)
 
-    # Should extract plan despite malformed lines
-    assert result == EXPECTED_PLAN_TEXT
+    assert result == "joyful-munching-hammock"
 
 
-def test_get_latest_plan_from_session_multiple_plans_same_session(tmp_path: Path) -> None:
-    """Test returns most recent when multiple plans in same session."""
+def test_get_plan_slug_from_session_skips_empty_lines(tmp_path: Path) -> None:
+    """Test skips empty lines in session file."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
     session_file = project_dir / "session-123.jsonl"
-    create_session_file(session_file, SESSION_MULTIPLE_PLANS)
+    with open(session_file, "w", encoding="utf-8") as f:
+        f.write("\n")  # Empty line
+        f.write("   \n")  # Whitespace line
+        data = json.loads(JSONL_SESSION_WITH_SLUG)
+        f.write(json.dumps(data) + "\n")
 
-    result = get_latest_plan_from_session(project_dir)
+    result = get_plan_slug_from_session(project_dir)
 
-    # Should return the later plan
-    assert result == EXPECTED_PLAN_TEXT_LATER
+    assert result == "joyful-munching-hammock"
+
+
+# ===============================================
+# Tests for get_plan_from_slug()
+# ===============================================
+
+
+def test_get_plan_from_slug_existing_plan(monkeypatch, tmp_path: Path) -> None:
+    """Test reads plan content from existing file."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # Create plans directory and plan file
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
+    plan_file = plans_dir / "test-slug.md"
+    plan_file.write_text(SAMPLE_PLAN_CONTENT, encoding="utf-8")
+
+    result = get_plan_from_slug("test-slug")
+
+    assert result == SAMPLE_PLAN_CONTENT
+
+
+def test_get_plan_from_slug_nonexistent_plan(monkeypatch, tmp_path: Path) -> None:
+    """Test returns None when plan file doesn't exist."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # Create plans directory but no plan file
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
+
+    result = get_plan_from_slug("nonexistent-slug")
+
+    assert result is None
+
+
+def test_get_plan_from_slug_nonexistent_plans_dir(monkeypatch, tmp_path: Path) -> None:
+    """Test returns None when plans directory doesn't exist."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # Don't create plans directory
+    result = get_plan_from_slug("any-slug")
+
+    assert result is None
 
 
 # ===============================================
@@ -364,11 +322,17 @@ def test_get_latest_plan_full_integration(monkeypatch, tmp_path: Path) -> None:
     project_dir.mkdir(parents=True)
 
     session_file = project_dir / "session-123.jsonl"
-    create_session_file(session_file, SESSION_WITH_PLAN)
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
+
+    # Create plans directory and plan file
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
+    plan_file = plans_dir / "joyful-munching-hammock.md"
+    plan_file.write_text(SAMPLE_PLAN_CONTENT, encoding="utf-8")
 
     result = get_latest_plan(working_dir)
 
-    assert result == EXPECTED_PLAN_TEXT
+    assert result == SAMPLE_PLAN_CONTENT
 
 
 def test_get_latest_plan_nonexistent_project(monkeypatch, tmp_path: Path) -> None:
@@ -376,6 +340,42 @@ def test_get_latest_plan_nonexistent_project(monkeypatch, tmp_path: Path) -> Non
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     working_dir = "/Users/schrockn/code/nonexistent"
+    result = get_latest_plan(working_dir)
+
+    assert result is None
+
+
+def test_get_latest_plan_no_slug_in_session(monkeypatch, tmp_path: Path) -> None:
+    """Test returns None when session has no slug field."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    working_dir = "/Users/schrockn/code/erk"
+    project_dir = tmp_path / ".claude" / "projects" / "-Users-schrockn-code-erk"
+    project_dir.mkdir(parents=True)
+
+    session_file = project_dir / "session-123.jsonl"
+    create_session_file(session_file, [JSONL_SESSION_WITHOUT_SLUG])
+
+    result = get_latest_plan(working_dir)
+
+    assert result is None
+
+
+def test_get_latest_plan_slug_but_no_plan_file(monkeypatch, tmp_path: Path) -> None:
+    """Test returns None when slug exists but plan file doesn't."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    working_dir = "/Users/schrockn/code/erk"
+    project_dir = tmp_path / ".claude" / "projects" / "-Users-schrockn-code-erk"
+    project_dir.mkdir(parents=True)
+
+    session_file = project_dir / "session-123.jsonl"
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
+
+    # Don't create plan file
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
+
     result = get_latest_plan(working_dir)
 
     assert result is None
@@ -389,13 +389,16 @@ def test_get_latest_plan_with_session_id_filter(monkeypatch, tmp_path: Path) -> 
     project_dir = tmp_path / ".claude" / "projects" / "-Users-schrockn-code-erk"
     project_dir.mkdir(parents=True)
 
-    # Create two sessions
-    session1 = project_dir / "session-123.jsonl"
-    create_session_file(session1, [JSONL_ASSISTANT_EXIT_PLAN_MODE])
+    # Create session with slug
+    session_file = project_dir / "target-session.jsonl"
+    create_session_file(session_file, [JSONL_SESSION_WITH_SLUG])
 
-    session2 = project_dir / "session-456.jsonl"
-    create_session_file(session2, [JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER])
+    # Create plans directory and plan file
+    plans_dir = tmp_path / ".claude" / "plans"
+    plans_dir.mkdir(parents=True)
+    plan_file = plans_dir / "joyful-munching-hammock.md"
+    plan_file.write_text(SAMPLE_PLAN_CONTENT, encoding="utf-8")
 
-    result = get_latest_plan(working_dir, session_id="session-123")
+    result = get_latest_plan(working_dir, session_id="target-session")
 
-    assert result == EXPECTED_PLAN_TEXT
+    assert result == SAMPLE_PLAN_CONTENT

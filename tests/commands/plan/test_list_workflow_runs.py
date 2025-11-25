@@ -301,9 +301,9 @@ def test_list_handles_missing_workflow_run() -> None:
         result = runner.invoke(cli, ["list"], obj=ctx)
         assert result.exit_code == 0, result.output
 
-        # Verify "-" appears in Run ID column
+        # Verify "-" appears in run-id column
         output = strip_ansi(result.output)
-        assert "Run ID" in output, "Expected Run ID column header"
+        assert "run-id" in output, "Expected run-id column header"
         # Run ID cell should show "-"
         lines = output.split("\n")
         # Find the line with the plan

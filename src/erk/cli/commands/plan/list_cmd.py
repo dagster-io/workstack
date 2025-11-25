@@ -377,14 +377,14 @@ def _list_plans_impl(
 
     # Create Rich table with columns
     table = Table(show_header=True, header_style="bold")
-    table.add_column("Plan", style="cyan", no_wrap=True)
-    table.add_column("PR", no_wrap=True)
-    table.add_column("Checks", no_wrap=True)
-    table.add_column("State", no_wrap=True)
-    table.add_column("Action", no_wrap=True, width=12)
-    table.add_column("Run ID", no_wrap=True)
-    table.add_column("Title", no_wrap=True)
-    table.add_column("Local Worktree", style="yellow", no_wrap=True)
+    table.add_column("plan", style="cyan", no_wrap=True)
+    table.add_column("pr", no_wrap=True)
+    table.add_column("title", no_wrap=True)
+    table.add_column("chks", no_wrap=True)
+    table.add_column("st", no_wrap=True)
+    table.add_column("action", no_wrap=True, width=12)
+    table.add_column("run-id", no_wrap=True)
+    table.add_column("wt", style="yellow", no_wrap=True)
 
     # Populate table rows
     for plan in plans:
@@ -473,9 +473,9 @@ def _list_plans_impl(
             # Format the run ID with linkification
             run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
 
-        # Add row to table
+        # Add row to table (columns: plan, pr, title, chks, st, action, run-id, wt)
         table.add_row(
-            issue_id, pr_cell, checks_cell, state_str, action_str, run_id_cell, title, worktree_name
+            issue_id, pr_cell, title, checks_cell, state_str, action_str, run_id_cell, worktree_name
         )
 
     # Output table to stderr (consistent with user_output convention)

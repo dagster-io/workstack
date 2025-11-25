@@ -221,8 +221,7 @@ def test_format_workflow_run_id_rich_table_alignment() -> None:
     # If alignment is broken, the column separators won't line up
     lines = output.strip().split("\n")
 
-    # Find the header separator line and data lines
-    separator_lines = [line for line in lines if "─" in line or "━" in line]
+    # Find the data lines (rows with column separators and issue numbers)
     data_lines = [line for line in lines if "│" in line and "#" in line]
 
     # The data lines should have consistent column separator positions

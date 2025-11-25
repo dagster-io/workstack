@@ -66,6 +66,7 @@ artifacts = [
     ".claude/commands/erk/save-raw-plan.md",
     ".claude/commands/erk/implement-plan.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
+    ".claude/commands/erk/submit-plan.md",
     ".claude/agents/erk/issue-wt-creator.md",
     ".claude/docs/erk/EXAMPLES.md",
 ]

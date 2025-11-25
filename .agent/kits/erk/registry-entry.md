@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- command: commands/erk/save-plan.md, commands/erk/save-raw-plan.md, commands/erk/implement-plan.md, commands/erk/fix-merge-conflicts.md
+- command: commands/erk/save-plan.md, commands/erk/save-raw-plan.md, commands/erk/implement-plan.md, commands/erk/fix-merge-conflicts.md, commands/erk/submit-plan.md
 - agent: agents/erk/issue-wt-creator.md
 - doc: docs/erk/EXAMPLES.md
 

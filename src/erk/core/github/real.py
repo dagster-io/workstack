@@ -518,7 +518,7 @@ query {{
         )
 
         # Poll for the run by matching displayTitle containing the distinct ID
-        # The workflow uses run-name: "Dispatch Erk Queue [<distinct_id>]"
+        # The workflow uses run-name: "<issue_number>:<distinct_id>"
         max_attempts = 5
         for attempt in range(max_attempts):
             runs_cmd = [
@@ -554,8 +554,8 @@ query {{
                     continue
 
                 display_title = run.get("displayTitle", "")
-                # Check for exact match pattern: [<distinct_id>]
-                if f"[{distinct_id}]" in display_title:
+                # Check for match pattern: :<distinct_id> (new format: issue_number:distinct_id)
+                if f":{distinct_id}" in display_title:
                     run_id = run["databaseId"]
                     return str(run_id)
 

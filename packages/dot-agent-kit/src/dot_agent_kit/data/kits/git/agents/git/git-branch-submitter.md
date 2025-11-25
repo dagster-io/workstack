@@ -256,7 +256,24 @@ gh pr create --title "$pr_title" --body "$pr_body"
 - GitHub CLI will output the PR URL
 - Extract and store for final report
 
-### Step 8: Show Results
+### Step 8: Post PR Link to Issue (if applicable)
+
+If an issue reference exists (from Step 6), post a comment to the GitHub issue linking to the newly created PR:
+
+```bash
+# Extract PR number and URL from gh pr create output, then post comment
+dot-agent run erk post-pr-comment --pr-url "<pr_url>" --pr-number <pr_number> 2>/dev/null || true
+```
+
+**What this does:**
+
+- Reads issue reference from `.impl/issue.json`
+- Posts a comment to the issue with the PR link
+- Returns JSON with success status
+
+**Note:** This step uses `|| true` to ensure submission continues even if the comment fails. The PR has already been created at this point.
+
+### Step 9: Show Results
 
 After submission, provide a clear summary with the PR URL.
 
@@ -271,11 +288,15 @@ After submission, provide a clear summary with the PR URL.
 ✓ Created commit with AI-generated message
 ✓ Pushed branch to origin with upstream tracking
 ✓ Created GitHub PR
+✓ Linked to issue #<number> (will auto-close on merge)
+✓ Posted PR link to issue #<number>
 
 ### View PR
 
 [PR URL from gh pr create output]
 ```
+
+**Note:** The "Linked to issue" and "Posted PR link" lines should only be displayed if an issue reference was found in `.impl/issue.json`.
 
 **Formatting requirements:**
 
@@ -447,6 +468,7 @@ Before completing, verify:
 - [ ] Closing text prepended to PR body (if issue found)
 - [ ] GitHub PR created successfully
 - [ ] PR URL extracted from output
+- [ ] PR link posted to issue (if issue reference exists)
 - [ ] Results displayed with "What Was Done" section listing actions
 - [ ] PR URL placed at end under "View PR" section
 - [ ] Any errors handled with helpful guidance

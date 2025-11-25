@@ -213,7 +213,23 @@ If the command fails (exit code 1), parse the error JSON. The error includes:
 
 Provide helpful, context-aware guidance based on the error type and command output.
 
-### Step 4: Show Results
+### Step 4: Post PR Link to Issue (if applicable)
+
+If an issue reference exists (`.impl/issue.json`), post a comment to the GitHub issue linking to the newly created PR:
+
+```bash
+dot-agent run erk post-pr-comment --pr-url "<pr_url>" --pr-number <pr_number> 2>/dev/null || true
+```
+
+**What this does:**
+
+- Reads issue reference from `.impl/issue.json`
+- Posts a comment to the issue with the PR link
+- Returns JSON with success status
+
+**Note:** This step uses `|| true` to ensure submission continues even if the comment fails. The PR has already been created at this point.
+
+### Step 5: Show Results
 
 After submission, provide a clear summary using the Graphite URL from the JSON output.
 
@@ -228,13 +244,14 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 ✓ Submitted branch to Graphite
 ✓ Updated PR #<pr_number> metadata
 ✓ Linked to issue #<number> (will auto-close on merge)
+✓ Posted PR link to issue #<number>
 
 ### View PR
 
 <graphite_url from JSON>
 ```
 
-**Note:** The "Linked to issue" line should only be displayed if an issue reference was found in `.impl/issue.json`.
+**Note:** The "Linked to issue" and "Posted PR link" lines should only be displayed if an issue reference was found in `.impl/issue.json`.
 
 **Formatting requirements:**
 
@@ -513,6 +530,7 @@ Before completing, verify:
 - [ ] Commit message has no Claude footer
 - [ ] File paths are relative to repository root
 - [ ] Post-analysis completed successfully
+- [ ] PR link posted to issue (if issue reference exists)
 - [ ] Graphite URL retrieved from JSON output
 - [ ] Results displayed with "What Was Done" section listing actions
 - [ ] Graphite URL placed at end under "View PR" section

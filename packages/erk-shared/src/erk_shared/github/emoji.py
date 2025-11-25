@@ -33,11 +33,14 @@ def get_pr_status_emoji(pr: PullRequestInfo) -> str:
     Returns:
         Emoji string representing PR status (e.g., "👀" or "👀💥")
     """
-    # Get base emoji for state
-    emoji = PR_STATE_EMOJIS.get(pr.state, "")
+    # Draft PRs have state="OPEN" but is_draft=True, so check is_draft first
+    if pr.is_draft:
+        emoji = PR_STATE_EMOJIS["DRAFT"]
+    else:
+        emoji = PR_STATE_EMOJIS.get(pr.state, "")
 
-    # Add conflicts indicator for open/draft PRs
-    if pr.state in ("OPEN", "DRAFT") and pr.has_conflicts:
+    # Add conflicts indicator for open/draft PRs (draft PRs also have state="OPEN")
+    if pr.state == "OPEN" and pr.has_conflicts:
         emoji += CONFLICTS_EMOJI
 
     return emoji

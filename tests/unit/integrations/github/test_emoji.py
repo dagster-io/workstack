@@ -51,10 +51,13 @@ def test_get_pr_status_emoji_open() -> None:
 
 
 def test_get_pr_status_emoji_draft() -> None:
-    """Test emoji for draft PR without conflicts."""
+    """Test emoji for draft PR without conflicts.
+
+    Note: GitHub API returns state="OPEN" for draft PRs, with is_draft=True.
+    """
     pr = PullRequestInfo(
         number=101,
-        state="DRAFT",
+        state="OPEN",  # GitHub API: draft PRs have state="OPEN", is_draft=True
         url="https://github.com/owner/repo/pull/101",
         is_draft=True,
         title="Draft PR",
@@ -123,10 +126,13 @@ def test_get_pr_status_emoji_open_with_conflicts() -> None:
 
 
 def test_get_pr_status_emoji_draft_with_conflicts() -> None:
-    """Test emoji for draft PR with conflicts includes conflict indicator."""
+    """Test emoji for draft PR with conflicts includes conflict indicator.
+
+    Note: GitHub API returns state="OPEN" for draft PRs, with is_draft=True.
+    """
     pr = PullRequestInfo(
         number=105,
-        state="DRAFT",
+        state="OPEN",  # GitHub API: draft PRs have state="OPEN", is_draft=True
         url="https://github.com/owner/repo/pull/105",
         is_draft=True,
         title="Conflicted Draft PR",
@@ -273,10 +279,13 @@ def test_get_checks_status_emoji_merged_pr_with_passing_checks() -> None:
 
 
 def test_get_checks_status_emoji_draft_pr_with_pending_checks() -> None:
-    """Test checks emoji for draft PR with pending checks."""
+    """Test checks emoji for draft PR with pending checks.
+
+    Note: GitHub API returns state="OPEN" for draft PRs, with is_draft=True.
+    """
     pr = PullRequestInfo(
         number=204,
-        state="DRAFT",
+        state="OPEN",  # GitHub API: draft PRs have state="OPEN", is_draft=True
         url="https://github.com/owner/repo/pull/204",
         is_draft=True,
         title="Draft PR",

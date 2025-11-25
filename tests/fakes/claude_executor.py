@@ -75,6 +75,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
         worktree_path: Path,
         dangerous: bool,
         verbose: bool = False,
+        debug: bool = False,
     ) -> Iterator[StreamEvent]:
         """Track command execution and yield simulated streaming events.
 
@@ -86,6 +87,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
             worktree_path: Path to worktree directory
             dangerous: Whether to skip permission prompts
             verbose: Whether to show raw output or filtered output
+            debug: Whether to emit debug output for stream parsing
 
         Yields:
             StreamEvent objects simulating command execution

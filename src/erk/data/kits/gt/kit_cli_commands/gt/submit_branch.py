@@ -409,7 +409,9 @@ def execute_post_analysis(
     # Check for empty parent branch (Graphite returns success but nothing submitted)
     # This MUST be checked even on success since gt returns exit code 0
     combined_output = result.stdout + result.stderr
-    if "Nothing to submit!" in combined_output or "does not introduce any changes" in combined_output:
+    nothing_to_submit = "Nothing to submit!" in combined_output
+    no_changes = "does not introduce any changes" in combined_output
+    if nothing_to_submit or no_changes:
         return PostAnalysisError(
             success=False,
             error_type="submit_empty_parent",

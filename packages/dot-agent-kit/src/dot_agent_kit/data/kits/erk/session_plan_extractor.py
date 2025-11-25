@@ -1,8 +1,8 @@
 """Extract implementation plans from Claude session files.
 
-This module provides functionality to parse Claude session JSONL files and
-extract the latest ExitPlanMode plan text. It supports both current-session
-and all-sessions search modes for maximum flexibility.
+This module provides functionality to extract plans from Claude Code sessions.
+Plans are stored in ~/.claude/plans/{slug}.md files, and sessions reference
+them via a 'slug' field in the session JSONL.
 
 All functions follow LBYL (Look Before You Leap) patterns and handle
 errors explicitly at boundaries.
@@ -62,123 +62,81 @@ def get_claude_project_dir(working_dir: str) -> Path:
     return claude_base / project_name
 
 
-def extract_plan_from_session_line(data: dict) -> str | None:
-    """Extract plan text from a single session line if it contains ExitPlanMode.
-
-    Args:
-        data: Parsed JSON object from session file line
+def get_plans_dir() -> Path:
+    """Return the Claude plans directory path.
 
     Returns:
-        Plan text if found, None otherwise
+        Path to ~/.claude/plans/
     """
-    # Check if this line has message content
-    if "message" not in data:
-        return None
-
-    message = data.get("message", {})
-    if "content" not in message:
-        return None
-
-    content = message.get("content", [])
-    if not isinstance(content, list):
-        return None
-
-    # Look for ExitPlanMode tool use
-    for item in content:
-        if not isinstance(item, dict):
-            continue
-
-        # Check if this is ExitPlanMode tool use
-        if item.get("type") == "tool_use" and item.get("name") == "ExitPlanMode":
-            # Extract plan from input
-            input_data = item.get("input", {})
-            if isinstance(input_data, dict) and "plan" in input_data:
-                plan_text = input_data.get("plan")
-                if plan_text and isinstance(plan_text, str):
-                    return plan_text
-
-    return None
+    return Path.home() / ".claude" / "plans"
 
 
-def get_latest_plan_from_session(project_dir: Path, session_id: str | None = None) -> str | None:
-    """Extract the latest plan from Claude session files.
+def get_plan_slug_from_session(project_dir: Path, session_id: str | None = None) -> str | None:
+    """Extract plan slug from Claude session files.
 
-    Searches all session files including agent subprocess files for ExitPlanMode entries.
-    Plans can be created in Plan agent subprocesses, so agent files must be included.
+    Searches session JSONL for entries with a 'slug' field, which indicates
+    a plan was created during the session.
 
     Args:
-        project_dir: Path to Claude project directory (e.g., -Users-schrockn-code-erk)
-        session_id: Optional session ID to search within. If None, searches all sessions.
+        project_dir: Path to Claude project directory
+        session_id: Optional session ID to search within
 
     Returns:
-        Plan text as markdown string, or None if no plan found
+        Plan slug string, or None if no slug found
     """
-    plans = []
-
     # Check if project directory exists
     if not project_dir.exists():
         return None
 
     # Determine which files to search
     if session_id:
-        # Search only the specified session
         files = [project_dir / f"{session_id}.jsonl"]
     else:
-        # Search all session files including agent files
-        # Agent files may contain plans created in Plan agent subprocesses
-        # Sort files by modification time (most recent first) for efficiency
+        # Search all session files sorted by modification time (most recent first)
         files = sorted(
             [f for f in project_dir.glob("*.jsonl") if f.is_file()],
             key=lambda f: f.stat().st_mtime,
             reverse=True,
         )
 
-    # Search for ExitPlanMode occurrences
+    # Search for slug field
     for session_file in files:
         if not session_file.exists():
             continue
-
-        # Read and parse each line of the JSONL file
         with open(session_file, encoding="utf-8") as f:
-            for line_num, line in enumerate(f, 1):
+            for line in f:
                 line = line.strip()
                 if not line:
                     continue
-
-                # Parse JSON line
                 try:
                     data = json.loads(line)
+                    slug = data.get("slug")
+                    if slug:
+                        return slug
                 except json.JSONDecodeError:
-                    # Skip malformed lines
                     continue
+    return None
 
-                # Try to extract plan from this line
-                plan_text = extract_plan_from_session_line(data)
-                if plan_text:
-                    # Add to plans list with timestamp for sorting
-                    timestamp = data.get("timestamp", "")
-                    plans.append(
-                        {
-                            "timestamp": timestamp,
-                            "plan": plan_text,
-                            "session_id": session_file.stem,
-                            "line_num": line_num,
-                        }
-                    )
 
-    # Return most recent plan by timestamp
-    if not plans:
+def get_plan_from_slug(slug: str) -> str | None:
+    """Read plan content from the Claude plans folder.
+
+    Args:
+        slug: Plan slug (e.g., "joyful-munching-hammock")
+
+    Returns:
+        Plan content as string, or None if plan file doesn't exist
+    """
+    plan_path = get_plans_dir() / f"{slug}.md"
+    if not plan_path.exists():
         return None
-
-    # Sort by timestamp (most recent first)
-    plans.sort(key=lambda x: x["timestamp"], reverse=True)
-    return plans[0]["plan"]
+    return plan_path.read_text(encoding="utf-8")
 
 
 def get_latest_plan(working_dir: str, session_id: str | None = None) -> str | None:
     """Extract the latest plan from Claude session for the current project.
 
-    This is the main entry point for extracting plans from session files.
+    Looks for slug in session JSONL, reads plan from ~/.claude/plans/{slug}.md
 
     Args:
         working_dir: Current working directory
@@ -187,11 +145,13 @@ def get_latest_plan(working_dir: str, session_id: str | None = None) -> str | No
     Returns:
         Plan text as markdown string, or None if no plan found
     """
-    # Get Claude project directory
     project_dir = get_claude_project_dir(working_dir)
 
-    # Extract latest plan
-    return get_latest_plan_from_session(project_dir, session_id)
+    slug = get_plan_slug_from_session(project_dir, session_id)
+    if not slug:
+        return None
+
+    return get_plan_from_slug(slug)
 
 
 def get_session_context() -> str | None:

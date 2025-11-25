@@ -379,3 +379,24 @@ def test_noop_github_issues_read_operations_work() -> None:
 
     all_issues = noop.list_issues(sentinel_path())
     assert len(all_issues) == 2
+
+
+def test_noop_github_issues_get_current_username_delegates() -> None:
+    """Test DryRunGitHubIssues get_current_username delegates to wrapped implementation."""
+    fake = FakeGitHubIssues(username="dry-run-user")
+    noop = DryRunGitHubIssues(fake)
+
+    # get_current_username is a read operation, should delegate
+    result = noop.get_current_username()
+
+    assert result == "dry-run-user"
+
+
+def test_noop_github_issues_get_current_username_with_none() -> None:
+    """Test DryRunGitHubIssues get_current_username returns None when wrapped returns None."""
+    fake = FakeGitHubIssues(username=None)
+    noop = DryRunGitHubIssues(fake)
+
+    result = noop.get_current_username()
+
+    assert result is None

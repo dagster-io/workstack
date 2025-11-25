@@ -1122,3 +1122,243 @@ def extract_metadata_value(
         return None
 
     return block.data.get(field)
+
+
+# =============================================================================
+# Plan Header Schema and Functions (Schema Version 2)
+# =============================================================================
+# These support the new plan issue structure where:
+# - Issue body contains only compact metadata (for fast querying)
+# - First comment contains the plan content
+# - last_dispatched_run_id is stored in issue body
+
+
+@dataclass(frozen=True)
+class PlanHeaderSchema(MetadataBlockSchema):
+    """Schema for plan-header blocks (issue body metadata in schema version 2).
+
+    Fields:
+        schema_version: Always "2" for this format
+        created_at: ISO 8601 timestamp of plan creation
+        created_by: GitHub username of plan creator
+        worktree_name: Auto-derived from title (stable)
+        last_dispatched_run_id: Updated by workflow, enables direct run lookup (nullable)
+        last_dispatched_at: Updated by workflow (nullable)
+    """
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate plan-header data structure."""
+        required_fields = {
+            "schema_version",
+            "created_at",
+            "created_by",
+            "worktree_name",
+        }
+        optional_fields = {"last_dispatched_run_id", "last_dispatched_at"}
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate schema_version
+        if data["schema_version"] != "2":
+            raise ValueError(f"Invalid schema_version '{data['schema_version']}'. Must be '2'")
+
+        # Validate string fields
+        for field in ["created_at", "created_by", "worktree_name"]:
+            if not isinstance(data[field], str):
+                raise ValueError(f"{field} must be a string")
+            if len(data[field]) == 0:
+                raise ValueError(f"{field} must not be empty")
+
+        # Validate optional fields if present
+        if "last_dispatched_run_id" in data:
+            if data["last_dispatched_run_id"] is not None:
+                if not isinstance(data["last_dispatched_run_id"], str):
+                    raise ValueError("last_dispatched_run_id must be a string or null")
+
+        if "last_dispatched_at" in data:
+            if data["last_dispatched_at"] is not None:
+                if not isinstance(data["last_dispatched_at"], str):
+                    raise ValueError("last_dispatched_at must be a string or null")
+
+        # Check for unexpected fields
+        known_fields = required_fields | optional_fields
+        unknown_fields = set(data.keys()) - known_fields
+        if unknown_fields:
+            raise ValueError(f"Unknown fields: {', '.join(sorted(unknown_fields))}")
+
+    def get_key(self) -> str:
+        return "plan-header"
+
+
+def create_plan_header_block(
+    *,
+    created_at: str,
+    created_by: str,
+    worktree_name: str,
+    last_dispatched_run_id: str | None = None,
+    last_dispatched_at: str | None = None,
+) -> MetadataBlock:
+    """Create a plan-header metadata block with validation.
+
+    Args:
+        created_at: ISO 8601 timestamp of plan creation
+        created_by: GitHub username of plan creator
+        worktree_name: Auto-derived worktree name from title
+        last_dispatched_run_id: Optional workflow run ID (set by workflow)
+        last_dispatched_at: Optional dispatch timestamp (set by workflow)
+
+    Returns:
+        MetadataBlock with plan-header schema
+    """
+    schema = PlanHeaderSchema()
+    data: dict[str, Any] = {
+        "schema_version": "2",
+        "created_at": created_at,
+        "created_by": created_by,
+        "worktree_name": worktree_name,
+        "last_dispatched_run_id": last_dispatched_run_id,
+        "last_dispatched_at": last_dispatched_at,
+    }
+
+    return create_metadata_block(
+        key=schema.get_key(),
+        data=data,
+        schema=schema,
+    )
+
+
+def format_plan_header_body(
+    *,
+    created_at: str,
+    created_by: str,
+    worktree_name: str,
+    last_dispatched_run_id: str | None = None,
+    last_dispatched_at: str | None = None,
+) -> str:
+    """Format issue body with only metadata (schema version 2).
+
+    Creates an issue body containing just the plan-header metadata block.
+    This is designed for fast querying - plan content goes in the first comment.
+
+    Args:
+        created_at: ISO 8601 timestamp of plan creation
+        created_by: GitHub username of plan creator
+        worktree_name: Auto-derived worktree name from title
+        last_dispatched_run_id: Optional workflow run ID
+        last_dispatched_at: Optional dispatch timestamp
+
+    Returns:
+        Issue body string with metadata block only
+    """
+    block = create_plan_header_block(
+        created_at=created_at,
+        created_by=created_by,
+        worktree_name=worktree_name,
+        last_dispatched_run_id=last_dispatched_run_id,
+        last_dispatched_at=last_dispatched_at,
+    )
+
+    return render_metadata_block(block)
+
+
+def format_plan_content_comment(plan_content: str) -> str:
+    """Format plan content for the first comment (schema version 2).
+
+    Wraps plan content in marker comments for reliable extraction.
+
+    Args:
+        plan_content: The full plan markdown content
+
+    Returns:
+        Comment body with plan wrapped in markers
+    """
+    return f"""<!-- erk:plan-content -->
+
+{plan_content.strip()}
+
+<!-- /erk:plan-content -->"""
+
+
+def extract_plan_from_comment(comment_body: str) -> str | None:
+    """Extract plan content from a comment with markers.
+
+    Args:
+        comment_body: Comment body potentially containing plan content
+
+    Returns:
+        Extracted plan content, or None if markers not found
+    """
+    # Pattern to match content between markers
+    pattern = r"<!-- erk:plan-content -->\s*(.*?)\s*<!-- /erk:plan-content -->"
+    match = re.search(pattern, comment_body, re.DOTALL)
+
+    if match is None:
+        return None
+
+    return match.group(1).strip()
+
+
+def update_plan_header_dispatch(
+    issue_body: str,
+    run_id: str,
+    dispatched_at: str,
+) -> str:
+    """Update dispatch fields in plan-header metadata block.
+
+    Uses Python YAML parsing for robustness (not regex).
+    This function reads the existing plan-header block, updates the
+    dispatch fields, and re-renders the entire body.
+
+    Args:
+        issue_body: Current issue body containing plan-header block
+        run_id: Workflow run ID to set
+        dispatched_at: ISO 8601 timestamp of dispatch
+
+    Returns:
+        Updated issue body with new dispatch fields
+
+    Raises:
+        ValueError: If plan-header block not found or invalid
+    """
+    # Extract existing plan-header block
+    block = find_metadata_block(issue_body, "plan-header")
+    if block is None:
+        raise ValueError("plan-header block not found in issue body")
+
+    # Update dispatch fields
+    updated_data = dict(block.data)
+    updated_data["last_dispatched_run_id"] = run_id
+    updated_data["last_dispatched_at"] = dispatched_at
+
+    # Validate updated data
+    schema = PlanHeaderSchema()
+    schema.validate(updated_data)
+
+    # Create new block and render
+    new_block = MetadataBlock(key="plan-header", data=updated_data)
+    return render_metadata_block(new_block)
+
+
+def extract_plan_header_dispatch_info(
+    issue_body: str,
+) -> tuple[str | None, str | None]:
+    """Extract dispatch info from plan-header block.
+
+    Args:
+        issue_body: Issue body containing plan-header block
+
+    Returns:
+        Tuple of (last_dispatched_run_id, last_dispatched_at)
+        Both are None if block not found or fields not present
+    """
+    block = find_metadata_block(issue_body, "plan-header")
+    if block is None:
+        return (None, None)
+
+    run_id = block.data.get("last_dispatched_run_id")
+    dispatched_at = block.data.get("last_dispatched_at")
+
+    return (run_id, dispatched_at)

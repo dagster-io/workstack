@@ -240,6 +240,7 @@ jobs:
           Plan content has been updated from the issue."
 
       - name: Create draft PR
+        id: create_pr
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
@@ -278,10 +279,15 @@ jobs:
             echo "✅ Draft PR created"
           fi
 
+          # Capture PR number for use in subsequent steps
+          PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
       - name: Post workflow started comment
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pr_number }}
           GH_TOKEN: ${{ github.token }}
         run: |
           STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -290,7 +296,7 @@ jobs:
 
           # Post comment indicating workflow has started
           cat > comment_body.md <<EOF
-          ## ⚙️ GitHub Action Started
+          ⚙️ GitHub Action Started
 
           <details>
           <summary>📋 Metadata</summary>
@@ -314,6 +320,7 @@ jobs:
           Setup completed successfully.
 
           **Branch:** \`$BRANCH_NAME\`
+          **PR:** [#$PR_NUMBER](https://github.com/${{ github.repository }}/pull/$PR_NUMBER)
           **Status:** Ready for implementation
 
           [View workflow run]($WORKFLOW_RUN_URL)

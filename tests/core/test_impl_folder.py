@@ -19,6 +19,7 @@ from erk_shared.impl_folder import (
     has_issue_reference,
     parse_progress_frontmatter,
     read_issue_reference,
+    read_last_dispatched_run_id,
     read_plan_author,
     remove_worker_impl_folder,
     save_issue_reference,
@@ -948,3 +949,150 @@ worktree_name: test-worktree
     author = read_plan_author(impl_dir)
 
     assert author is None
+
+
+# ============================================================================
+# Last Dispatched Run ID Tests
+# ============================================================================
+
+
+def test_read_last_dispatched_run_id_success(tmp_path: Path) -> None:
+    """Test reading run ID from plan.md with valid plan-header block."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md with plan-header metadata block including run ID
+    plan_content = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+last_dispatched_run_id: '12345678901'
+last_dispatched_at: '2025-01-15T11:00:00+00:00'
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+# Test Plan
+
+1. Step one
+2. Step two
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    # Read run ID
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id == "12345678901"
+
+
+def test_read_last_dispatched_run_id_no_plan_file(tmp_path: Path) -> None:
+    """Test read_last_dispatched_run_id returns None when plan.md doesn't exist."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id is None
+
+
+def test_read_last_dispatched_run_id_no_impl_dir(tmp_path: Path) -> None:
+    """Test read_last_dispatched_run_id returns None when .impl/ directory doesn't exist."""
+    impl_dir = tmp_path / ".impl"
+    # Don't create the directory
+
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id is None
+
+
+def test_read_last_dispatched_run_id_no_metadata_block(tmp_path: Path) -> None:
+    """Test read_last_dispatched_run_id returns None when plan.md has no plan-header block."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md without metadata block
+    plan_content = """# Simple Plan
+
+1. Step one
+2. Step two
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id is None
+
+
+def test_read_last_dispatched_run_id_null_value(tmp_path: Path) -> None:
+    """Test read_last_dispatched_run_id returns None when run ID is null."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md with plan-header but null run ID
+    plan_content = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id is None
+
+
+def test_read_last_dispatched_run_id_missing_field(tmp_path: Path) -> None:
+    """Test read_last_dispatched_run_id returns None when run ID field is missing."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
+
+    # Create plan.md with plan-header but no last_dispatched_run_id
+    plan_content = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-01-15T10:00:00+00:00'
+created_by: test-user
+worktree_name: test-worktree
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->
+"""
+    plan_file = impl_dir / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    run_id = read_last_dispatched_run_id(impl_dir)
+
+    assert run_id is None

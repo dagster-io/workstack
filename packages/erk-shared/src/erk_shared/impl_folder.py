@@ -436,6 +436,39 @@ def read_plan_author(impl_dir: Path) -> str | None:
     return created_by
 
 
+def read_last_dispatched_run_id(impl_dir: Path) -> str | None:
+    """Read the last dispatched run ID from .impl/plan.md metadata.
+
+    Extracts the 'last_dispatched_run_id' field from the plan-header metadata
+    block embedded in the plan.md file.
+
+    Args:
+        impl_dir: Path to .impl/ directory
+
+    Returns:
+        The workflow run ID, or None if not found, file doesn't exist, or value is null
+    """
+    plan_file = impl_dir / "plan.md"
+
+    if not plan_file.exists():
+        return None
+
+    plan_content = plan_file.read_text(encoding="utf-8")
+
+    # Use existing metadata parsing infrastructure
+    from erk_shared.github.metadata import find_metadata_block
+
+    block = find_metadata_block(plan_content, "plan-header")
+    if block is None:
+        return None
+
+    run_id = block.data.get("last_dispatched_run_id")
+    if run_id is None or not isinstance(run_id, str):
+        return None
+
+    return run_id
+
+
 def add_worktree_creation_comment(
     github_issues,
     repo_root: Path,

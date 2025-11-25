@@ -243,6 +243,7 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get issue data from API
@@ -253,15 +254,18 @@ jobs:
           if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
             echo "✅ PR already exists for branch $BRANCH_NAME"
           else
-            # Create PR body
+            # Create PR body with attribution metadata
             cat > pr_body.md <<EOF
-          Closes #$ISSUE_NUMBER
-
-          $ISSUE_URL
+          **Author:** @$SUBMITTED_BY
+          **Plan:** #$ISSUE_NUMBER
 
           **Status:** Queued for implementation
 
           This PR will be marked ready for review after implementation completes.
+
+          ---
+
+          Closes #$ISSUE_NUMBER
           EOF
 
             # Create draft PR
@@ -362,6 +366,9 @@ jobs:
           # Install Prettier
           npm install -g prettier
 
+          # Install Graphite CLI (needed for gt:submit-pr command)
+          npm install -g @withgraphite/graphite-cli
+
           # Install erk kit for Claude Code
           dot-agent kit install erk
 
@@ -428,3 +435,13 @@ jobs:
             --dangerously-skip-permissions \
             --verbose \
             "/gt:submit-pr Implement issue #$ISSUE_NUMBER"
+
+      - name: Mark PR ready for review
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
+        run: |
+          # Mark PR as ready for review to trigger full CI
+          gh pr ready "$BRANCH_NAME"
+          echo "✅ PR marked ready for review"

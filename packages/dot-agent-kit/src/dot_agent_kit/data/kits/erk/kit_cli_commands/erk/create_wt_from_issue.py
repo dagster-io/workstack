@@ -24,7 +24,7 @@ Examples:
 
     **Next step:**
 
-    `erk checkout issue-776-25-11-22 && claude --permission-mode acceptEdits "/erk:implement-plan"`
+    `erk checkout issue-776-25-11-22 && claude --permission-mode acceptEdits "/erk:plan-implement"`
 
     $ dot-agent run erk create-wt-from-issue https://github.com/owner/repo/issues/776
     (same as above)
@@ -527,5 +527,5 @@ def create_wt_from_issue(ctx: click.Context, issue_reference: str) -> None:
     click.echo("")
     click.echo(
         f"`erk checkout {branch_name} && "
-        f'claude --permission-mode acceptEdits "/erk:implement-plan"`'
+        f'claude --permission-mode acceptEdits "/erk:plan-implement"`'
     )

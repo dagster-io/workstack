@@ -349,7 +349,7 @@ The agent has stopped and is waiting for you to sync. Follow these steps:
 
 2. **After sync completes**, re-run the workflow:
    ```bash
-   /gt:submit-pr <description>
+   /gt:pr-submit <description>
    ```
 
 **Why this happened:** Your local trunk is behind the remote. Syncing updates your local branches to reflect merged PRs.
@@ -376,7 +376,7 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 
 3. **After resolution completes**, re-run the workflow:
    ```bash
-   /gt:submit-pr <description>
+   /gt:pr-submit <description>
    ```
 
 **The agent will NOT attempt to resolve conflicts for you.** Manual resolution ensures correctness.
@@ -423,7 +423,7 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 
 5. **After resolution**, re-run this workflow:
    ```bash
-   /gt:submit-pr <description>
+   /gt:pr-submit <description>
    ```
 
 **Alternative:** If rebase is too complex, you can:
@@ -448,7 +448,7 @@ The agent has stopped and is waiting for you to resolve this. Choose one approac
 # Manually rebase your branch onto its parent
 gt stack fix
 # Then retry the workflow
-/gt:submit-pr <description>
+/gt:pr-submit <description>
 ```
 
 **Option 2: Sync with trunk first**
@@ -457,7 +457,7 @@ gt stack fix
 # Update your local trunk to match remote
 gt sync -f
 # Then retry the workflow
-/gt:submit-pr <description>
+/gt:pr-submit <description>
 ```
 
 **The agent will NOT attempt to resolve conflicts for you.** You must choose and execute one of these approaches.

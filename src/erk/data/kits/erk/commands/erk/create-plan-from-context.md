@@ -57,7 +57,7 @@ This command provides a fast path for creating GitHub issues when you don't need
 
 **If you need worktree workflow:**
 
-1. Use `/erk:save-plan` or `/erk:save-context-enriched-plan` to save plan to disk
+1. Use `/erk:plan-save` or `/erk:save-context-enriched-plan` to save plan to disk
 2. Use `/erk:create-wt-from-plan-file` to create worktree
 3. Use `/erk:create-plan-from-file` to create issue
 
@@ -247,7 +247,7 @@ After successfully creating the issue, output:
 
 🔗 <issue_url>
 
-📝 Note: This issue was created without a local plan file. To create a worktree, first save the plan with `/erk:save-plan` or `/erk:save-context-enriched-plan`.
+📝 Note: This issue was created without a local plan file. To create a worktree, first save the plan with `/erk:plan-save` or `/erk:save-context-enriched-plan`.
 
 Next steps:
 1. Review issue content on GitHub

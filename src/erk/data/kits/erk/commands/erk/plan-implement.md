@@ -2,14 +2,14 @@
 description: Execute the implementation plan from .impl/ folder in current directory
 ---
 
-# /erk:implement-plan
+# /erk:plan-implement
 
 This command reads and executes the `.impl/plan.md` file from the current directory. It is designed to be run after switching to a worktree created by `/erk:save-context-enriched-plan` and `/erk:create-wt-from-plan-file`.
 
 ## Usage
 
 ```bash
-/erk:implement-plan
+/erk:plan-implement
 ```
 
 ## Prerequisites
@@ -39,7 +39,7 @@ When you run this command:
 
 ## Agent Instructions
 
-You are executing the `/erk:implement-plan` command. Follow these steps carefully:
+You are executing the `/erk:plan-implement` command. Follow these steps carefully:
 
 ### Step 1: Verify .impl/plan.md Exists
 
@@ -56,7 +56,7 @@ To create a worktree with a plan:
 1. Run /erk:save-context-enriched-plan to save your enhanced plan to disk
 2. Run /erk:create-wt-from-plan-file to create a worktree from the plan
 3. Run: erk checkout <branch>
-4. Then run: claude --permission-mode acceptEdits "/erk:implement-plan"
+4. Then run: claude --permission-mode acceptEdits "/erk:plan-implement"
 ```
 
 ### Step 2: Read the Plan File

@@ -1,6 +1,6 @@
 """Create GitHub issue from enriched plan (via --plan-file option).
 
-This kit CLI command is used by the /erk:save-plan slash command which handles
+This kit CLI command is used by the /erk:plan-save slash command which handles
 plan enrichment before passing the enriched plan to this command via a file.
 
 The enrichment happens in the agent's logic (adding context, architectural notes, etc.)

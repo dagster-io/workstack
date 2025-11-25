@@ -61,7 +61,7 @@ def _format_error_display(error_message: str, details: str | None = None) -> Non
         click.echo(f"\nDetails: {details}", err=True)
 
 
-@click.command(name="save-plan-from-session")
+@click.command(name="plan-save-from-session")
 @click.option(
     "--session-id",
     help="Session ID to search (optional, auto-discovered from SESSION_CONTEXT or searches all)",

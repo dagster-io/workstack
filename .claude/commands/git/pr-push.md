@@ -11,10 +11,10 @@ Automatically create a git commit with a helpful summary message and push the cu
 
 ```bash
 # Invoke the command (description argument is optional but recommended)
-/git:push-pr "Add user authentication feature"
+/git:pr-push "Add user authentication feature"
 
 # Without argument (will analyze changes automatically)
-/git:push-pr
+/git:pr-push
 ```
 
 ## What This Command Does

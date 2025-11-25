@@ -65,7 +65,7 @@ exit 1
 
 ### save-plan Command
 
-In `/erk:save-plan`, validation occurs after plan extraction in Step 1:
+In `/erk:plan-save`, validation occurs after plan extraction in Step 1:
 
 1. Extract plan content from conversation
 2. Validate using `validate-plan-content` kit CLI command
@@ -74,7 +74,7 @@ In `/erk:save-plan`, validation occurs after plan extraction in Step 1:
 
 ### save-raw-plan Command
 
-In `/erk:save-raw-plan`, the same validation pattern applies:
+In `/erk:plan-save-raw`, the same validation pattern applies:
 
 1. Extract plan content from conversation
 2. Validate using `validate-plan-content` kit CLI command

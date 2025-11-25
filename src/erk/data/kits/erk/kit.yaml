@@ -4,11 +4,11 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: MIT
 artifacts:
   command:
-    - commands/erk/save-plan.md
-    - commands/erk/save-raw-plan.md
+    - commands/erk/plan-save.md
+    - commands/erk/plan-save-raw.md
     - commands/erk/create-wt-from-plan-file.md
-    - commands/erk/implement-plan.md
-    - commands/erk/fix-merge-conflicts.md
+    - commands/erk/plan-implement.md
+    - commands/erk/merge-conflicts-fix.md
   agent:
     - agents/erk/issue-wt-creator.md
   doc:
@@ -54,7 +54,7 @@ kit_cli_commands:
     path: kit_cli_commands/erk/create_wt_from_issue.py
     description: Create worktree from GitHub issue with erk-plan label
   - name: debug-agent
-    path: kit_cli_commands/erk/debug_agent.py
+    path: kit_cli_commands/erk/agent_debug.py
     description: Inspect failed agent runs from a session by showing execution logs and errors
   - name: create-plan-from-context
     path: kit_cli_commands/erk/create_plan_from_context.py
@@ -70,7 +70,7 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:save-plan is invoked
+    description: Injects session ID into context when /erk:plan-save is invoked
     timeout: 30
   - id: set-tab-title-hook
     lifecycle: SessionStart

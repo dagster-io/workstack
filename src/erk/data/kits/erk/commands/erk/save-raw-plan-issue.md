@@ -2,14 +2,14 @@
 description: Extract plan from conversation and save to disk (no enhancements)
 ---
 
-# /erk:save-plan
+# /erk:plan-save
 
 Extracts an implementation plan from the conversation and saves it to disk with minimal frontmatter. This is a simplified alternative to `/erk:save-session-enriched-plan` that skips all discovery mining and enhancement steps.
 
 ## Usage
 
 ```bash
-/erk:save-plan
+/erk:plan-save
 ```
 
 ## Purpose
@@ -40,7 +40,7 @@ This command provides a fast path for saving plans when you don't need session l
 
 ## Agent Instructions
 
-You are executing the `/erk:save-plan` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:plan-save` command. Follow these steps carefully using ONLY the allowed tools.
 
 ### CRITICAL: Tool Restrictions
 
@@ -92,7 +92,7 @@ Please create a plan first:
 1. Enter Plan mode
 2. Create your implementation plan
 3. Exit Plan mode
-4. Then run /erk:save-plan
+4. Then run /erk:plan-save
 ```
 
 ### Step 2: Generate Filename

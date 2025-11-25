@@ -17,7 +17,7 @@ def _execute_streaming_submit(
     verbose: bool,
     console: Console,
 ) -> CommandResult:
-    """Execute /gt:submit-pr command with streaming output.
+    """Execute /gt:pr-submit command with streaming output.
 
     Args:
         executor: Claude CLI executor
@@ -31,7 +31,7 @@ def _execute_streaming_submit(
     """
     from pathlib import Path
 
-    command = "/gt:submit-pr"
+    command = "/gt:pr-submit"
 
     if verbose:
         click.echo(f"Running {command}...", err=True)
@@ -83,7 +83,7 @@ def _execute_streaming_submit(
 def pr_submit(ctx: ErkContext, dangerous: bool, verbose: bool) -> None:
     """Submit current branch as a pull request using Claude Code.
 
-    Invokes Claude Code to execute the /gt:submit-pr slash command,
+    Invokes Claude Code to execute the /gt:pr-submit slash command,
     which analyzes your changes, generates a commit message, and
     creates a pull request.
 

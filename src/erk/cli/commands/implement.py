@@ -38,7 +38,7 @@ def _build_claude_command(slash_command: str, dangerous: bool) -> str:
     """Build a Claude CLI invocation with appropriate flags.
 
     Args:
-        slash_command: The slash command to execute (e.g., "/erk:implement-plan")
+        slash_command: The slash command to execute (e.g., "/erk:plan-implement")
         dangerous: Whether to skip permission prompts
 
     Returns:
@@ -88,9 +88,9 @@ def _build_command_sequence(submit: bool) -> list[str]:
     Returns:
         List of slash commands to execute in sequence
     """
-    commands = ["/erk:implement-plan"]
+    commands = ["/erk:plan-implement"]
     if submit:
-        commands.extend(["/fast-ci", "/gt:submit-pr"])
+        commands.extend(["/fast-ci", "/gt:pr-submit"])
     return commands
 
 
@@ -571,11 +571,11 @@ def _output_activation_instructions(
         user_output(f"  1. Change to worktree:  erk checkout {branch}")
         if submit:
             user_output("  2. Run implementation, CI, and submit PR:")
-            user_output(f"     {_build_claude_command('/erk:implement-plan', dangerous)}")
+            user_output(f"     {_build_claude_command('/erk:plan-implement', dangerous)}")
             user_output(f"     {_build_claude_command('/fast-ci', dangerous)}")
-            user_output(f"     {_build_claude_command('/gt:submit-pr', dangerous)}")
+            user_output(f"     {_build_claude_command('/gt:pr-submit', dangerous)}")
         else:
-            claude_cmd = _build_claude_command("/erk:implement-plan", dangerous)
+            claude_cmd = _build_claude_command("/erk:plan-implement", dangerous)
             user_output(f"  2. Run implementation:  {claude_cmd}")
         user_output("\n" + click.style("Shell integration not detected.", fg="yellow"))
         user_output("To activate environment and run commands, use:")

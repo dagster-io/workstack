@@ -547,7 +547,7 @@ erk checkout {branch_name}
 
 To implement the plan:
 ```bash
-claude --permission-mode acceptEdits "/erk:implement-plan"
+claude --permission-mode acceptEdits "/erk:plan-implement"
 ```"""
 
     # Create comment with consistent format

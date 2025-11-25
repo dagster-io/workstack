@@ -99,7 +99,7 @@ def stream_command_with_feedback(
 
     Args:
         executor: Claude CLI executor for command execution
-        command: The slash command to execute (e.g., "/gt:submit-pr")
+        command: The slash command to execute (e.g., "/gt:pr-submit")
         worktree_path: Path to worktree directory to run command in
         dangerous: Whether to skip permission prompts
         console: Rich Console for output (if None, creates one with force_terminal=True)

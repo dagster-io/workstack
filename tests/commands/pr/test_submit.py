@@ -33,7 +33,7 @@ def test_pr_submit_success() -> None:
         # Verify executor was called correctly
         assert len(executor.executed_commands) == 1
         command, worktree_path, dangerous, verbose = executor.executed_commands[0]
-        assert command == "/gt:submit-pr"
+        assert command == "/gt:pr-submit"
         assert dangerous is False
         assert verbose is False
 

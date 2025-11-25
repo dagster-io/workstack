@@ -274,6 +274,49 @@ jobs:
             echo "✅ Draft PR created"
           fi
 
+      - name: Post workflow started comment
+        env:
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          WORKFLOW_RUN_ID="${{ github.run_id }}"
+          WORKFLOW_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Post comment indicating workflow has started
+          cat > comment_body.md <<EOF
+          ## ⚙️ GitHub Action Started
+
+          <details>
+          <summary>📋 Metadata</summary>
+
+          <!-- erk:metadata-block:workflow-started -->
+          \`\`\`yaml
+          schema: workflow-started
+          status: started
+          started_at: $STARTED_AT
+          workflow_run_id: "$WORKFLOW_RUN_ID"
+          workflow_run_url: $WORKFLOW_RUN_URL
+          branch_name: $BRANCH_NAME
+          issue_number: $ISSUE_NUMBER
+          \`\`\`
+          <!-- /erk:metadata-block:workflow-started -->
+
+          </details>
+
+          ---
+
+          Setup completed successfully.
+
+          **Branch:** \`$BRANCH_NAME\`
+          **Status:** Ready for implementation
+
+          [View workflow run]($WORKFLOW_RUN_URL)
+          EOF
+
+          gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
+
   implement:
     needs: setup
     if: needs.setup.outputs.setup_success == 'true'

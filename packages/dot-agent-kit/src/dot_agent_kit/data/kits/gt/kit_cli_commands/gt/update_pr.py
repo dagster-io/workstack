@@ -37,9 +37,29 @@ def execute_update_pr() -> dict:
         if not kit.git().commit("Update changes"):
             return {"success": False, "error": "Failed to commit changes"}
 
-    # 2. Restack
-    if not kit.graphite().restack():
-        return {"success": False, "error": "Failed to restack branch"}
+    # 2. Restack with conflict detection
+    restack_result = kit.graphite().restack()
+    if not restack_result.success:
+        combined_output = restack_result.stdout + restack_result.stderr
+        combined_lower = combined_output.lower()
+
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return {
+                "success": False,
+                "error_type": "restack_conflict",
+                "error": (
+                    "Merge conflict detected during restack. "
+                    "Resolve conflicts manually or run 'gt restack --continue' after fixing."
+                ),
+                "details": {"stderr": restack_result.stderr},
+            }
+
+        return {
+            "success": False,
+            "error_type": "restack_failed",
+            "error": "Failed to restack branch",
+            "details": {"stderr": restack_result.stderr},
+        }
 
     # 3. Submit update
     result = kit.graphite().submit(publish=True, restack=False)

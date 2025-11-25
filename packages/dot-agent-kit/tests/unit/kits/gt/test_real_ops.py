@@ -296,9 +296,11 @@ class TestRealGraphiteGtKitOps:
             assert result.stdout == ""
 
     def test_restack(self) -> None:
-        """Test restack returns bool and calls correct command."""
+        """Test restack returns CommandResult and calls correct command."""
         mock_result = Mock()
         mock_result.returncode = 0
+        mock_result.stdout = "Restacked successfully"
+        mock_result.stderr = ""
 
         with patch(
             "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
@@ -316,18 +318,22 @@ class TestRealGraphiteGtKitOps:
             )
 
             # Verify return type matches interface contract
-            assert isinstance(result, bool)
-            assert result is True
+            assert result.success is True
+            assert result.stdout == "Restacked successfully"
+            assert result.stderr == ""
 
         # Test failure case
         mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "Failed to restack"
         with patch(
             "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGraphiteGtKit()
             result = ops.restack()
-            assert result is False
+            assert result.success is False
+            assert result.stderr == "Failed to restack"
 
     def test_navigate_to_child(self) -> None:
         """Test navigate_to_child returns bool and calls correct command."""

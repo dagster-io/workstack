@@ -45,6 +45,8 @@ class GraphiteState:
     submit_stdout: str = ""
     submit_stderr: str = ""
     restack_success: bool = True
+    restack_stdout: str = ""
+    restack_stderr: str = ""
     squash_success: bool = True
     squash_stdout: str = ""
     squash_stderr: str = ""
@@ -217,9 +219,13 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
             stderr=self._state.submit_stderr,
         )
 
-    def restack(self) -> bool:
+    def restack(self) -> CommandResult:
         """Run gt restack with configurable success/failure."""
-        return self._state.restack_success
+        return CommandResult(
+            success=self._state.restack_success,
+            stdout=self._state.restack_stdout,
+            stderr=self._state.restack_stderr,
+        )
 
     def navigate_to_child(self) -> bool:
         """Navigate to child branch (always succeeds in fake)."""
@@ -451,14 +457,20 @@ class FakeGtKitOps(GtKit):
         )
         return self
 
-    def with_restack_failure(self) -> "FakeGtKitOps":
+    def with_restack_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
         """Configure restack to fail.
+
+        Args:
+            stdout: Stdout to return
+            stderr: Stderr to return
 
         Returns:
             Self for chaining
         """
         gt_state = self._graphite.get_state()
-        self._graphite._state = replace(gt_state, restack_success=False)
+        self._graphite._state = replace(
+            gt_state, restack_success=False, restack_stdout=stdout, restack_stderr=stderr
+        )
         return self
 
     def with_merge_failure(self) -> "FakeGtKitOps":

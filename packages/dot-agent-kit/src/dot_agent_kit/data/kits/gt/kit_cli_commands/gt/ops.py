@@ -180,11 +180,11 @@ class GraphiteGtKit(ABC):
         """
 
     @abstractmethod
-    def restack(self) -> bool:
+    def restack(self) -> CommandResult:
         """Run gt restack in no-interactive mode.
 
         Returns:
-            True on success, False on failure
+            CommandResult with success status and output
         """
 
     @abstractmethod

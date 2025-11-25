@@ -301,8 +301,9 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
     assert result.exit_code == 0
     # Run ID should still appear
     assert "123" in result.output
-    # Should show "-" for plan/title columns since no linkage
-    # The Rich table will show dashes for missing data
+    # Should show "X" for plan/title/pr/chks columns since legacy format can't be parsed
+    # (distinguishes "can't parse" from "no data available" which uses "-")
+    assert "X" in result.output
 
 
 def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:

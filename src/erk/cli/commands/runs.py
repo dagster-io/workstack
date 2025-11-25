@@ -104,10 +104,16 @@ def _list_runs(click_ctx: click.Context) -> None:
         # Format status
         status_cell = format_workflow_outcome(run)
 
-        # Format plan column
-        plan_cell = "-"
-        title_cell = "-"
-        if issue_num is not None:
+        # Handle legacy runs where we can't parse the issue number
+        # Show "X" to indicate "can't parse" vs "-" for "no data"
+        if issue_num is None:
+            # Legacy format - can't extract issue linkage
+            plan_cell = "[dim]X[/dim]"
+            title_cell = "[dim]X[/dim]"
+            pr_cell = "[dim]X[/dim]"
+            checks_cell = "[dim]X[/dim]"
+        else:
+            # New format - have issue number, try to get data
             issue_url = None
             if owner and repo_name:
                 issue_url = f"https://github.com/{owner}/{repo_name}/issues/{issue_num}"
@@ -124,21 +130,23 @@ def _list_runs(click_ctx: click.Context) -> None:
                 if len(title) > 50:
                     title = title[:47] + "..."
                 title_cell = title
+            else:
+                title_cell = "-"
 
-        # Format PR column
-        pr_cell = "-"
-        checks_cell = "-"
-        if issue_num is not None and issue_num in pr_linkages:
-            prs = pr_linkages[issue_num]
-            selected_pr = select_display_pr(prs)
-            if selected_pr is not None:
-                graphite_url = ctx.graphite.get_graphite_url(
-                    selected_pr.owner, selected_pr.repo, selected_pr.number
-                )
-                pr_cell = format_pr_cell(
-                    selected_pr, use_graphite=use_graphite, graphite_url=graphite_url
-                )
-                checks_cell = get_checks_status_emoji(selected_pr)
+            # Format PR column
+            pr_cell = "-"
+            checks_cell = "-"
+            if issue_num in pr_linkages:
+                prs = pr_linkages[issue_num]
+                selected_pr = select_display_pr(prs)
+                if selected_pr is not None:
+                    graphite_url = ctx.graphite.get_graphite_url(
+                        selected_pr.owner, selected_pr.repo, selected_pr.number
+                    )
+                    pr_cell = format_pr_cell(
+                        selected_pr, use_graphite=use_graphite, graphite_url=graphite_url
+                    )
+                    checks_cell = get_checks_status_emoji(selected_pr)
 
         table.add_row(
             run_id_cell,

@@ -135,6 +135,11 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
         help="Filter by workflow run state",
     )(f)
     f = click.option(
+        "--with-run",
+        is_flag=True,
+        help="Show workflow run columns (run-id, run-state)",
+    )(f)
+    f = click.option(
         "--limit",
         type=int,
         help="Maximum number of results to return",
@@ -211,6 +216,7 @@ def _list_plans_impl(
     label: tuple[str, ...],
     state: str | None,
     run_state: str | None,
+    with_run: bool,
     limit: int | None,
 ) -> None:
     """Implementation logic for listing plans with optional filters.
@@ -226,7 +232,11 @@ def _list_plans_impl(
     # Build labels list - default to ["erk-plan"] if no labels specified
     labels_list = list(label) if label else ["erk-plan"]
 
+    # Determine if we need workflow runs (for display or filtering)
+    needs_workflow_runs = with_run or run_state is not None
+
     # Use PlanListService for batched API calls (2 total: GraphQL + REST)
+    # Skip workflow runs when not needed for better performance
     try:
         plan_data = ctx.plan_list_service.get_plan_list_data(
             repo_root=repo_root,
@@ -234,6 +244,7 @@ def _list_plans_impl(
             workflow_name="dispatch-erk-queue.yml",
             state=state,
             limit=limit,
+            skip_workflow_runs=not needs_workflow_runs,
         )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
@@ -293,8 +304,9 @@ def _list_plans_impl(
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
-    table.add_column("run-id", no_wrap=True)
-    table.add_column("run-state", no_wrap=True, width=12)
+    if with_run:
+        table.add_column("run-id", no_wrap=True)
+        table.add_column("run-state", no_wrap=True, width=12)
     table.add_column("impl-wt", style="yellow", no_wrap=True)
 
     # Populate table rows
@@ -366,16 +378,25 @@ def _list_plans_impl(
         # Format workflow run outcome
         run_outcome_cell = format_workflow_outcome(workflow_run)
 
-        # Add row to table (columns: plan, title, pr, chks, run-id, run-state, impl-wt)
-        table.add_row(
-            issue_id,
-            title,
-            pr_cell,
-            checks_cell,
-            run_id_cell,
-            run_outcome_cell,
-            worktree_name,
-        )
+        # Add row to table (columns depend on with_run flag)
+        if with_run:
+            table.add_row(
+                issue_id,
+                title,
+                pr_cell,
+                checks_cell,
+                run_id_cell,
+                run_outcome_cell,
+                worktree_name,
+            )
+        else:
+            table.add_row(
+                issue_id,
+                title,
+                pr_cell,
+                checks_cell,
+                worktree_name,
+            )
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation
@@ -393,6 +414,7 @@ def list_plans(
     label: tuple[str, ...],
     state: str | None,
     run_state: str | None,
+    with_run: bool,
     limit: int | None,
 ) -> None:
     """List plans with optional filters.
@@ -403,8 +425,9 @@ def list_plans(
         erk plan list --limit 10
         erk plan list --run-state in_progress
         erk plan list --run-state success --state open
+        erk plan list --with-run
     """
-    _list_plans_impl(ctx, label, state, run_state, limit)
+    _list_plans_impl(ctx, label, state, run_state, with_run, limit)
 
 
 # Register ls as a hidden alias (won't show in help)
@@ -416,7 +439,8 @@ def ls_plans(
     label: tuple[str, ...],
     state: str | None,
     run_state: str | None,
+    with_run: bool,
     limit: int | None,
 ) -> None:
     """List plans with optional filters (alias of 'list')."""
-    _list_plans_impl(ctx, label, state, run_state, limit)
+    _list_plans_impl(ctx, label, state, run_state, with_run, limit)

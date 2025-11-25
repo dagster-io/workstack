@@ -30,6 +30,11 @@ from erk.core.context import ErkContext
     help="Filter by action state (plans only)",
 )
 @click.option(
+    "--with-run",
+    is_flag=True,
+    help="Show workflow run columns (run-id, run-state, plans only)",
+)
+@click.option(
     "--limit",
     type=int,
     help="Maximum number of results to return (plans only)",
@@ -42,6 +47,7 @@ def ls_cmd(
     label: tuple[str, ...],
     state: str | None,
     action_state: str | None,
+    with_run: bool,
     limit: int | None,
 ) -> None:
     """List plans (default) or worktrees.
@@ -53,10 +59,11 @@ def ls_cmd(
         erk ls --worktrees               # List worktrees
         erk ls --label erk-plan          # List plans with label
         erk ls --worktrees --ci          # List worktrees with CI status
+        erk ls --with-run                # List plans with workflow run columns
     """
     if worktrees:
         # List worktrees
         _list_worktrees(ctx, ci=ci)
     else:
         # List plans (default)
-        _list_plans_impl(ctx, label, state, action_state, limit)
+        _list_plans_impl(ctx, label, state, action_state, with_run, limit)

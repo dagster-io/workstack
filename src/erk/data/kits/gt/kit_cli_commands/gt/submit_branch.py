@@ -58,7 +58,12 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
-from erk_shared.impl_folder import has_issue_reference, read_issue_reference, read_plan_author
+from erk_shared.impl_folder import (
+    has_issue_reference,
+    read_issue_reference,
+    read_last_dispatched_run_id,
+    read_plan_author,
+)
 
 from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
@@ -394,6 +399,22 @@ def execute_post_analysis(
     if plan_author is not None:
         author_attribution = f"\n\n---\n📋 Plan created by @{plan_author}"
         pr_body = pr_body + author_attribution
+
+    # Add GitHub Actions run link if available
+    run_id = read_last_dispatched_run_id(impl_dir)
+    if run_id is not None and has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            # Extract owner/repo from issue_url (format: https://github.com/owner/repo/issues/N)
+            issue_url = issue_ref.issue_url
+            parts = issue_url.split("/")
+            # URL parts: ['https:', '', 'github.com', 'owner', 'repo', 'issues', 'N']
+            if len(parts) >= 5:
+                owner = parts[3]
+                repo = parts[4]
+                run_url = f"https://github.com/{owner}/{repo}/actions/runs/{run_id}"
+                run_link = f"\n🔗 [View GitHub Actions Run]({run_url})"
+                pr_body = pr_body + run_link
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()

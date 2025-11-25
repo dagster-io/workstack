@@ -1445,3 +1445,65 @@ Suffix content"""
     assert "Suffix content" in result
     # Should have the updated block
     assert "plan-header" in result
+
+
+def test_extract_plan_header_created_by_basic() -> None:
+    """Test extracting created_by from plan-header block."""
+    from erk_shared.github.metadata import extract_plan_header_created_by
+
+    body = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-11-25T14:37:43.513418+00:00'
+created_by: schrockn
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = extract_plan_header_created_by(body)
+    assert result == "schrockn"
+
+
+def test_extract_plan_header_created_by_no_block() -> None:
+    """Test that extract_plan_header_created_by returns None when block not found."""
+    from erk_shared.github.metadata import extract_plan_header_created_by
+
+    body = "No plan-header block here"
+    result = extract_plan_header_created_by(body)
+    assert result is None
+
+
+def test_extract_plan_header_created_by_missing_field() -> None:
+    """Test that extract_plan_header_created_by returns None when field missing."""
+    from erk_shared.github.metadata import extract_plan_header_created_by
+
+    body = """<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+
+schema_version: '2'
+created_at: '2025-11-25T14:37:43.513418+00:00'
+worktree_name: test-worktree
+last_dispatched_run_id: null
+last_dispatched_at: null
+
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = extract_plan_header_created_by(body)
+    assert result is None

@@ -30,9 +30,34 @@ Implementation:
     It provides cleaner agent code and makes issue linking behavior testable.
 """
 
+import subprocess
 from pathlib import Path
 
 import click
+
+
+def _get_plan_author(issue_number: int) -> str | None:
+    """Fetch plan author from issue's plan-header metadata.
+
+    Args:
+        issue_number: GitHub issue number
+
+    Returns:
+        GitHub username of plan creator, or None if not found
+    """
+    # Import here to avoid loading when not needed
+    from erk_shared.github.metadata import extract_plan_header_created_by
+
+    result = subprocess.run(
+        ["gh", "issue", "view", str(issue_number), "--json", "body", "--jq", ".body"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    return extract_plan_header_created_by(result.stdout)
 
 
 @click.command(name="get-closing-text")
@@ -62,5 +87,12 @@ def get_closing_text() -> None:
         return
 
     # Output closing text (with trailing newlines for PR body formatting)
-    closing_text = f"Closes #{issue_ref.issue_number}\n\n"
+    closing_text = f"Closes #{issue_ref.issue_number}"
+
+    # Fetch issue to get plan author
+    plan_author = _get_plan_author(issue_ref.issue_number)
+    if plan_author:
+        closing_text += f"\nPlan crafted by @{plan_author}"
+
+    closing_text += "\n\n"
     click.echo(closing_text, nl=False)

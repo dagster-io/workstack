@@ -51,6 +51,7 @@ Examples:
 """
 
 import json
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -58,6 +59,7 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
+from erk_shared.github.metadata import extract_plan_header_created_by
 from erk_shared.impl_folder import has_issue_reference, read_issue_reference
 
 from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
@@ -366,6 +368,27 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     )
 
 
+def _get_plan_author(issue_number: int) -> str | None:
+    """Fetch plan author from issue's plan-header metadata.
+
+    Args:
+        issue_number: GitHub issue number
+
+    Returns:
+        GitHub username of plan creator, or None if not found
+    """
+    result = subprocess.run(
+        ["gh", "issue", "view", str(issue_number), "--json", "body", "--jq", ".body"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    return extract_plan_header_created_by(result.stdout)
+
+
 def execute_post_analysis(
     commit_message: str, ops: GtKit | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
@@ -386,7 +409,14 @@ def execute_post_analysis(
         issue_ref = read_issue_reference(impl_dir)
         if issue_ref is not None:
             # Prepend "Closes #N" to PR body
-            closing_text = f"Closes #{issue_ref.issue_number}\n\n"
+            closing_text = f"Closes #{issue_ref.issue_number}"
+
+            # Fetch issue to get plan author from metadata
+            plan_author = _get_plan_author(issue_ref.issue_number)
+            if plan_author:
+                closing_text += f"\nPlan crafted by @{plan_author}"
+
+            closing_text += "\n\n"
             pr_body = closing_text + pr_body
 
     # Step 1: Get current branch for context

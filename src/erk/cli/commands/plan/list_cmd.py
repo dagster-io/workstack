@@ -316,13 +316,12 @@ def _list_plans_impl(
     # Create Rich table with columns
     table = Table(show_header=True, header_style="bold")
     table.add_column("plan", style="cyan", no_wrap=True)
-    table.add_column("pr", no_wrap=True)
     table.add_column("title", no_wrap=True)
+    table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
-    table.add_column("st", no_wrap=True)
-    table.add_column("last-queue-run", no_wrap=True, width=12)
     table.add_column("run-id", no_wrap=True)
-    table.add_column("wt", style="yellow", no_wrap=True)
+    table.add_column("run-state", no_wrap=True, width=12)
+    table.add_column("impl-wt", style="yellow", no_wrap=True)
 
     # Populate table rows
     for plan in plans:
@@ -336,10 +335,6 @@ def _list_plans_impl(
             issue_id = f"[link={plan.url}]{colored_id}[/link]"
         else:
             issue_id = colored_id
-
-        # Format state with color
-        state_color = "green" if plan.state == PlanState.OPEN else "red"
-        state_str = f"[{state_color}]{plan.state.value}[/{state_color}]"
 
         # Truncate title to 50 characters with ellipsis
         title = plan.title
@@ -397,15 +392,14 @@ def _list_plans_impl(
         # Format workflow run outcome
         run_outcome_cell = format_workflow_outcome(workflow_run)
 
-        # Add row to table (columns: plan, pr, title, chks, st, run, run-id, wt)
+        # Add row to table (columns: plan, title, pr, chks, run-id, run-state, impl-wt)
         table.add_row(
             issue_id,
-            pr_cell,
             title,
+            pr_cell,
             checks_cell,
-            state_str,
-            run_outcome_cell,
             run_id_cell,
+            run_outcome_cell,
             worktree_name,
         )
 

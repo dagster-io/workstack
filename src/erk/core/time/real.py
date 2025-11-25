@@ -1,17 +1,8 @@
-"""Real time implementation using actual time.sleep()."""
+"""Re-export from erk_shared for backward compatibility."""
 
-import time
+from erk_shared.integrations.time.real import RealTime
 
-from erk.core.time.abc import Time
+# Keep old name for compatibility
+RealTimeIntegration = RealTime
 
-
-class RealTime(Time):
-    """Production implementation using actual time.sleep()."""
-
-    def sleep(self, seconds: float) -> None:
-        """Sleep for specified number of seconds using time.sleep().
-
-        Args:
-            seconds: Number of seconds to sleep
-        """
-        time.sleep(seconds)
+__all__ = ["RealTime", "RealTimeIntegration"]

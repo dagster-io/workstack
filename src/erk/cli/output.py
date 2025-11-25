@@ -1,50 +1,17 @@
 """Output utilities for CLI commands with clear intent."""
 
-from typing import Any
-
-import click
+from erk_shared.output import format_duration, machine_output, user_output
 from rich.panel import Panel
 from rich.text import Text
 
 from erk.core.claude_executor import CommandResult
 
-
-def user_output(
-    message: Any | None = None,
-    nl: bool = True,
-    color: bool | None = None,
-) -> None:
-    """Output informational message for human users.
-
-    Routes to stderr so shell integration can capture structured data
-    on stdout while users still see progress/status messages.
-
-    Args:
-        message: The string or bytes to output. Other objects are converted to strings.
-        nl: Print a newline after the message. Enabled by default.
-        color: Force showing or hiding colors and other styles. By default, Click
-            will remove color if the output does not look like an interactive terminal.
-    """
-    click.echo(message, nl=nl, err=True, color=color)
-
-
-def machine_output(
-    message: Any | None = None,
-    nl: bool = True,
-    color: bool | None = None,
-) -> None:
-    """Output structured data for machine/script consumption.
-
-    Routes to stdout for shell wrappers to capture. Should only be used
-    for final output like activation script paths.
-
-    Args:
-        message: The string or bytes to output. Other objects are converted to strings.
-        nl: Print a newline after the message. Enabled by default.
-        color: Force showing or hiding colors and other styles. By default, Click
-            will remove color if the output does not look like an interactive terminal.
-    """
-    click.echo(message, nl=nl, err=False, color=color)
+__all__ = [
+    "format_duration",
+    "format_implement_summary",
+    "machine_output",
+    "user_output",
+]
 
 
 def format_implement_summary(results: list[CommandResult], total_duration: float) -> Panel:
@@ -105,26 +72,3 @@ def format_implement_summary(results: list[CommandResult], total_duration: float
     return Panel(
         content, title=title, border_style="green" if overall_success else "red", padding=(1, 2)
     )
-
-
-def format_duration(seconds: float) -> str:
-    """Format duration in human-readable form.
-
-    Args:
-        seconds: Duration in seconds
-
-    Returns:
-        Formatted duration string (e.g., "2m 34s" or "45s")
-
-    Example:
-        >>> format_duration(154.5)
-        '2m 34s'
-        >>> format_duration(45.2)
-        '45s'
-    """
-    if seconds < 60:
-        return f"{seconds:.0f}s"
-
-    minutes = int(seconds / 60)
-    remaining_seconds = int(seconds % 60)
-    return f"{minutes}m {remaining_seconds}s"

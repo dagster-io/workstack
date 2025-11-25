@@ -330,7 +330,7 @@ Write plan content to a temporary file for kit CLI:
 
 ```bash
 # Create temp file
-temp_plan=$(mktemp /tmp/erk-plan-XXXXXX.md)
+temp_plan=$(mktemp)
 
 # Write plan content
 cat > "$temp_plan" <<'PLAN_EOF'

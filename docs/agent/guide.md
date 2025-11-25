@@ -54,6 +54,7 @@ docs/
 | Your Task                         | Start Here                                                                                                     |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Understanding erk terminology     | [glossary.md](glossary.md)                                                                                     |
+| Cleaning up branches/worktrees    | [erk/branch-cleanup.md](erk/branch-cleanup.md)                                                                 |
 | Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |
 | Using time.sleep() or delays      | [erk-architecture.md](erk-architecture.md#time-abstraction-for-testing)                                        |
 | Understanding or modifying hooks  | [hooks-erk.md](hooks-erk.md) → General: [hooks.md](hooks.md)                                                   |

@@ -6,6 +6,7 @@ from erk_shared.output.output import machine_output, user_output
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, write_trunk_to_pyproject
 
@@ -15,13 +16,8 @@ def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
 
     Prints the value or exits with error if key not found.
     """
-    if len(parts) != 2:
-        user_output(f"Invalid key: {key}")
-        raise SystemExit(1)
-
-    if parts[1] not in cfg.env:
-        user_output(f"Key not found: {key}")
-        raise SystemExit(1)
+    Ensure.invariant(len(parts) == 2, f"Invalid key: {key}")
+    Ensure.invariant(parts[1] in cfg.env, f"Key not found: {key}")
 
     machine_output(cfg.env[parts[1]])
 
@@ -31,15 +27,11 @@ def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> Non
 
     Prints the value or exits with error if key not found.
     """
-    if len(parts) != 2:
-        user_output(f"Invalid key: {key}")
-        raise SystemExit(1)
+    Ensure.invariant(len(parts) == 2, f"Invalid key: {key}")
 
     # Handle shell subkey
     if parts[1] == "shell":
-        if not cfg.post_create_shell:
-            user_output(f"Key not found: {key}")
-            raise SystemExit(1)
+        Ensure.invariant(cfg.post_create_shell is not None, f"Key not found: {key}")
         machine_output(cfg.post_create_shell)
         return
 
@@ -50,8 +42,7 @@ def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> Non
         return
 
     # Unknown subkey
-    user_output(f"Key not found: {key}")
-    raise SystemExit(1)
+    Ensure.invariant(False, f"Key not found: {key}")
 
 
 @click.group("config")

@@ -243,7 +243,7 @@ class RealGraphiteGtKit(GraphiteGtKit):
 
     def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
         """Run gt submit to create or update PR."""
-        args = ["gt", "submit", "--no-edit"]
+        args = ["gt", "submit", "--no-edit", "--no-interactive"]
 
         if publish:
             args.append("--publish")

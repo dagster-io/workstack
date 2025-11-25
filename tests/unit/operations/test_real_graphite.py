@@ -67,7 +67,8 @@ def test_real_graphite_ops_submit_branch() -> None:
 
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "submit", "--branch", "feat-1", "--no-edit"]
+        expected = ["gt", "submit", "--branch", "feat-1", "--no-edit", "--no-interactive"]
+        assert call_args[0][0] == expected
         assert call_args[1]["cwd"] == Path("/test")
         assert call_args[1]["check"] is True
 
@@ -83,7 +84,16 @@ def test_real_graphite_ops_submit_branch_with_quiet() -> None:
 
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "submit", "--branch", "feat-2", "--no-edit", "--quiet"]
+        expected = [
+            "gt",
+            "submit",
+            "--branch",
+            "feat-2",
+            "--no-edit",
+            "--no-interactive",
+            "--quiet",
+        ]
+        assert call_args[0][0] == expected
 
 
 def test_real_graphite_ops_submit_branch_stderr_handling() -> None:

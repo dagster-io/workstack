@@ -257,7 +257,7 @@ class RealGraphite(Graphite):
             branch_name: Name of the branch to submit
             quiet: If True, pass --quiet flag to gt submit for minimal output
         """
-        cmd = ["gt", "submit", "--branch", branch_name, "--no-edit"]
+        cmd = ["gt", "submit", "--branch", branch_name, "--no-edit", "--no-interactive"]
         if quiet:
             cmd.append("--quiet")
 

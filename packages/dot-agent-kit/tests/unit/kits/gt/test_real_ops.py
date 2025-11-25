@@ -247,7 +247,7 @@ class TestRealGraphiteGtKitOps:
 
             # Verify correct command was called
             mock_run.assert_called_once_with(
-                ["gt", "submit", "--no-edit"],
+                ["gt", "submit", "--no-edit", "--no-interactive"],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -273,7 +273,7 @@ class TestRealGraphiteGtKitOps:
 
             # Verify flags are added
             mock_run.assert_called_once_with(
-                ["gt", "submit", "--no-edit", "--publish", "--restack"],
+                ["gt", "submit", "--no-edit", "--no-interactive", "--publish", "--restack"],
                 capture_output=True,
                 text=True,
                 check=False,

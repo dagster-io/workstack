@@ -91,7 +91,7 @@ def test_ls_command_lists_plans_by_default() -> None:
 
 
 def test_ls_command_with_worktrees_flag() -> None:
-    """Test that 'erk ls --worktrees' lists worktrees (old behavior)."""
+    """Test that 'erk ls --worktrees' lists worktrees."""
     from erk_shared.git.abc import WorktreeInfo
 
     from erk.core.git.fake import FakeGit
@@ -114,9 +114,9 @@ def test_ls_command_with_worktrees_flag() -> None:
         # Act - Use ls command with --worktrees flag
         result = runner.invoke(ls_cmd, ["--worktrees"], obj=ctx)
 
-        # Assert - Should show worktrees section
+        # Assert - Should show worktrees table with columns
         assert result.exit_code == 0
-        assert "## Worktrees" in result.output
+        assert "worktree" in result.output  # Table header
         assert "root" in result.output
 
 

@@ -10,11 +10,6 @@ from erk.core.context import ErkContext
 @click.command("ls")
 @click.option("--worktrees", is_flag=True, help="List worktrees instead of plans")
 @click.option(
-    "--ci",
-    is_flag=True,
-    help="Fetch CI check status from GitHub (slower, worktrees only)",
-)
-@click.option(
     "--label",
     multiple=True,
     help="Filter by label (plans only)",
@@ -43,7 +38,6 @@ from erk.core.context import ErkContext
 def ls_cmd(
     ctx: ErkContext,
     worktrees: bool,
-    ci: bool,
     label: tuple[str, ...],
     state: str | None,
     action_state: str | None,
@@ -58,12 +52,11 @@ def ls_cmd(
         erk ls                           # List plans
         erk ls --worktrees               # List worktrees
         erk ls --label erk-plan          # List plans with label
-        erk ls --worktrees --ci          # List worktrees with CI status
         erk ls --with-run                # List plans with workflow run columns
     """
     if worktrees:
         # List worktrees
-        _list_worktrees(ctx, ci=ci)
+        _list_worktrees(ctx)
     else:
         # List plans (default)
         _list_plans_impl(ctx, label, state, action_state, with_run, limit)

@@ -1,7 +1,7 @@
 ---
 name: git-branch-submitter
 description: Specialized agent for git-only push-pr workflow. Handles the complete workflow from uncommitted changes check through PR submission using standard git + GitHub CLI (no Graphite required). Orchestrates git operations, diff analysis, commit message generation, and PR management.
-model: sonnet
+model: haiku
 color: blue
 tools: Read, Bash, Task
 ---

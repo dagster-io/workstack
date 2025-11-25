@@ -18,7 +18,6 @@ from erk.cli.commands.runs import runs_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.stack import stack_group
 from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
-from erk.cli.commands.stack.land_old.command import land_stack as land_stack_cmd
 from erk.cli.commands.stack.move_cmd import move_stack
 from erk.cli.commands.stack.split_old.command import split_cmd as split_stack
 from erk.cli.commands.status import status_cmd
@@ -80,7 +79,6 @@ cli.add_command(prepare_cwd_recovery_cmd)
 
 # Deprecated aliases (hidden from help and autocomplete)
 consolidate_stack.hidden = True
-land_stack_cmd.hidden = True
 move_stack.hidden = True
 split_stack.hidden = True
 create_wt.hidden = True
@@ -97,8 +95,6 @@ cli.add_command(current_wt, name="current")  # Deprecated: use 'erk wt current'
 cli.add_command(delete_wt, name="delete")  # Deprecated: use 'erk wt delete'
 cli.add_command(del_wt, name="del")  # Deprecated: use 'erk wt delete'
 cli.add_command(goto_wt, name="goto")  # Deprecated: use 'erk wt goto'
-cli.add_command(land_stack_cmd, name="land")  # Deprecated: use 'erk stack land'
-cli.add_command(land_stack_cmd, name="land-stack")  # Deprecated: use 'erk stack land'
 cli.add_command(move_stack, name="move")  # Deprecated: use 'erk stack move'
 cli.add_command(rename_wt, name="rename")  # Deprecated: use 'erk wt rename'
 cli.add_command(split_stack, name="split")  # Deprecated: use 'erk stack split'

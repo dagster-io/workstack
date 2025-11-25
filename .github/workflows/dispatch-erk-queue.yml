@@ -15,6 +15,10 @@ on:
         description: "GitHub issue number to implement"
         required: true
         type: string
+      submitted_by:
+        description: "GitHub username of the person who submitted the issue"
+        required: true
+        type: string
       distinct_id:
         description: "Unique identifier for run discovery (base36)"
         required: true
@@ -58,9 +62,12 @@ jobs:
           uv tool install --from ./packages/dot-agent-kit --with . dot-agent-kit
 
       - name: Configure git
+        env:
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use submitter as the git author for proper attribution
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "${SUBMITTED_BY}@users.noreply.github.com"
 
       - name: Derive branch name from issue title
         id: branch_name
@@ -316,9 +323,12 @@ jobs:
           dot-agent kit install erk
 
       - name: Configure git
+        env:
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use submitter as the git author for proper attribution
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "${SUBMITTED_BY}@users.noreply.github.com"
 
       - name: Set up implementation folder
         run: |
@@ -352,45 +362,26 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ github.token }}
 
-      - name: Commit and push changes
-        id: commit
+      - name: Submit branch with proper commit message
+        if: steps.implement.outputs.implementation_success == 'true'
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ needs.setup.outputs.issue_number }}
           BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
-          if [[ -n $(git status --porcelain) ]]; then
-            git add .
-            git commit -m "Implement plan from issue #$ISSUE_NUMBER"
-            git push origin "$BRANCH_NAME"
-            echo "✓ Changes committed and pushed"
-            echo "changes_pushed=true" >> $GITHUB_OUTPUT
-          else
-            echo "No changes to commit"
-            echo "changes_pushed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Clean up .erp folder
-        if: steps.commit.outputs.changes_pushed == 'true'
-        env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
-        run: |
-          # Remove .erp/ folder now that implementation is complete
+          # First, delete .erp/ folder and stage it (before submission)
           git rm -rf .erp/
-          git commit -m "Remove temporary plan after implementation"
-          git push origin "$BRANCH_NAME"
-          echo "✓ Removed .erp/ folder"
+          git add -A
 
-      - name: Mark PR as ready for review
-        if: steps.commit.outputs.changes_pushed == 'true'
-        env:
-          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get PR number for current branch
-          pr_number=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          if [ -n "$pr_number" ]; then
-            gh pr ready "$pr_number"
-            echo "✓ Marked PR #$pr_number as ready for review"
-          else
-            echo "⚠️ Could not find PR for branch $BRANCH_NAME"
-          fi
+          # Run gt:submit-pr which will:
+          # 1. Commit any uncommitted changes (including .erp removal)
+          # 2. Squash all commits in the branch
+          # 3. Analyze the diff and generate a good commit message
+          # 4. Include "Closes #N" since .impl/issue.json exists
+          # 5. Submit with Graphite and update PR metadata
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "/gt:submit-pr Implement issue #$ISSUE_NUMBER"

@@ -141,9 +141,7 @@ def test_runs_cmd_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -241,9 +239,7 @@ def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -288,9 +284,7 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
     github_ops = FakeGitHub(workflow_runs=workflow_runs)
     issues_ops = FakeGitHubIssues(issues={})
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -363,9 +357,7 @@ def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -420,9 +412,7 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -475,9 +465,7 @@ def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 
@@ -535,9 +523,7 @@ def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
     }
     issues_ops = FakeGitHubIssues(issues=issues)
 
-    ctx = create_test_context(
-        git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root
-    )
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
 
     runner = CliRunner()
 

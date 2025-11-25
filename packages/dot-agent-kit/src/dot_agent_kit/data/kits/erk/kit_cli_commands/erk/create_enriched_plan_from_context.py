@@ -70,10 +70,21 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_file: str) -> Non
     # This eliminates the need for update_issue_body after creation
     formatted_body = format_plan_issue_body_simple(plan.strip())
 
-    # Create issue with pre-formatted body, no labels
-    # Labels removed as erk-plan label is no longer used
+    # Ensure erk-plan label exists (required for erk submit validation)
     try:
-        result = github.create_issue(repo_root, title, formatted_body, labels=[])
+        github.ensure_label_exists(
+            repo_root=repo_root,
+            label="erk-plan",
+            description="Implementation plan for manual execution",
+            color="0E8A16",
+        )
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Create issue with pre-formatted body and erk-plan label
+    try:
+        result = github.create_issue(repo_root, title, formatted_body, labels=["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
         raise SystemExit(1) from e

@@ -28,7 +28,6 @@ from erk.cli.commands.up import up_cmd
 from erk.cli.commands.wt import wt_group
 from erk.cli.commands.wt.create_cmd import create_wt
 from erk.cli.commands.wt.current_cmd import current_wt
-from erk.cli.commands.wt.delete_cmd import del_wt, delete_wt
 from erk.cli.commands.wt.goto_cmd import goto_wt
 from erk.cli.commands.wt.rename_cmd import rename_wt
 from erk.cli.help_formatter import GroupedCommandGroup
@@ -92,8 +91,6 @@ cli.add_command(prepare_cwd_recovery_cmd)
 cli.add_command(_hidden_alias(consolidate_stack), name="consolidate")
 cli.add_command(_hidden_alias(create_wt), name="create")  # Deprecated: use 'erk wt create'
 cli.add_command(_hidden_alias(current_wt), name="current")  # Deprecated: use 'erk wt current'
-cli.add_command(_hidden_alias(delete_wt), name="delete")  # Deprecated: use 'erk wt delete'
-cli.add_command(_hidden_alias(del_wt), name="del")  # Deprecated: use 'erk wt delete'
 cli.add_command(_hidden_alias(goto_wt), name="goto")  # Deprecated: use 'erk wt goto'
 cli.add_command(_hidden_alias(move_stack), name="move")  # Deprecated: use 'erk stack move'
 cli.add_command(_hidden_alias(rename_wt), name="rename")  # Deprecated: use 'erk wt rename'

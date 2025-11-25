@@ -1,4 +1,4 @@
-"""Tests for erk delete command.
+"""Tests for erk wt delete command.
 
 This file tests the delete command which removes a worktree workspace.
 """
@@ -26,7 +26,7 @@ def test_delete_force_removes_directory() -> None:
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "foo"
 
         test_ctx = build_workspace_test_context(env, existing_paths={wt})
-        result = runner.invoke(cli, ["delete", "foo", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "foo", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert result.output.strip().endswith(str(wt))
@@ -40,7 +40,7 @@ def test_delete_prompts_and_aborts_on_no() -> None:
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "bar"
 
         test_ctx = build_workspace_test_context(env, existing_paths={wt})
-        result = runner.invoke(cli, ["delete", "bar"], input="n\n", obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "bar"], input="n\n", obj=test_ctx)
 
         assert_cli_success(result)
         # User aborted, so worktree should still exist (check via git_ops state)
@@ -55,7 +55,7 @@ def test_delete_dry_run_does_not_delete() -> None:
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         test_ctx = build_workspace_test_context(env, dry_run=True, existing_paths={wt})
-        result = runner.invoke(cli, ["delete", "test-stack", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "test-stack", "-f"], obj=test_ctx)
 
         assert_cli_success(
             result,
@@ -97,7 +97,7 @@ def test_delete_dry_run_with_delete_stack() -> None:
             existing_paths={wt},
         )
 
-        result = runner.invoke(cli, ["delete", "test-stack", "-f", "-s"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "test-stack", "-f", "-s"], obj=test_ctx)
 
         assert_cli_success(result, "[DRY RUN]", "Would run: gt delete")
         assert len(fake_git_ops.deleted_branches) == 0  # No actual deletion
@@ -110,7 +110,7 @@ def test_delete_rejects_dot_dot() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         test_ctx = build_workspace_test_context(env)
-        result = runner.invoke(cli, ["delete", "..", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "..", "-f"], obj=test_ctx)
 
         assert_cli_error(result, 1, "Error: Cannot delete '..'", "directory references not allowed")
 
@@ -120,7 +120,7 @@ def test_delete_rejects_root_slash() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         test_ctx = build_workspace_test_context(env)
-        result = runner.invoke(cli, ["delete", "/", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "/", "-f"], obj=test_ctx)
 
         assert_cli_error(result, 1, "Error: Cannot delete '/'", "absolute paths not allowed")
 
@@ -130,7 +130,7 @@ def test_delete_rejects_path_with_slash() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         test_ctx = build_workspace_test_context(env)
-        result = runner.invoke(cli, ["delete", "foo/bar", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "foo/bar", "-f"], obj=test_ctx)
 
         assert_cli_error(result, 1, "Error: Cannot delete 'foo/bar'", "path separators not allowed")
 
@@ -140,7 +140,7 @@ def test_delete_rejects_root_name() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         test_ctx = build_workspace_test_context(env)
-        result = runner.invoke(cli, ["delete", "root", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "root", "-f"], obj=test_ctx)
 
         assert_cli_error(result, 1, "Error: Cannot delete 'root'", "root worktree name not allowed")
 
@@ -168,7 +168,7 @@ def test_delete_changes_directory_when_in_target_worktree() -> None:
         test_ctx = env.build_context(git=git_ops, cwd=wt_path, existing_paths={wt_path})
 
         # Execute delete command with --force to skip confirmation
-        result = runner.invoke(cli, ["delete", "feature", "-f"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "feature", "-f"], obj=test_ctx)
 
         # Should succeed and show directory change message
         assert_cli_success(result, "Changing directory to repository root", str(env.cwd))
@@ -212,7 +212,7 @@ def test_delete_with_delete_stack_handles_user_decline() -> None:
             existing_paths={wt},
         )
 
-        result = runner.invoke(cli, ["delete", "test-stack", "-s"], obj=test_ctx, input="y\n")
+        result = runner.invoke(cli, ["wt", "delete", "test-stack", "-s"], obj=test_ctx, input="y\n")
 
         # Should NOT crash - should exit gracefully
         assert result.exit_code == 0, result.output
@@ -249,7 +249,7 @@ def test_delete_with_delete_stack_handles_gt_not_found() -> None:
             existing_paths={wt},
         )
 
-        result = runner.invoke(cli, ["delete", "test-stack", "-f", "-s"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "delete", "test-stack", "-f", "-s"], obj=test_ctx)
 
         # For case-insensitive checks, verify we can find the patterns
         output_lower = result.output.lower()

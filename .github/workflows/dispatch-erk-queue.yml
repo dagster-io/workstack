@@ -581,16 +581,30 @@ jobs:
         run: |
           echo "Triggering CI workflows for branch $BRANCH_NAME..."
 
-          # Check if local is ahead of remote (unpushed commits from failed submission)
+          # Fetch remote branch state
           git fetch origin "$BRANCH_NAME"
 
+          # Check divergence: both ahead AND behind means branches diverged
           AHEAD=$(git rev-list --count "origin/$BRANCH_NAME..$BRANCH_NAME" 2>/dev/null || echo "0")
+          BEHIND=$(git rev-list --count "$BRANCH_NAME..origin/$BRANCH_NAME" 2>/dev/null || echo "0")
 
-          if [ "$AHEAD" -gt 0 ]; then
+          echo "Local vs remote: ahead=$AHEAD, behind=$BEHIND"
+
+          if [ "$AHEAD" -gt 0 ] && [ "$BEHIND" -gt 0 ]; then
+            # Branches have diverged - reset local to match remote
+            echo "⚠️  Branches have diverged (ahead=$AHEAD, behind=$BEHIND)"
+            echo "Resetting local to match remote..."
+            git reset --hard "origin/$BRANCH_NAME"
+          elif [ "$AHEAD" -gt 0 ]; then
+            # Local has unpushed commits (from failed submission) - push them
             echo "⚠️  Local branch is ahead by $AHEAD commit(s)"
             echo "This usually means /gt:pr-submit failed after creating commits"
             echo "Pushing pending commits before triggering CI..."
             git push origin "$BRANCH_NAME"
+          elif [ "$BEHIND" -gt 0 ]; then
+            # Local is behind remote - fast-forward to remote
+            echo "Local branch is behind by $BEHIND commit(s), fast-forwarding..."
+            git merge --ff-only "origin/$BRANCH_NAME"
           fi
 
           # Push empty commit to trigger CI via synchronize event

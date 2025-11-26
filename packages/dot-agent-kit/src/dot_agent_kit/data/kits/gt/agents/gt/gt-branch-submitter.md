@@ -207,11 +207,13 @@ COMMIT_MSG
 
 If the command fails (exit code 1), parse the error JSON. The error includes:
 
-- `error_type`: Category of error (submit_merged_parent, submit_diverged, submit_failed, amend_failed, pr_update_failed)
+- `error_type`: Category of error (gt_not_authenticated, gh_not_authenticated, no_branch, no_parent, no_commits, squash_failed, squash_conflict, pr_has_conflicts, submit_merged_parent, submit_diverged, submit_failed, amend_failed, pr_update_failed)
 - `message`: Human-readable description
-- `details`: Additional context including stdout, stderr, branch_name
+- `details`: Additional context including stdout, stderr, branch_name, or fix instructions
 
 Provide helpful, context-aware guidance based on the error type and command output.
+
+**Authentication errors:** The `gt_not_authenticated` and `gh_not_authenticated` error types are returned by pre-analysis when authentication validation fails. These errors should be handled first since they prevent any meaningful work from being done.
 
 ### Step 4: Post PR Link to Issue (if applicable)
 
@@ -328,6 +330,60 @@ This is a hard rule with no exceptions:
 Manual resolution by a human ensures correctness and safety.
 
 ### Specific Error Type Guidance
+
+#### `gt_not_authenticated` Error
+
+❌ **Graphite CLI is not authenticated**
+
+**What happened:** The Graphite CLI (gt) is not authenticated. This is required before any branch submission operations.
+
+**What you need to do:**
+
+The agent has stopped and is waiting for you to authenticate. Follow these steps:
+
+1. **Authenticate with Graphite** (you must do this manually):
+
+   ```bash
+   gt auth
+   ```
+
+2. **Follow the prompts** to connect your GitHub account with Graphite
+
+3. **After authentication**, re-run the workflow:
+   ```bash
+   /gt:pr-submit <description>
+   ```
+
+**Why this check exists:** Authentication is validated upfront to prevent wasted work. Better to fail fast than to prepare commits that can't be submitted.
+
+**The agent will NOT run auth commands for you.** Manual authentication ensures you're connecting your own credentials.
+
+#### `gh_not_authenticated` Error
+
+❌ **GitHub CLI is not authenticated**
+
+**What happened:** The GitHub CLI (gh) is not authenticated. This is required for PR operations like checking PR status and updating metadata.
+
+**What you need to do:**
+
+The agent has stopped and is waiting for you to authenticate. Follow these steps:
+
+1. **Authenticate with GitHub** (you must do this manually):
+
+   ```bash
+   gh auth login
+   ```
+
+2. **Follow the prompts** to connect your GitHub account
+
+3. **After authentication**, re-run the workflow:
+   ```bash
+   /gt:pr-submit <description>
+   ```
+
+**Why this check exists:** Both `gt` and `gh` authentication are validated upfront. The GitHub CLI is used for PR status checks and metadata updates.
+
+**The agent will NOT run auth commands for you.** Manual authentication ensures you're connecting your own credentials.
 
 #### `submit_merged_parent` Error
 

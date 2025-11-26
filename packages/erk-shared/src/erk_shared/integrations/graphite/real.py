@@ -272,3 +272,53 @@ class RealGraphite(Graphite):
         # Display stderr in verbose mode after successful execution
         if not quiet and result.stderr:
             user_output(result.stderr, nl=False)
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check Graphite authentication status.
+
+        Runs `gt auth` and parses the output to determine authentication status.
+        Looks for patterns like:
+        - "Authenticated as: USERNAME"
+        - "Ready to submit PRs to OWNER/REPO"
+        - Success indicator (checkmark)
+
+        Returns:
+            Tuple of (is_authenticated, username, repo_info)
+        """
+        result = subprocess.run(
+            ["gt", "auth"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # If command failed, not authenticated
+        if result.returncode != 0:
+            return (False, None, None)
+
+        output = result.stdout + result.stderr
+
+        # Look for success indicator (checkmark symbol or "Authenticated as:")
+        if "Authenticated as:" not in output and "✓" not in output:
+            return (False, None, None)
+
+        # Extract username from "Authenticated as: USERNAME"
+        username: str | None = None
+        for line in output.split("\n"):
+            if "Authenticated as:" in line:
+                # Parse "Authenticated as: USERNAME" or similar
+                parts = line.split("Authenticated as:")
+                if len(parts) >= 2:
+                    username = parts[1].strip()
+                break
+
+        # Extract repo info from "Ready to submit PRs to OWNER/REPO"
+        repo_info: str | None = None
+        for line in output.split("\n"):
+            if "Ready to submit PRs to" in line:
+                parts = line.split("Ready to submit PRs to")
+                if len(parts) >= 2:
+                    repo_info = parts[1].strip()
+                break
+
+        return (True, username, repo_info)

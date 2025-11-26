@@ -195,6 +195,17 @@ class GraphiteGtKit(ABC):
             True on success, False on failure
         """
 
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check Graphite authentication status.
+
+        Returns:
+            Tuple of (is_authenticated, username, repo_info):
+            - is_authenticated: True if gt is authenticated
+            - username: Authenticated username or None
+            - repo_info: Repository info string or None
+        """
+
 
 class GitHubGtKit(ABC):
     """GitHub (gh) operations interface for GT kit commands."""
@@ -254,6 +265,17 @@ class GitHubGtKit(ABC):
 
         Returns:
             Graphite URL or None if repo info cannot be determined
+        """
+
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check GitHub CLI authentication status.
+
+        Returns:
+            Tuple of (is_authenticated, username, hostname):
+            - is_authenticated: True if gh CLI is authenticated
+            - username: Authenticated username or None
+            - hostname: GitHub hostname or None
         """
 
 

@@ -37,6 +37,9 @@ class FakeGitHub(GitHub):
         pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
         polled_run_id: str | None = None,
         pr_checkout_infos: dict[int, PRCheckoutInfo] | None = None,
+        authenticated: bool = True,
+        auth_username: str | None = "test-user",
+        auth_hostname: str | None = "github.com",
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -51,6 +54,9 @@ class FakeGitHub(GitHub):
             pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
             polled_run_id: Run ID to return from poll_for_workflow_run (None for timeout)
             pr_checkout_infos: Mapping of pr_number -> PRCheckoutInfo
+            authenticated: Whether gh CLI is authenticated (default True for test convenience)
+            auth_username: Username returned by check_auth_status() (default "test-user")
+            auth_hostname: Hostname returned by check_auth_status() (default "github.com")
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -86,12 +92,16 @@ class FakeGitHub(GitHub):
         self._pr_issue_linkages = pr_issue_linkages or {}
         self._polled_run_id = polled_run_id
         self._pr_checkout_infos = pr_checkout_infos or {}
+        self._authenticated = authenticated
+        self._auth_username = auth_username
+        self._auth_hostname = auth_hostname
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
         self._get_pr_status_calls: list[tuple[Path, str]] = []
         self._triggered_workflows: list[tuple[str, dict[str, str]]] = []
         self._poll_attempts: list[tuple[str, str, int, int]] = []
+        self._check_auth_status_calls: list[None] = []
 
     @property
     def merged_prs(self) -> list[int]:
@@ -415,3 +425,28 @@ class FakeGitHub(GitHub):
                     break
             result[run_id] = found
         return result
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return pre-configured authentication status.
+
+        Tracks calls for verification.
+
+        Returns:
+            Tuple of (is_authenticated, username, hostname)
+        """
+        self._check_auth_status_calls.append(None)
+
+        if not self._authenticated:
+            return (False, None, None)
+
+        return (True, self._auth_username, self._auth_hostname)
+
+    @property
+    def check_auth_status_calls(self) -> list[None]:
+        """Get the list of check_auth_status() calls that were made.
+
+        Returns list of None values (one per call, no arguments tracked).
+
+        This property is for test assertions only.
+        """
+        return self._check_auth_status_calls

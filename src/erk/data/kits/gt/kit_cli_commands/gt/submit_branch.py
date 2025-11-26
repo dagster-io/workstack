@@ -79,6 +79,8 @@ class SubmitResult(NamedTuple):
 
 
 PreAnalysisErrorType = Literal[
+    "gt_not_authenticated",
+    "gh_not_authenticated",
     "no_branch",
     "no_parent",
     "no_commits",
@@ -213,7 +215,33 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     if ops is None:
         ops = RealGtKit()
 
-    # Step 0: Check for and commit uncommitted changes
+    # Step 0a: Check Graphite authentication FIRST (before any git operations)
+    gt_authenticated, gt_username, _ = ops.graphite().check_auth_status()
+    if not gt_authenticated:
+        return PreAnalysisError(
+            success=False,
+            error_type="gt_not_authenticated",
+            message="Graphite CLI (gt) is not authenticated",
+            details={
+                "fix": "Run 'gt auth' to authenticate with Graphite",
+                "authenticated": False,
+            },
+        )
+
+    # Step 0b: Check GitHub authentication (required for PR operations)
+    gh_authenticated, gh_username, _ = ops.github().check_auth_status()
+    if not gh_authenticated:
+        return PreAnalysisError(
+            success=False,
+            error_type="gh_not_authenticated",
+            message="GitHub CLI (gh) is not authenticated",
+            details={
+                "fix": "Run 'gh auth login' to authenticate with GitHub",
+                "authenticated": False,
+            },
+        )
+
+    # Step 0c: Check for and commit uncommitted changes
     uncommitted_changes_committed = False
     if ops.git().has_uncommitted_changes():
         if not ops.git().add_all():

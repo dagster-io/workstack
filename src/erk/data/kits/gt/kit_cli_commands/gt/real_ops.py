@@ -199,6 +199,48 @@ class RealGitGtKit(GitGtKit):
 class RealGraphiteGtKit(GraphiteGtKit):
     """Real Graphite operations using subprocess."""
 
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check Graphite authentication status.
+
+        Runs `gt auth` and parses the output to determine authentication status.
+        """
+        result = subprocess.run(
+            ["gt", "auth"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # If command failed, not authenticated
+        if result.returncode != 0:
+            return (False, None, None)
+
+        output = result.stdout + result.stderr
+
+        # Look for success indicator (checkmark symbol or "Authenticated as:")
+        if "Authenticated as:" not in output and "✓" not in output:
+            return (False, None, None)
+
+        # Extract username from "Authenticated as: USERNAME"
+        username: str | None = None
+        for line in output.split("\n"):
+            if "Authenticated as:" in line:
+                parts = line.split("Authenticated as:")
+                if len(parts) >= 2:
+                    username = parts[1].strip()
+                break
+
+        # Extract repo info from "Ready to submit PRs to OWNER/REPO"
+        repo_info: str | None = None
+        for line in output.split("\n"):
+            if "Ready to submit PRs to" in line:
+                parts = line.split("Ready to submit PRs to")
+                if len(parts) >= 2:
+                    repo_info = parts[1].strip()
+                break
+
+        return (True, username, repo_info)
+
     def get_parent_branch(self) -> str | None:
         """Get the parent branch using gt parent."""
         result = subprocess.run(
@@ -299,6 +341,49 @@ class RealGraphiteGtKit(GraphiteGtKit):
 
 class RealGitHubGtKit(GitHubGtKit):
     """Real GitHub operations using subprocess."""
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check GitHub CLI authentication status.
+
+        Runs `gh auth status` and parses the output to determine authentication status.
+        """
+        result = subprocess.run(
+            ["gh", "auth", "status"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # gh auth status returns non-zero if not authenticated
+        if result.returncode != 0:
+            return (False, None, None)
+
+        output = result.stdout + result.stderr
+
+        # Look for success pattern "Logged in to HOST as USER"
+        username: str | None = None
+        hostname: str | None = None
+
+        for line in output.split("\n"):
+            if "Logged in to" in line:
+                if " as " in line:
+                    parts = line.split(" as ")
+                    if len(parts) >= 2:
+                        username = parts[1].strip().split()[0] if parts[1].strip() else None
+                        logged_in_part = parts[0]
+                        if "Logged in to" in logged_in_part:
+                            host_part = logged_in_part.split("Logged in to")[-1].strip()
+                            hostname = host_part if host_part else None
+                break
+
+        if username:
+            return (True, username, hostname)
+
+        # Fallback: if checkmark present, still consider authenticated
+        if "✓" in output:
+            return (True, None, None)
+
+        return (False, None, None)
 
     def get_pr_info(self) -> tuple[int, str] | None:
         """Get PR number and URL using gh pr view."""

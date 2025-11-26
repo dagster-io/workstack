@@ -63,20 +63,20 @@ exit 1
 
 ## Usage in Commands
 
-### save-plan Command
+### plan-save Command
 
-In `/erk:plan-save`, validation occurs after plan extraction in Step 1:
+In `/erk:plan-save`, validation occurs after plan extraction:
 
-1. Extract plan content from conversation
+1. Extract plan content from session logs
 2. Validate using `validate-plan-content` kit CLI command
 3. If invalid, format error using `format-error` kit CLI command
 4. Exit with error if validation fails
 
-### save-raw-plan Command
+### session-plan-enrich Command
 
-In `/erk:plan-save-raw`, the same validation pattern applies:
+In `/erk:session-plan-enrich`, the same validation pattern applies:
 
-1. Extract plan content from conversation
+1. Extract plan content from session logs
 2. Validate using `validate-plan-content` kit CLI command
 3. If invalid, format error using `format-error` kit CLI command
 4. Exit with error if validation fails

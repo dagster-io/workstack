@@ -12,7 +12,13 @@ never actually calls methods on the GitHub instance - it only uses GitHubIssues.
 from pathlib import Path
 
 from erk_shared.github.abc import GitHub
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 
 
 class RealGitHub(GitHub):
@@ -214,6 +220,15 @@ class RealGitHub(GitHub):
         timeout: int = 30,
         poll_interval: int = 2,
     ) -> str | None:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
         """Stub method - not implemented in erk-shared."""
         msg = (
             "RealGitHub from erk-shared is a stub for context creation only. "

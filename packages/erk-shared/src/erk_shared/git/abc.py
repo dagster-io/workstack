@@ -456,3 +456,23 @@ class Git(ABC):
             Issue number if set, None otherwise
         """
         ...
+
+    @abstractmethod
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """Fetch a PR ref into a local branch.
+
+        Uses GitHub's special refs/pull/<number>/head reference to fetch
+        the PR head commit and create a local branch tracking it.
+
+        Command: git fetch <remote> pull/<number>/head:<local_branch>
+
+        Args:
+            repo_root: Path to the git repository root
+            remote: Remote name (e.g., "origin")
+            pr_number: GitHub PR number
+            local_branch: Name for the local branch to create
+
+        Raises:
+            subprocess.CalledProcessError: If git command fails
+        """
+        ...

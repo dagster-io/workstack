@@ -64,7 +64,7 @@ version = "0.3.1"
 artifacts = [
     ".claude/commands/erk/plan-save.md",
     ".claude/commands/erk/plan-enrich.md",
-    ".claude/commands/erk/session-plan-enrich.md",
+    ".claude/commands/erk/plan-save-enriched.md",
     ".claude/commands/erk/plan-implement.md",
     ".claude/commands/erk/merge-conflicts-fix.md",
     ".claude/commands/erk/plan-submit.md",

@@ -91,11 +91,6 @@ Determine the issue number from argument or conversation context.
 2. **Conversation context** - If no argument, check if a GitHub issue was recently created or discussed in this session (look for issue numbers like `#1259` or `issue 1259` mentioned in recent messages)
 3. **Error** - If neither available, show error
 
-**Expected input formats:**
-
-- `/erk:plan-enrich 456` - Explicit issue number
-- `/erk:plan-enrich` - Use last issue from context (if available)
-
 **Resolution logic:**
 
 ```
@@ -118,15 +113,6 @@ Display confirmation before proceeding:
 Proceeding to fetch and enrich...
 ```
 
-**Validation:**
-
-```bash
-# Issue number must be a positive integer
-if [[ ! "$issue_number" =~ ^[0-9]+$ ]]; then
-    echo "❌ Error: Invalid issue number"
-fi
-```
-
 **Error handling:**
 
 If no issue number provided AND none found in context:
@@ -137,16 +123,6 @@ If no issue number provided AND none found in context:
 No issue number was provided and none found in conversation context.
 
 Usage: /erk:plan-enrich <issue-number>
-
-Example: /erk:plan-enrich 456
-```
-
-If invalid format:
-
-```
-❌ Error: Invalid issue number: "[input]"
-
-Issue number must be a positive integer.
 
 Example: /erk:plan-enrich 456
 ```
@@ -188,43 +164,13 @@ The issue body is empty. Ensure the issue contains an implementation plan.
 
 ### Step 4: Launch Plan-Extractor Agent (Enriched Mode)
 
-Use the Task tool to launch the specialized agent with the fetched plan content:
-
-```json
-{
-  "subagent_type": "plan-extractor",
-  "description": "Enrich plan from GitHub issue",
-  "prompt": "Enrich the implementation plan fetched from GitHub issue with semantic understanding.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[plan content from GitHub issue]\",\n  \"guidance\": \"\"\n}\n\nThe plan was fetched from GitHub issue #[issue_number]: [issue_title]\n\nYour job:\n1. Ask clarifying questions via AskUserQuestion tool\n2. Extract semantic understanding (8 categories) from the plan content\n3. Return markdown output with enrichment details.\n\nNote: This plan was fetched from a GitHub issue, not from conversation context. Extract what context you can from the plan content itself.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full enriched plan content.",
-  "model": "haiku"
-}
-```
-
-**What the agent does:**
-
-1. Receives plan content from GitHub issue
-2. Asks clarifying questions via AskUserQuestion tool
-3. Extracts semantic understanding (8 categories) from plan content
-4. Returns enriched markdown output
-
-@../../docs/erk/includes/planning/plan-extractor-agent-restrictions.md
+@../../docs/erk/includes/planning/launch-plan-extractor-agent.md
 
 ### Step 5: Display Enriched Plan for Review
 
-After receiving the enriched plan from the agent, display it directly in the conversation:
+@../../docs/erk/includes/planning/display-enriched-plan.md
 
-```
-## Enriched Plan
-
-**Source:** GitHub issue #[issue_number]: [issue_title]
-
----
-
-[Full enriched plan markdown from agent]
-
----
-```
-
-This allows the user to review the enriched plan before it is saved.
+**Source description:** `GitHub issue #[issue_number]: [issue_title]`
 
 ### Step 6: Ask User for Confirmation
 
@@ -285,6 +231,21 @@ rm "$temp_plan"
 
 **Note:** This updates the issue in place, preserving the issue number, URL, comments, and labels.
 
+**Error handling:**
+
+If issue update fails:
+
+```
+❌ Error: Failed to update GitHub issue #[issue_number]
+
+[gh error output]
+
+Common causes:
+- Insufficient permissions to edit the issue
+- Network connectivity issue
+- GitHub API rate limit
+```
+
 ### Step 8: Display Success Summary
 
 ```
@@ -334,19 +295,6 @@ The plan-extractor agent encountered an error during enrichment.
 The issue body is empty. Ensure the issue contains an implementation plan.
 ```
 
-### GitHub Issue Update Failed
-
-```
-❌ Error: Failed to update GitHub issue #[issue_number]
-
-[gh error output]
-
-Common causes:
-- Insufficient permissions to edit the issue
-- Network connectivity issue
-- GitHub API rate limit
-```
-
 ## Success Criteria
 
 This command succeeds when ALL of the following are true:
@@ -387,7 +335,6 @@ This command demonstrates the **in-place enrichment pattern**:
 **Related commands:**
 
 - `/erk:plan-save-enriched` - Enrich plan from `~/.claude/plans/` and save to NEW issue
-- `/erk:session-plan-enrich [guidance]` - Enrich plan from current session (uses `~/.claude/plans/`)
 - `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue (no enrichment)
 
 **Agent file:** `.claude/agents/erk/plan-extractor.md`

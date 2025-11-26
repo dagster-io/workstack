@@ -77,6 +77,7 @@ uv pip list | grep pyright
 ### 6. Report Results
 
 Output a summary showing:
+
 - Old version → New version
 - Sync status (success/failure)
 - Any relevant release notes or changes from the search results
@@ -93,20 +94,24 @@ Output a summary showing:
 If any step fails:
 
 ### WebSearch Fails
+
 - Report: "Could not determine latest Pyright version from web search"
 - Suggest: Ask user to manually specify version
 
 ### Edit Fails
+
 - Report: "Could not update pyproject.toml - version constraint may have changed format"
 - Show: The current line format from pyproject.toml
 - Ask: User to verify the file format
 
 ### uv sync Fails
+
 - Report: The full error message from uv sync
 - Show: The exit code and any relevant stderr output
 - Ask: User how to proceed (may need to resolve dependency conflicts)
 
 ### Version Already Latest
+
 - Report: "Pyright is already at version X.X.X (latest)"
 - Exit: Successfully without making changes
 
@@ -138,14 +143,17 @@ After command completes:
 ## Success Criteria
 
 **SUCCESS**: Stop when:
+
 - pyproject.toml is updated with new version
 - `uv sync` exits with code 0
 - `uv pip list` shows the new version installed
 
 **SKIP**: Exit early if:
+
 - Current version matches latest version (already up to date)
 
 **ERROR**: Stop and report if:
+
 - Cannot determine latest version
 - Edit tool fails to update file
 - uv sync fails with non-zero exit code

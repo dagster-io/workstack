@@ -14,6 +14,7 @@ Domain-Specific Methods:
 """
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -359,3 +360,64 @@ class Ensure:
                 + "Then authenticate with: gh auth login"
             )
             raise SystemExit(1)
+
+    @staticmethod
+    def parse_github_issue_reference(reference: str) -> int:
+        """Parse and validate GitHub issue reference, wrapping parse_issue_reference.
+
+        This method provides Ensure semantics for issue reference parsing,
+        encapsulating the parsing logic and error handling in the Ensure pattern.
+
+        Args:
+            reference: Issue number or GitHub issue URL
+
+        Returns:
+            Validated issue number as positive integer
+
+        Raises:
+            SystemExit: If reference format is invalid or number is not positive
+
+        Example:
+            >>> issue_number = Ensure.parse_github_issue_reference("123")
+            >>> issue_number = Ensure.parse_github_issue_reference(
+            ...     "https://github.com/owner/repo/issues/456"
+            ... )
+        """
+        from erk.cli.parse_issue_reference import parse_issue_reference
+
+        return parse_issue_reference(reference)
+
+    @staticmethod
+    def github_api_call[T](operation: Callable[[], T], error_context: str = "") -> T:
+        """Execute GitHub API call with consistent RuntimeError handling.
+
+        This method provides a consistent way to handle RuntimeError exceptions
+        from GitHub API operations, converting them to styled CLI errors.
+
+        Args:
+            operation: Callable that performs the GitHub API operation
+            error_context: Optional context to prepend to error message
+
+        Returns:
+            Result of the operation with type preserved
+
+        Raises:
+            SystemExit: If the operation raises RuntimeError (with exit code 1)
+
+        Example:
+            >>> issue = Ensure.github_api_call(
+            ...     lambda: ctx.issues.get_issue(repo_root, issue_number),
+            ...     "Failed to fetch issue"
+            ... )
+            >>> comments = Ensure.github_api_call(
+            ...     lambda: ctx.issues.get_issue_comments(repo_root, issue_number)
+            ... )
+        """
+        try:
+            return operation()
+        except RuntimeError as e:
+            error_message = str(e)
+            if error_context:
+                error_message = f"{error_context}: {error_message}"
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1) from e

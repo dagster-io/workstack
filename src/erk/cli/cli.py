@@ -8,6 +8,7 @@ from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.ls import ls_cmd
+from erk.cli.commands.plan.check_cmd import check_plan
 from erk.cli.commands.plan.close_cmd import close_plan
 from erk.cli.commands.plan.create_cmd import create_plan
 from erk.cli.commands.plan.get import get_plan
@@ -41,6 +42,7 @@ def cli(ctx: click.Context) -> None:
 
 # Register all commands
 cli.add_command(admin_group)
+cli.add_command(check_plan, name="check")  # Plan command
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias
 cli.add_command(close_plan, name="close")  # Plan command

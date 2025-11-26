@@ -16,7 +16,7 @@ This command combines the enrichment and save steps for plans already in context
 - ✅ Interactively enhance plan for autonomous execution
 - ✅ Extract semantic understanding and context (8 categories)
 - ✅ Present enriched plan for user review in conversation
-- ✅ Save enriched plan to a **NEW** GitHub issue (after confirmation)
+- ✅ Save enriched plan to a **NEW** GitHub issue automatically
 
 **What this command CANNOT do:**
 
@@ -35,7 +35,7 @@ Agent asks clarifying questions
   ↓
 Enriched plan displayed for review
   ↓
-User confirms → NEW GitHub issue created
+NEW GitHub issue created automatically
 ```
 
 **Comparison with related commands:**
@@ -76,8 +76,7 @@ User confirms → NEW GitHub issue created
   │     Agent returns markdown: # Plan: ... with Enrichment Details
   │     (Agent has NO Edit/Write tools - structurally safe)
   ├─→ Display enriched plan in conversation for review
-  ├─→ Ask user for confirmation (AskUserQuestion)
-  └─→ Save enriched plan to NEW GitHub issue
+  └─→ Save enriched plan to NEW GitHub issue automatically
 ```
 
 ---
@@ -104,49 +103,7 @@ You are executing the `/erk:plan-save-enriched` command. Follow these steps care
 
 **Source description:** `Plan from ~/.claude/plans/`
 
-### Step 5: Ask User for Confirmation
-
-Use the **AskUserQuestion** tool to confirm before creating a new GitHub issue:
-
-```json
-{
-  "questions": [
-    {
-      "question": "Save this enriched plan to a new GitHub issue?",
-      "header": "Save plan",
-      "options": [
-        {
-          "label": "Yes, save to GitHub",
-          "description": "Create a new GitHub issue with the enriched plan"
-        },
-        {
-          "label": "No, cancel",
-          "description": "Do not save - you can copy the plan above if needed"
-        }
-      ],
-      "multiSelect": false
-    }
-  ]
-}
-```
-
-**If user selects "No, cancel":**
-
-```
-Plan not saved. The enriched plan is displayed above for reference.
-
-To save without enrichment:
-    /erk:plan-save
-
-To re-run enrichment:
-    /erk:plan-save-enriched
-```
-
-Then STOP - do not proceed to Step 6.
-
-**If user selects "Yes, save to GitHub":** Proceed to Step 6.
-
-### Step 6: Save Enriched Plan to GitHub Issue
+### Step 5: Save Enriched Plan to GitHub Issue
 
 Create a new GitHub issue with the enriched plan content:
 
@@ -184,7 +141,7 @@ Common causes:
 - GitHub API rate limit
 ```
 
-### Step 7: Display Success Summary
+### Step 6: Display Success Summary
 
 ```
 ✅ Enriched plan saved to GitHub
@@ -248,7 +205,6 @@ This command succeeds when ALL of the following are true:
 
 **Review:**
 ✅ Enriched plan displayed in conversation
-✅ User confirmation obtained via AskUserQuestion
 
 **Saving:**
 ✅ New GitHub issue created with enriched plan
@@ -265,8 +221,7 @@ This command demonstrates the **context-to-issue enrichment pattern**:
 2. Command launches specialized agent for enrichment
 3. Agent enriches plan (structurally safe)
 4. Command displays enriched plan for user review
-5. Command asks user for confirmation
-6. Command creates NEW GitHub issue
+5. Command creates NEW GitHub issue automatically
 
 **Key design choice:** This command takes a plan from context (not GitHub) and saves to a NEW issue. Use `/erk:plan-enrich [issue]` if you want to enrich an existing issue and update it in place.
 

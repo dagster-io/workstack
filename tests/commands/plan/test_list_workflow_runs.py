@@ -32,7 +32,7 @@ def plan_to_issue(plan: Plan) -> IssueInfo:
 
 
 def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
-    """Workflow run ID should appear for plans with .impl/issue.json."""
+    """Workflow run ID should appear for plans with run_id in plan-header."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Create worktree directory with .impl/issue.json
@@ -51,11 +51,24 @@ def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
             encoding="utf-8",
         )
 
-        # Create plan for this issue
+        # Create plan with workflow run ID in plan-header
+        plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '12345678'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+Implementation details"""
+
         plan = Plan(
             plan_identifier="123",
             title="Test Implementation",
-            body="Implementation details",
+            body=plan_body,
             state=PlanState.OPEN,
             url="https://github.com/owner/repo/issues/123",
             labels=["erk-plan"],
@@ -76,18 +89,16 @@ def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        # Add workflow run with display_title matching the plan title
-        # dispatch-erk-queue runs have headBranch=master but display_title=issue title
+        # Add workflow run with matching run_id
         workflow_run = WorkflowRun(
             run_id="12345678",
             status="completed",
             conclusion="success",
-            branch="master",  # dispatch-erk-queue always runs on master
+            branch="master",
             head_sha="abc123",
-            display_title="Test Implementation",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(issues={123: plan_to_issue(plan)}, comments={})
+        issues = FakeGitHubIssues(issues={123: plan_to_issue(plan)})
 
         ctx = build_workspace_test_context(
             env,
@@ -96,7 +107,7 @@ def test_list_displays_workflow_run_id_for_plan_with_impl_folder() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--runs"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify workflow run ID appears
@@ -126,11 +137,22 @@ def test_list_linkifies_workflow_run_id_with_owner_repo() -> None:
             encoding="utf-8",
         )
 
-        # Create plan with URL metadata containing owner/repo
+        # Create plan with workflow run ID in plan-header
+        plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '87654321'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
         plan = Plan(
             plan_identifier="456",
             title="Test with URL",
-            body="",
+            body=plan_body,
             state=PlanState.OPEN,
             url="https://github.com/testowner/testrepo/issues/456",
             labels=["erk-plan"],
@@ -153,17 +175,16 @@ def test_list_linkifies_workflow_run_id_with_owner_repo() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        # dispatch-erk-queue runs have headBranch=master but display_title=issue title
+        # Add workflow run with matching run_id
         workflow_run = WorkflowRun(
             run_id="87654321",
             status="in_progress",
             conclusion=None,
-            branch="master",  # dispatch-erk-queue always runs on master
+            branch="master",
             head_sha="def456",
-            display_title="Test with URL",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(issues={456: plan_to_issue(plan)}, comments={})
+        issues = FakeGitHubIssues(issues={456: plan_to_issue(plan)})
 
         ctx = build_workspace_test_context(
             env,
@@ -172,7 +193,7 @@ def test_list_linkifies_workflow_run_id_with_owner_repo() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--runs"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify run ID and OSC 8 link present
@@ -201,11 +222,22 @@ def test_list_displays_plain_run_id_without_owner_repo() -> None:
             encoding="utf-8",
         )
 
-        # Create plan WITHOUT url metadata (no owner/repo)
+        # Create plan with workflow run ID but WITHOUT url metadata (no owner/repo)
+        plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '99887766'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
         plan = Plan(
             plan_identifier="789",
             title="Plan without URL",
-            body="",
+            body=plan_body,
             state=PlanState.OPEN,
             url=None,
             labels=["erk-plan"],
@@ -225,17 +257,16 @@ def test_list_displays_plain_run_id_without_owner_repo() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        # dispatch-erk-queue runs have headBranch=master but display_title=issue title
+        # Add workflow run with matching run_id
         workflow_run = WorkflowRun(
             run_id="99887766",
             status="completed",
             conclusion="failure",
-            branch="master",  # dispatch-erk-queue always runs on master
+            branch="master",
             head_sha="ghi789",
-            display_title="Plan without URL",  # Must match plan.title
         )
         github = FakeGitHub(workflow_runs=[workflow_run])
-        issues = FakeGitHubIssues(issues={789: plan_to_issue(plan)}, comments={})
+        issues = FakeGitHubIssues(issues={789: plan_to_issue(plan)})
 
         ctx = build_workspace_test_context(
             env,
@@ -244,7 +275,7 @@ def test_list_displays_plain_run_id_without_owner_repo() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--runs"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify run ID displays (without link)
@@ -305,7 +336,7 @@ def test_list_handles_missing_workflow_run() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--runs"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify "-" appears in run-id column
@@ -414,11 +445,33 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
             encoding="utf-8",
         )
 
-        # Create two plans
+        # Create two plans with workflow run IDs in plan-header
+        plan1_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '11111111'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+        plan2_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '22222222'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
         plan1 = Plan(
             plan_identifier="301",
             title="First Implementation",
-            body="",
+            body=plan1_body,
             state=PlanState.OPEN,
             url="https://github.com/owner/repo/issues/301",
             labels=["erk-plan"],
@@ -431,7 +484,7 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
         plan2 = Plan(
             plan_identifier="302",
             title="Second Implementation",
-            body="",
+            body=plan2_body,
             state=PlanState.OPEN,
             url="https://github.com/owner/repo/issues/302",
             labels=["erk-plan"],
@@ -452,28 +505,23 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        # Add workflow runs with display_title matching plan titles
-        # dispatch-erk-queue runs have headBranch=master but display_title=issue title
+        # Add workflow runs with matching run_ids
         run1 = WorkflowRun(
             run_id="11111111",
             status="completed",
             conclusion="success",
-            branch="master",  # dispatch-erk-queue always runs on master
+            branch="master",
             head_sha="abc111",
-            display_title="First Implementation",  # Must match plan1.title
         )
         run2 = WorkflowRun(
             run_id="22222222",
             status="in_progress",
             conclusion=None,
-            branch="master",  # dispatch-erk-queue always runs on master
+            branch="master",
             head_sha="abc222",
-            display_title="Second Implementation",  # Must match plan2.title
         )
         github = FakeGitHub(workflow_runs=[run1, run2])
-        issues = FakeGitHubIssues(
-            issues={301: plan_to_issue(plan1), 302: plan_to_issue(plan2)}, comments={}
-        )
+        issues = FakeGitHubIssues(issues={301: plan_to_issue(plan1), 302: plan_to_issue(plan2)})
 
         ctx = build_workspace_test_context(
             env,
@@ -482,7 +530,7 @@ def test_list_displays_multiple_plans_with_different_workflow_runs() -> None:
             issues=issues,
         )
 
-        result = runner.invoke(cli, ["list", "--with-run"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--runs"], obj=ctx)
         assert result.exit_code == 0, result.output
 
         # Verify both run IDs appear

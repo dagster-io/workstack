@@ -1,13 +1,11 @@
 """Command to list plans with filtering."""
 
 from collections.abc import Callable
-from datetime import datetime
-from pathlib import Path
 
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
-from erk_shared.github.issues import GitHubIssues, IssueInfo
-from erk_shared.github.metadata_blocks import parse_metadata_blocks
+from erk_shared.github.issues import IssueInfo
+from erk_shared.github.metadata import extract_plan_header_worktree_name
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
 from erk_shared.output.output import user_output
@@ -135,7 +133,7 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
         help="Filter by workflow run state",
     )(f)
     f = click.option(
-        "--with-run",
+        "--runs",
         is_flag=True,
         help="Show workflow run columns (run-id, run-state)",
     )(f)
@@ -147,83 +145,20 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
     return f
 
 
-def _parse_worktree_from_comments(comments: list[str]) -> str | None:
-    """Parse worktree name from issue comments.
-
-    Returns worktree name if exists, None otherwise.
-    For multiple worktrees, returns most recent by timestamp.
-
-    Args:
-        comments: List of comment bodies (markdown strings)
-
-    Returns:
-        Worktree name if found, None otherwise
-    """
-    # Track all worktree metadata blocks with timestamps
-    worktree_blocks: list[tuple[datetime, str]] = []
-
-    # Search through comments for worktree metadata
-    for comment_body in comments:
-        blocks = parse_metadata_blocks(comment_body)
-        for block in blocks:
-            if block.key == "erk-worktree-creation":
-                # Extract timestamp and worktree name
-                timestamp_str = block.data.get("timestamp")
-                worktree_name = block.data.get("worktree_name")
-
-                if timestamp_str and worktree_name:
-                    # Parse ISO 8601 timestamp
-                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-                    worktree_blocks.append((timestamp, worktree_name))
-
-    # If no worktree blocks found, return None
-    if not worktree_blocks:
-        return None
-
-    # Sort by timestamp descending and return most recent worktree name
-    worktree_blocks.sort(reverse=True, key=lambda x: x[0])
-    return worktree_blocks[0][1]
-
-
-def get_worktree_status(
-    github_issues: GitHubIssues,
-    repo_root: Path,
-    issue_number: int,
-) -> str | None:
-    """Query worktree status for an issue.
-
-    Note: This function is deprecated in favor of batch fetching.
-    Use get_multiple_issue_comments() for better performance.
-
-    Returns worktree name if exists, None otherwise.
-    For multiple worktrees, returns most recent by timestamp.
-
-    Args:
-        github_issues: GitHub issues integration instance
-        repo_root: Repository root directory
-        issue_number: Issue number to query
-
-    Returns:
-        Worktree name if found, None otherwise
-    """
-    # Get all comments for the issue
-    comments = github_issues.get_issue_comments(repo_root, issue_number)
-    return _parse_worktree_from_comments(comments)
-
-
 def _list_plans_impl(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
     run_state: str | None,
-    with_run: bool,
+    runs: bool,
     limit: int | None,
 ) -> None:
     """Implementation logic for listing plans with optional filters.
 
-    Uses PlanListService to batch all API calls into 2 total:
-    1. Single GraphQL query for issues + PRs + comments + checks
-    2. REST API call for workflow runs
+    Uses PlanListService to batch all API calls into 3 total:
+    1. Single GraphQL query for issues
+    2. Single GraphQL query for PRs
+    3. REST API calls for workflow runs (one per issue with run_id)
     """
     repo = discover_repo_context(ctx, ctx.cwd)
     ensure_erk_metadata_dir(repo)  # Ensure erk metadata directories exist
@@ -233,15 +168,14 @@ def _list_plans_impl(
     labels_list = list(label) if label else ["erk-plan"]
 
     # Determine if we need workflow runs (for display or filtering)
-    needs_workflow_runs = with_run or run_state is not None
+    needs_workflow_runs = runs or run_state is not None
 
-    # Use PlanListService for batched API calls (2 total: GraphQL + REST)
+    # Use PlanListService for batched API calls
     # Skip workflow runs when not needed for better performance
     try:
         plan_data = ctx.plan_list_service.get_plan_list_data(
             repo_root=repo_root,
             labels=labels_list,
-            workflow_name="dispatch-erk-queue.yml",
             state=state,
             limit=limit,
             skip_workflow_runs=not needs_workflow_runs,
@@ -261,9 +195,8 @@ def _list_plans_impl(
     user_output(f"\nFound {len(plans)} plan(s):\n")
 
     # Use pre-fetched data from PlanListService
-    all_comments = plan_data.issue_comments
     pr_linkages = plan_data.pr_linkages
-    workflow_runs_by_title = plan_data.workflow_runs
+    workflow_runs = plan_data.workflow_runs
 
     # Build local worktree mapping from .impl/issue.json files
     worktree_by_issue: dict[int, str] = {}
@@ -281,14 +214,11 @@ def _list_plans_impl(
     if run_state:
         filtered_plans: list[Plan] = []
         for plan in plans:
-            # Get workflow run - try schema v2 first (keyed by issue number),
-            # then fallback to schema v1 (keyed by title)
+            # Get workflow run (keyed by issue number)
             plan_issue_number = plan.metadata.get("number")
             workflow_run = None
             if isinstance(plan_issue_number, int):
-                workflow_run = workflow_runs_by_title.get(plan_issue_number)
-            if workflow_run is None:
-                workflow_run = workflow_runs_by_title.get(plan.title)
+                workflow_run = workflow_runs.get(plan_issue_number)
             if workflow_run is None:
                 # No workflow run - skip this plan when filtering
                 continue
@@ -312,7 +242,7 @@ def _list_plans_impl(
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
     table.add_column("impl-wt", style="yellow", no_wrap=True)
-    if with_run:
+    if runs:
         table.add_column("run-id", no_wrap=True)
         table.add_column("run-state", no_wrap=True, width=12)
 
@@ -334,20 +264,18 @@ def _list_plans_impl(
         if len(title) > 50:
             title = title[:47] + "..."
 
-        # Query worktree status - check local .impl/issue.json first, then GitHub comments
+        # Query worktree status - check local .impl/issue.json first, then issue body
         issue_number = plan.metadata.get("number")
         worktree_name = ""
 
         # Check local mapping first
         if isinstance(issue_number, int) and issue_number in worktree_by_issue:
             worktree_name = worktree_by_issue[issue_number]
-        # Fall back to GitHub comments if not found locally
-        elif isinstance(issue_number, int) and issue_number in all_comments:
-            comments = all_comments[issue_number]
-            # Parse worktree metadata from comments
-            parsed_name = _parse_worktree_from_comments(comments)
-            if parsed_name:
-                worktree_name = parsed_name
+        # Extract from issue body (schema v2 only)
+        elif plan.body:
+            extracted = extract_plan_header_worktree_name(plan.body)
+            if extracted:
+                worktree_name = extracted
 
         # Get PR info for this issue
         pr_cell = "-"
@@ -364,17 +292,11 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
-        # Get workflow run for this plan
-        # Schema v2: keyed by issue number (int)
-        # Schema v1 fallback: keyed by title (str)
+        # Get workflow run for this plan (keyed by issue number)
         run_id_cell = "-"
         workflow_run = None
         if isinstance(issue_number, int):
-            # Try schema v2 first (keyed by issue number)
-            workflow_run = workflow_runs_by_title.get(issue_number)
-        if workflow_run is None:
-            # Fallback to schema v1 (keyed by title)
-            workflow_run = workflow_runs_by_title.get(plan.title)
+            workflow_run = workflow_runs.get(issue_number)
         if workflow_run is not None:
             # Build workflow URL from plan.url attribute
             workflow_url = None
@@ -393,8 +315,8 @@ def _list_plans_impl(
         # Format workflow run outcome
         run_outcome_cell = format_workflow_outcome(workflow_run)
 
-        # Add row to table (columns depend on with_run flag)
-        if with_run:
+        # Add row to table (columns depend on runs flag)
+        if runs:
             table.add_row(
                 issue_id,
                 title,
@@ -429,7 +351,7 @@ def list_plans(
     label: tuple[str, ...],
     state: str | None,
     run_state: str | None,
-    with_run: bool,
+    runs: bool,
     limit: int | None,
 ) -> None:
     """List plans with optional filters.
@@ -440,6 +362,6 @@ def list_plans(
         erk plan list --limit 10
         erk plan list --run-state in_progress
         erk plan list --run-state success --state open
-        erk plan list --with-run
+        erk plan list --runs
     """
-    _list_plans_impl(ctx, label, state, run_state, with_run, limit)
+    _list_plans_impl(ctx, label, state, run_state, runs, limit)

@@ -23,7 +23,7 @@ from erk.core.context import ErkContext
     help="Filter by action state",
 )
 @click.option(
-    "--with-run",
+    "--runs",
     is_flag=True,
     help="Show workflow run columns (run-id, run-state)",
 )
@@ -38,7 +38,7 @@ def ls_cmd(
     label: tuple[str, ...],
     state: str | None,
     action_state: str | None,
-    with_run: bool,
+    runs: bool,
     limit: int | None,
 ) -> None:
     """List plans.
@@ -46,6 +46,6 @@ def ls_cmd(
     Examples:
         erk ls                           # List plans
         erk ls --label erk-plan          # List plans with label
-        erk ls --with-run                # List plans with workflow run columns
+        erk ls --runs                    # List plans with workflow run columns
     """
-    _list_plans_impl(ctx, label, state, action_state, with_run, limit)
+    _list_plans_impl(ctx, label, state, action_state, runs, limit)

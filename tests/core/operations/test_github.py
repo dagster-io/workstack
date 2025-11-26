@@ -496,7 +496,7 @@ def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPat
 
 
 def test_build_issue_pr_linkage_query_structure() -> None:
-    """Test that issue-PR linkage query has correct structure with closingIssuesReferences."""
+    """Test that issue-PR linkage query uses timeline API with CrossReferencedEvent."""
     ops = RealGitHub(FakeTime())
 
     query = ops._build_issue_pr_linkage_query([100, 200], "test-owner", "test-repo")
@@ -505,49 +505,55 @@ def test_build_issue_pr_linkage_query_structure() -> None:
     assert "query {" in query
     assert 'repository(owner: "test-owner", name: "test-repo")' in query
 
-    # Validate we're querying PRs with closingIssuesReferences (not issues with timeline)
-    assert "pullRequests(" in query
-    assert "closingIssuesReferences(" in query
-    assert "timelineItems" not in query  # Old approach
-    assert "CONNECTED_EVENT" not in query  # Old approach
+    # Validate we're using timeline approach (not pullRequests)
+    assert "pullRequests(" not in query
+    assert "closingIssuesReferences(" not in query
 
-    # Validate required PR fields
+    # Validate aliased issue queries
+    assert "issue_100: issue(number: 100)" in query
+    assert "issue_200: issue(number: 200)" in query
+
+    # Validate timeline items with CrossReferencedEvent
+    assert "timelineItems(itemTypes: [CROSS_REFERENCED_EVENT]" in query
+    assert "willCloseTarget" in query
+
+    # Validate PR fields within source
+    assert "source {" in query
+    assert "... on PullRequest {" in query
     assert "number" in query
     assert "state" in query
     assert "url" in query
     assert "isDraft" in query
-    assert "title" in query
-    assert "createdAt" in query
     assert "statusCheckRollup" in query
     assert "mergeable" in query
 
-    # Validate closingIssuesReferences structure
-    assert "closingIssuesReferences(first: 100)" in query
-    assert "nodes {" in query  # Must have nodes wrapper for connection type
-
 
 def test_parse_issue_pr_linkages_with_single_pr() -> None:
-    """Test parsing GraphQL response with single PR linking to an issue."""
+    """Test parsing GraphQL timeline response with single PR closing an issue."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with PR linking to issue 100
+    # Timeline response with PR closing issue 100
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        {
-                            "number": 200,
-                            "state": "OPEN",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": False,
-                            "title": "Fix bug",
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": {"state": "SUCCESS"},
-                            "mergeable": "MERGEABLE",
-                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
-                        }
-                    ]
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Fix bug",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": {"state": "SUCCESS"},
+                                    "mergeable": "MERGEABLE",
+                                },
+                            }
+                        ]
+                    }
                 }
             }
         }
@@ -570,38 +576,44 @@ def test_parse_issue_pr_linkages_with_single_pr() -> None:
 
 
 def test_parse_issue_pr_linkages_with_multiple_prs() -> None:
-    """Test parsing response with multiple PRs linking to same issue."""
+    """Test parsing timeline response with multiple PRs closing same issue."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with two PRs linking to issue 100
+    # Timeline response with two PRs closing issue 100
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        {
-                            "number": 201,
-                            "state": "OPEN",
-                            "url": "https://github.com/owner/repo/pull/201",
-                            "isDraft": False,
-                            "title": "Recent PR",
-                            "createdAt": "2024-01-02T00:00:00Z",
-                            "statusCheckRollup": None,
-                            "mergeable": "UNKNOWN",
-                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
-                        },
-                        {
-                            "number": 200,
-                            "state": "CLOSED",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": False,
-                            "title": "Older PR",
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": {"state": "FAILURE"},
-                            "mergeable": "MERGEABLE",
-                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
-                        },
-                    ]
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 201,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/201",
+                                    "isDraft": False,
+                                    "title": "Recent PR",
+                                    "createdAt": "2024-01-02T00:00:00Z",
+                                    "statusCheckRollup": None,
+                                    "mergeable": "UNKNOWN",
+                                },
+                            },
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "CLOSED",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Older PR",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": {"state": "FAILURE"},
+                                    "mergeable": "MERGEABLE",
+                                },
+                            },
+                        ]
+                    }
                 }
             }
         }
@@ -623,33 +635,51 @@ def test_parse_issue_pr_linkages_with_multiple_prs() -> None:
 
 
 def test_parse_issue_pr_linkages_with_pr_linking_multiple_issues() -> None:
-    """Test parsing response where single PR links to multiple issues."""
+    """Test parsing timeline response where same PR closes multiple issues."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with one PR linking to issues 100 and 101
+    # Timeline response with same PR closing both issues 100 and 101
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        {
-                            "number": 200,
-                            "state": "OPEN",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": False,
-                            "title": "Fix multiple bugs",
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": {"state": "SUCCESS"},
-                            "mergeable": "MERGEABLE",
-                            "closingIssuesReferences": {
-                                "nodes": [
-                                    {"number": 100},
-                                    {"number": 101},
-                                ]
-                            },
-                        }
-                    ]
-                }
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Fix multiple bugs",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": {"state": "SUCCESS"},
+                                    "mergeable": "MERGEABLE",
+                                },
+                            }
+                        ]
+                    }
+                },
+                "issue_101": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Fix multiple bugs",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": {"state": "SUCCESS"},
+                                    "mergeable": "MERGEABLE",
+                                },
+                            }
+                        ]
+                    }
+                },
             }
         }
     }
@@ -667,30 +697,18 @@ def test_parse_issue_pr_linkages_with_pr_linking_multiple_issues() -> None:
     assert result[101][0].number == 200
 
 
-def test_parse_issue_pr_linkages_handles_empty_closing_references() -> None:
-    """Test parsing handles PRs with no closingIssuesReferences."""
+def test_parse_issue_pr_linkages_handles_empty_timeline() -> None:
+    """Test parsing handles issues with no cross-reference events."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with PR that doesn't close any issues
+    # Timeline response with empty timeline (no PRs reference this issue)
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        {
-                            "number": 200,
-                            "state": "OPEN",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": True,
-                            "title": "WIP PR",
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": None,
-                            "mergeable": "MERGEABLE",
-                            "closingIssuesReferences": {
-                                "nodes": []  # Empty - no issues linked
-                            },
-                        }
-                    ]
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": []  # Empty - no cross-references
+                    }
                 }
             }
         }
@@ -698,38 +716,42 @@ def test_parse_issue_pr_linkages_handles_empty_closing_references() -> None:
 
     result = ops._parse_issue_pr_linkages(response, "owner", "repo")
 
-    # Should return empty dict since no issues are linked
+    # Issue with no PRs should not appear in result
+    assert 100 not in result
     assert result == {}
 
 
 def test_parse_issue_pr_linkages_handles_null_nodes() -> None:
-    """Test parsing handles null values in nodes arrays gracefully."""
+    """Test parsing handles null values in timeline nodes gracefully."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with null PR node and null issue node
+    # Timeline response with null nodes and null source
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        None,  # Null PR node
-                        {
-                            "number": 200,
-                            "state": "OPEN",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": False,
-                            "title": "Valid PR",
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": None,
-                            "mergeable": "MERGEABLE",
-                            "closingIssuesReferences": {
-                                "nodes": [
-                                    None,  # Null issue node
-                                    {"number": 100},
-                                ]
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            None,  # Null event node
+                            {
+                                "willCloseTarget": True,
+                                "source": None,  # Null source
                             },
-                        },
-                    ]
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Valid PR",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": None,
+                                    "mergeable": "MERGEABLE",
+                                },
+                            },
+                        ]
+                    }
                 }
             }
         }
@@ -747,24 +769,28 @@ def test_parse_issue_pr_linkages_handles_missing_optional_fields() -> None:
     """Test parsing handles missing optional fields (checks, conflicts)."""
     ops = RealGitHub(FakeTime())
 
-    # Mock response with minimal fields
+    # Timeline response with minimal fields in PR source
     response = {
         "data": {
             "repository": {
-                "pullRequests": {
-                    "nodes": [
-                        {
-                            "number": 200,
-                            "state": "MERGED",
-                            "url": "https://github.com/owner/repo/pull/200",
-                            "isDraft": None,  # Missing
-                            "title": None,  # Missing
-                            "createdAt": "2024-01-01T00:00:00Z",
-                            "statusCheckRollup": None,  # No checks
-                            "mergeable": None,  # Unknown
-                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
-                        }
-                    ]
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "MERGED",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": None,  # Missing
+                                    "title": None,  # Missing
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": None,  # No checks
+                                    "mergeable": None,  # Unknown
+                                },
+                            }
+                        ]
+                    }
                 }
             }
         }
@@ -780,3 +806,96 @@ def test_parse_issue_pr_linkages_handles_missing_optional_fields() -> None:
     assert pr.title is None
     assert pr.checks_passing is None
     assert pr.has_conflicts is None
+
+
+def test_parse_issue_pr_linkages_filters_non_closing_prs() -> None:
+    """Test parsing filters out PRs that don't close the issue (willCloseTarget=false)."""
+    ops = RealGitHub(FakeTime())
+
+    # Timeline response with PRs that mention but don't close the issue
+    response = {
+        "data": {
+            "repository": {
+                "issue_100": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": False,  # Just mentions, doesn't close
+                                "source": {
+                                    "number": 201,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/201",
+                                    "isDraft": False,
+                                    "title": "Mentions issue",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": None,
+                                    "mergeable": "MERGEABLE",
+                                },
+                            },
+                            {
+                                "willCloseTarget": True,  # Will close the issue
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Fixes issue",
+                                    "createdAt": "2024-01-02T00:00:00Z",
+                                    "statusCheckRollup": None,
+                                    "mergeable": "MERGEABLE",
+                                },
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should only include the closing PR
+    assert 100 in result
+    assert len(result[100]) == 1
+    assert result[100][0].number == 200  # Only the closing PR
+
+
+def test_parse_issue_pr_linkages_handles_issue_not_found() -> None:
+    """Test parsing handles non-existent issue (null result)."""
+    ops = RealGitHub(FakeTime())
+
+    # Timeline response where one issue doesn't exist
+    response = {
+        "data": {
+            "repository": {
+                "issue_100": None,  # Issue doesn't exist
+                "issue_101": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "willCloseTarget": True,
+                                "source": {
+                                    "number": 200,
+                                    "state": "OPEN",
+                                    "url": "https://github.com/owner/repo/pull/200",
+                                    "isDraft": False,
+                                    "title": "Fix",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "statusCheckRollup": None,
+                                    "mergeable": "MERGEABLE",
+                                },
+                            }
+                        ]
+                    }
+                },
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Non-existent issue should be skipped
+    assert 100 not in result
+    # Valid issue should be processed
+    assert 101 in result
+    assert result[101][0].number == 200

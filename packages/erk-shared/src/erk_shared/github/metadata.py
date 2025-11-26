@@ -1415,3 +1415,19 @@ def extract_plan_header_dispatch_info(
     dispatched_at = block.data.get("last_dispatched_at")
 
     return (run_id, dispatched_at)
+
+
+def extract_plan_header_worktree_name(issue_body: str) -> str | None:
+    """Extract worktree_name from plan-header block.
+
+    Args:
+        issue_body: Issue body containing plan-header block
+
+    Returns:
+        worktree_name if found, None otherwise (indicates schema v1 or missing block)
+    """
+    block = find_metadata_block(issue_body, "plan-header")
+    if block is None:
+        return None
+
+    return block.data.get("worktree_name")

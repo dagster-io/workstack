@@ -1012,3 +1012,121 @@ def test_runs_logs_no_runs_for_branch(tmp_path: Path) -> None:
     # Assert
     assert result.exit_code == 1
     assert "No workflow runs found for branch: feature-y" in result.output
+
+
+# ============================================================================
+# Tests for submission time column
+# ============================================================================
+
+
+def test_runs_cmd_displays_submission_time(tmp_path: Path) -> None:
+    """Test runs command displays submission time in local timezone."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    # Create a specific timestamp
+    timestamp = datetime(2024, 11, 26, 14, 30, 45, tzinfo=UTC)
+
+    workflow_runs = [
+        WorkflowRun(
+            run_id="1234567890",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",
+            created_at=timestamp,
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Test issue",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=timestamp,
+            updated_at=timestamp,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # The timestamp will be converted to local timezone
+    # Check for the date part (month-day) which should be 11-26
+    # (unless timezone shifts to next/previous day)
+    assert "11-26" in result.output or "11-25" in result.output or "11-27" in result.output
+    # Also check the table header
+    assert "submitted" in result.output
+
+
+def test_runs_cmd_handles_missing_timestamp(tmp_path: Path) -> None:
+    """Test runs command handles missing created_at gracefully."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        WorkflowRun(
+            run_id="1234567890",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",
+            created_at=None,  # Missing timestamp
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Test issue",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # Should display without error - the "-" placeholder is dimmed
+    # Just check it doesn't crash and outputs a table
+    assert "submitted" in result.output

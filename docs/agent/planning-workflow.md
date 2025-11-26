@@ -33,31 +33,19 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 
 Create a plan using Claude's ExitPlanMode tool. This stores the plan in session logs.
 
-### 2. (Optional) Enrich the Plan
+### 2. Save to GitHub Issue
 
-If you want to add semantic context and clarifications to your plan:
-
-```bash
-/erk:session-plan-enrich
-```
-
-This enriches the plan with 8 categories of context and interactive clarifications. You can iterate:
+Save the plan to a GitHub issue:
 
 ```bash
-/erk:session-plan-enrich "Add retry logic"
-```
-
-### 3. Save to GitHub Issue
-
-Save the plan (raw or enriched) to a GitHub issue:
-
-```bash
+# Quick save (no enrichment)
 /erk:plan-save
+
+# Enriched save (adds semantic context and interactive clarifications)
+/erk:plan-save-enriched
 ```
 
-This creates a GitHub issue with the plan content and the `erk-plan` label. The issue becomes the source of truth.
-
-**Note:** `/erk:plan-save` saves whatever is in session logs - run `/erk:session-plan-enrich` first if you want enrichment.
+Both commands create a GitHub issue with the plan content and the `erk-plan` label. The issue becomes the source of truth.
 
 ### 4. Implement from Issue
 
@@ -146,14 +134,14 @@ gh run watch
 
 ## Commands Reference
 
-### Plan Enrichment (Optional)
-
-- `/erk:session-plan-enrich [guidance]` - Enrich plan from current session with context extraction
-- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue with context extraction
-
 ### Plan Saving
 
-- `/erk:plan-save` - Save plan from session logs to GitHub issue (no enrichment - use enrich commands first)
+- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue (no enrichment)
+- `/erk:plan-save-enriched` - Enrich plan from `~/.claude/plans/` with context extraction, then save to NEW GitHub issue
+
+### Plan Enrichment (Optional)
+
+- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue and UPDATE it in place
 
 ### Implementation (Issue-Based)
 

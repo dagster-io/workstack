@@ -8,7 +8,7 @@ description: Save plan from ~/.claude/plans/ to GitHub issue (no enrichment)
 
 **Save the latest implementation plan from `~/.claude/plans/` to a GitHub issue.**
 
-This command saves whatever plan is currently in the plans directory - raw or enriched - to GitHub. It does NOT perform enrichment. Use `/erk:session-plan-enrich` or `/erk:plan-enrich` to enrich plans before saving.
+This command saves whatever plan is currently in the plans directory - raw or enriched - to GitHub. It does NOT perform enrichment. Use `/erk:plan-save-enriched` or `/erk:plan-enrich` to enrich plans.
 
 **What this command does:**
 
@@ -19,10 +19,9 @@ This command saves whatever plan is currently in the plans directory - raw or en
 
 **What this command does NOT do:**
 
-- ❌ No plan enhancement or enrichment (use `/erk:session-plan-enrich`)
+- ❌ No plan enhancement or enrichment (use `/erk:plan-save-enriched`)
 - ❌ No interactive clarifying questions
 - ❌ No semantic understanding extraction
-- ❌ No guidance parameter
 
 **What this command CANNOT do:**
 
@@ -37,7 +36,7 @@ This command saves whatever plan is currently in the plans directory - raw or en
 Create plan → ExitPlanMode → /erk:plan-save → GitHub issue
 
 # Enriched save (opt-in enrichment)
-Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save → GitHub issue
+Create plan → ExitPlanMode → /erk:plan-save-enriched → GitHub issue
 ```
 
 ## Usage
@@ -46,7 +45,7 @@ Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save →
 /erk:plan-save
 ```
 
-**Note:** This command takes no arguments. Use `/erk:session-plan-enrich [guidance]` to apply guidance before saving.
+**Note:** This command takes no arguments. Use `/erk:plan-save-enriched` to enrich and save in one step.
 
 ## Prerequisites
 
@@ -100,7 +99,7 @@ if echo "$plan_content" | grep -q "## Enrichment Details"; then
     enrichment_note="This plan includes semantic context (8 categories)"
 else
     enrichment_status="Raw"
-    enrichment_note="This plan has no enrichment. Use /erk:session-plan-enrich before saving to add context."
+    enrichment_note="This plan has no enrichment. Use /erk:plan-save-enriched to add context."
 fi
 ```
 
@@ -294,7 +293,5 @@ This command demonstrates the **raw save pattern**:
 
 **Related commands:**
 
-- `/erk:session-plan-enrich [guidance]` - Enrich plan from session before saving
-- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue
-
-**Breaking change note:** This command previously included inline enrichment. That functionality has moved to `/erk:session-plan-enrich`. The old guidance parameter is no longer supported.
+- `/erk:plan-save-enriched` - Enrich plan and save to new issue in one step
+- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue and update in place

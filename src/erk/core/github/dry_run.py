@@ -156,3 +156,7 @@ class DryRunGitHub(GitHub):
     ) -> dict[str, WorkflowRun | None]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_workflow_runs_batch(repo_root, run_ids)
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.check_auth_status()

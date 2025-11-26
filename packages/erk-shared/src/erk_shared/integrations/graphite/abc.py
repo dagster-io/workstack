@@ -142,6 +142,28 @@ class Graphite(ABC):
         """
         ...
 
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check Graphite authentication status.
+
+        Runs `gt auth` and parses the output to determine authentication status.
+        This is a LBYL check to validate Graphite authentication before operations
+        that require it (like gt submit).
+
+        Returns:
+            Tuple of (is_authenticated, username, repo_info):
+            - is_authenticated: True if gt is authenticated
+            - username: Authenticated username (e.g., "schrockn") or None if not authenticated
+            - repo_info: Repository info string (e.g., "dagster-io/erk") or None
+
+        Example:
+            >>> graphite.check_auth_status()
+            (True, "schrockn", "dagster-io/erk")
+            >>> # If not authenticated:
+            (False, None, None)
+        """
+        ...
+
     def get_parent_branch(self, git_ops: Git, repo_root: Path, branch: str) -> str | None:
         """Get parent branch name for a given branch.
 

@@ -50,6 +50,9 @@ class GraphiteState:
     squash_success: bool = True
     squash_stdout: str = ""
     squash_stderr: str = ""
+    authenticated: bool = True
+    auth_username: str | None = "test-user"
+    auth_repo_info: str | None = "owner/repo"
 
 
 @dataclass(frozen=True)
@@ -64,6 +67,9 @@ class GitHubState:
     merge_success: bool = True
     pr_update_success: bool = True
     pr_delay_attempts_until_visible: int = 0
+    authenticated: bool = True
+    auth_username: str | None = "test-user"
+    auth_hostname: str | None = "github.com"
 
 
 class FakeGitGtKitOps(GitGtKit):
@@ -191,6 +197,12 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
         """Get current state (for testing assertions)."""
         return self._state
 
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return pre-configured authentication status."""
+        if not self._state.authenticated:
+            return (False, None, None)
+        return (True, self._state.auth_username, self._state.auth_repo_info)
+
     def get_parent_branch(self) -> str | None:
         """Get the parent branch for current branch."""
         if self._current_branch not in self._state.branch_parents:
@@ -252,6 +264,12 @@ class FakeGitHubGtKitOps(GitHubGtKit):
     def get_state(self) -> GitHubState:
         """Get current state (for testing assertions)."""
         return self._state
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return pre-configured authentication status."""
+        if not self._state.authenticated:
+            return (False, None, None)
+        return (True, self._state.auth_username, self._state.auth_hostname)
 
     def get_pr_info(self) -> tuple[int, str] | None:
         """Get PR number and URL for current branch."""
@@ -556,5 +574,35 @@ class FakeGtKitOps(GtKit):
                 "Nothing to submit!"
             ),
             submit_stderr="",
+        )
+        return self
+
+    def with_gt_unauthenticated(self) -> "FakeGtKitOps":
+        """Configure Graphite as not authenticated.
+
+        Returns:
+            Self for chaining
+        """
+        gt_state = self._graphite.get_state()
+        self._graphite._state = replace(
+            gt_state,
+            authenticated=False,
+            auth_username=None,
+            auth_repo_info=None,
+        )
+        return self
+
+    def with_gh_unauthenticated(self) -> "FakeGtKitOps":
+        """Configure GitHub as not authenticated.
+
+        Returns:
+            Self for chaining
+        """
+        gh_state = self._github.get_state()
+        self._github._state = replace(
+            gh_state,
+            authenticated=False,
+            auth_username=None,
+            auth_hostname=None,
         )
         return self

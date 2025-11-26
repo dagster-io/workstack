@@ -331,3 +331,25 @@ class GitHub(ABC):
             Run IDs that don't exist will have None as their value.
         """
         ...
+
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check GitHub CLI authentication status.
+
+        Runs `gh auth status` and parses the output to determine authentication status.
+        This is a LBYL check to validate GitHub CLI authentication before operations
+        that require it.
+
+        Returns:
+            Tuple of (is_authenticated, username, hostname):
+            - is_authenticated: True if gh CLI is authenticated
+            - username: Authenticated username (e.g., "octocat") or None if not authenticated
+            - hostname: GitHub hostname (e.g., "github.com") or None
+
+        Example:
+            >>> github.check_auth_status()
+            (True, "octocat", "github.com")
+            >>> # If not authenticated:
+            (False, None, None)
+        """
+        ...

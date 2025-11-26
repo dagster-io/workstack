@@ -1159,3 +1159,59 @@ query {{
         for run_id in run_ids:
             result[run_id] = self.get_workflow_run(repo_root, run_id)
         return result
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check GitHub CLI authentication status.
+
+        Runs `gh auth status` and parses the output to determine authentication status.
+        Looks for patterns like:
+        - "Logged in to github.com as USERNAME"
+        - Success indicator (checkmark)
+
+        Returns:
+            Tuple of (is_authenticated, username, hostname)
+        """
+        result = run_subprocess_with_context(
+            ["gh", "auth", "status"],
+            operation_context="check GitHub authentication status",
+            capture_output=True,
+            check=False,
+        )
+
+        # gh auth status returns non-zero if not authenticated
+        if result.returncode != 0:
+            return (False, None, None)
+
+        output = result.stdout + result.stderr
+
+        # Look for success pattern "Logged in to HOST as USER"
+        # The output looks like:
+        # github.com
+        #   ✓ Logged in to github.com as USERNAME
+        username: str | None = None
+        hostname: str | None = None
+
+        for line in output.split("\n"):
+            if "Logged in to" in line:
+                # Parse "Logged in to github.com as USERNAME"
+                # Try to extract hostname and username
+                if " as " in line:
+                    parts = line.split(" as ")
+                    if len(parts) >= 2:
+                        username = parts[1].strip().split()[0] if parts[1].strip() else None
+                        # Extract hostname from "Logged in to github.com"
+                        logged_in_part = parts[0]
+                        if "Logged in to" in logged_in_part:
+                            host_part = logged_in_part.split("Logged in to")[-1].strip()
+                            hostname = host_part if host_part else None
+                break
+
+        # If we found username, authentication is successful
+        if username:
+            return (True, username, hostname)
+
+        # Fallback: if checkmark present and no parse, still consider authenticated
+        if "✓" in output:
+            return (True, None, None)
+
+        return (False, None, None)

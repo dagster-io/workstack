@@ -236,3 +236,12 @@ class RealGitHub(GitHub):
             "actual GitHub operations."
         )
         raise NotImplementedError(msg)
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)

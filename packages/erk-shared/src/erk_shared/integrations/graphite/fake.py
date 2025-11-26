@@ -29,6 +29,9 @@ class FakeGraphite(Graphite):
         pr_info: dict[str, PullRequestInfo] | None = None,
         branches: dict[str, BranchMetadata] | None = None,
         stacks: dict[str, list[str]] | None = None,
+        authenticated: bool = True,
+        auth_username: str | None = "test-user",
+        auth_repo_info: str | None = "owner/repo",
     ) -> None:
         """Create FakeGraphite with pre-configured state.
 
@@ -40,6 +43,9 @@ class FakeGraphite(Graphite):
             pr_info: Mapping of branch name -> PullRequestInfo for get_prs_from_graphite()
             branches: Mapping of branch name -> BranchMetadata for get_all_branches()
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
+            authenticated: Whether gt is authenticated (default True for test convenience)
+            auth_username: Username returned by check_auth_status() (default "test-user")
+            auth_repo_info: Repo info returned by check_auth_status() (default "owner/repo")
         """
         self._sync_raises = sync_raises
         self._restack_raises = restack_raises
@@ -52,6 +58,10 @@ class FakeGraphite(Graphite):
         self._pr_info = pr_info if pr_info is not None else {}
         self._branches = branches if branches is not None else {}
         self._stacks = stacks if stacks is not None else {}
+        self._authenticated = authenticated
+        self._auth_username = auth_username
+        self._auth_repo_info = auth_repo_info
+        self._check_auth_status_calls: list[None] = []
 
     def get_graphite_url(self, owner: str, repo: str, pr_number: int) -> str:
         """Get Graphite PR URL (constructs URL directly)."""
@@ -188,3 +198,28 @@ class FakeGraphite(Graphite):
         This property is for test assertions only.
         """
         return self._submit_branch_calls
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return pre-configured authentication status.
+
+        Tracks calls for verification.
+
+        Returns:
+            Tuple of (is_authenticated, username, repo_info)
+        """
+        self._check_auth_status_calls.append(None)
+
+        if not self._authenticated:
+            return (False, None, None)
+
+        return (True, self._auth_username, self._auth_repo_info)
+
+    @property
+    def check_auth_status_calls(self) -> list[None]:
+        """Get the list of check_auth_status() calls that were made.
+
+        Returns list of None values (one per call, no arguments tracked).
+
+        This property is for test assertions only.
+        """
+        return self._check_auth_status_calls

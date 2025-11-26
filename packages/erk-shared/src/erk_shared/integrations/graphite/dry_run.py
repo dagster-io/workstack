@@ -69,3 +69,7 @@ class DryRunGraphite(Graphite):
         """No-op for gt submit in dry-run mode."""
         # Do nothing - prevents actual gt submit execution
         pass
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check authentication status (read-only, delegates to wrapped)."""
+        return self._wrapped.check_auth_status()

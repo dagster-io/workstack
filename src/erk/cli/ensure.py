@@ -359,3 +359,61 @@ class Ensure:
                 + "Then authenticate with: gh auth login"
             )
             raise SystemExit(1)
+
+    @staticmethod
+    def gt_authenticated(ctx: "ErkContext") -> None:
+        """Ensure Graphite CLI (gt) is authenticated.
+
+        Uses LBYL pattern to check gt authentication status before operations
+        that require it (like gt submit).
+
+        Args:
+            ctx: Application context with graphite integration
+
+        Raises:
+            SystemExit: If gt is not authenticated
+
+        Example:
+            >>> Ensure.gt_authenticated(ctx)
+            >>> # Now safe to call gt submit
+            >>> ctx.graphite.submit_branch(repo.root, branch_name, quiet=True)
+        """
+        is_authenticated, username, _ = ctx.graphite.check_auth_status()
+
+        if not is_authenticated:
+            user_output(
+                click.style("Error: ", fg="red")
+                + "Graphite CLI (gt) is not authenticated\n\n"
+                + "Authenticate with: gt auth\n\n"
+                + "This is required before submitting branches or creating PRs."
+            )
+            raise SystemExit(1)
+
+    @staticmethod
+    def gh_authenticated(ctx: "ErkContext") -> None:
+        """Ensure GitHub CLI (gh) is authenticated.
+
+        Uses LBYL pattern to check gh authentication status before operations
+        that require it.
+
+        Args:
+            ctx: Application context with github integration
+
+        Raises:
+            SystemExit: If gh is not authenticated
+
+        Example:
+            >>> Ensure.gh_authenticated(ctx)
+            >>> # Now safe to call gh commands
+            >>> pr_info = ctx.github.get_pr_status(repo.root, branch)
+        """
+        is_authenticated, username, _ = ctx.github.check_auth_status()
+
+        if not is_authenticated:
+            user_output(
+                click.style("Error: ", fg="red")
+                + "GitHub CLI (gh) is not authenticated\n\n"
+                + "Authenticate with: gh auth login\n\n"
+                + "This is required before submitting branches or creating PRs."
+            )
+            raise SystemExit(1)

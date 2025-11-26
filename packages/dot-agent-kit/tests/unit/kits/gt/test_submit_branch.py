@@ -267,6 +267,58 @@ worktree_name: test-worktree
 class TestPreAnalysisExecution:
     """Tests for pre-analysis phase execution logic."""
 
+    def test_pre_analysis_gt_not_authenticated(self) -> None:
+        """Test error when Graphite CLI is not authenticated."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gt_unauthenticated()
+        )
+
+        result = execute_pre_analysis(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.success is False
+        assert result.error_type == "gt_not_authenticated"
+        assert "Graphite CLI (gt) is not authenticated" in result.message
+        assert result.details["fix"] == "Run 'gt auth' to authenticate with Graphite"
+        assert result.details["authenticated"] is False
+
+    def test_pre_analysis_gh_not_authenticated(self) -> None:
+        """Test error when GitHub CLI is not authenticated (gt is authenticated)."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gh_unauthenticated()
+        )
+
+        result = execute_pre_analysis(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.success is False
+        assert result.error_type == "gh_not_authenticated"
+        assert "GitHub CLI (gh) is not authenticated" in result.message
+        assert result.details["fix"] == "Run 'gh auth login' to authenticate with GitHub"
+        assert result.details["authenticated"] is False
+
+    def test_pre_analysis_gt_checked_before_gh(self) -> None:
+        """Test that Graphite authentication is checked before GitHub."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gt_unauthenticated()
+            .with_gh_unauthenticated()
+        )
+
+        result = execute_pre_analysis(ops)
+
+        # When both are unauthenticated, gt should be reported first
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "gt_not_authenticated"
+
     def test_pre_analysis_with_uncommitted_changes(self) -> None:
         """Test pre-analysis when uncommitted changes exist (should commit them)."""
         ops = (

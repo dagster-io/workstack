@@ -1,0 +1,5 @@
+{
+  "number": 1336,
+  "url": "https://github.com/dagster-io/erk/issues/1336",
+  "title": "Refactor plan check_cmd.py to Extract Reusable Helpers"
+}

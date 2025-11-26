@@ -2,7 +2,6 @@
 
 import subprocess
 from datetime import UTC, datetime
-from urllib.parse import urlparse
 
 import click
 from erk_shared.github.metadata import (
@@ -13,6 +12,7 @@ from erk_shared.github.metadata import (
 )
 from erk_shared.output.output import user_output
 
+from erk.cli.commands.plan.shared import parse_plan_identifier
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -37,28 +37,11 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
     repo_root = repo.root
 
     # Parse identifier to get issue number
-    if identifier.isdigit():
-        issue_number = int(identifier)
-    else:
-        # Parse GitHub URL
-        parsed = urlparse(identifier)
-        if parsed.hostname == "github.com" and parsed.path:
-            parts = parsed.path.rstrip("/").split("/")
-            if len(parts) >= 2 and parts[-2] == "issues":
-                try:
-                    issue_number = int(parts[-1])
-                except ValueError as e:
-                    user_output(click.style("Error: ", fg="red") + "Invalid issue number in URL")
-                    raise SystemExit(1) from e
-            else:
-                user_output(click.style("Error: ", fg="red") + "Invalid GitHub issue URL")
-                raise SystemExit(1)
-        else:
-            user_output(
-                click.style("Error: ", fg="red")
-                + "Invalid identifier. Use issue number or GitHub URL"
-            )
-            raise SystemExit(1)
+    try:
+        issue_number = parse_plan_identifier(identifier)
+    except ValueError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from e
 
     # Fetch issue from GitHub
     try:

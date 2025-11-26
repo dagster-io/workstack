@@ -44,10 +44,9 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get current branch
-    current_branch = ctx.git.get_current_branch(ctx.cwd)
-    if current_branch is None:
-        user_output("Error: Not currently on a branch (detached HEAD)")
-        raise SystemExit(1)
+    current_branch = Ensure.not_none(
+        ctx.git.get_current_branch(ctx.cwd), "Not currently on a branch (detached HEAD)"
+    )
 
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git.list_worktrees(repo.root)
@@ -74,13 +73,10 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     current_worktree_path = None
     if delete_current:
         # Store current worktree path for later deletion
-        current_worktree_path = ctx.git.find_worktree_for_branch(repo.root, current_branch)
-        if current_worktree_path is None:
-            user_output(
-                click.style("Error: ", fg="red")
-                + f"Could not find worktree for branch '{current_branch}'"
-            )
-            raise SystemExit(1)
+        current_worktree_path = Ensure.not_none(
+            ctx.git.find_worktree_for_branch(repo.root, current_branch),
+            f"Could not find worktree for branch '{current_branch}'",
+        )
 
         # Validate clean working tree (no uncommitted changes)
         check_clean_working_tree(ctx)
@@ -99,14 +95,10 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
         )
 
     # Resolve target branch to actual worktree path
-    target_wt_path = ctx.git.find_worktree_for_branch(repo.root, target_name)
-    if target_wt_path is None:
-        # This should not happen because _resolve_up_navigation already checks
-        # But include defensive error handling
-        user_output(
-            f"Error: Branch '{target_name}' has no worktree. This should not happen.",
-        )
-        raise SystemExit(1)
+    target_wt_path = Ensure.not_none(
+        ctx.git.find_worktree_for_branch(repo.root, target_name),
+        f"Branch '{target_name}' has no worktree. This should not happen.",
+    )
 
     if delete_current and current_worktree_path is not None:
         # Handle activation inline when cleanup is needed

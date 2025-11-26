@@ -8,6 +8,7 @@ from rich.table import Table
 
 from erk.cli.commands.plan.list_cmd import format_pr_cell, select_display_pr
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.display_utils import format_workflow_outcome, format_workflow_run_id
 
@@ -179,10 +180,9 @@ def logs(click_ctx: click.Context, run_id: str | None) -> None:
 
     if run_id is None:
         # Auto-detect: find most recent run for current branch
-        current_branch = ctx.git.get_current_branch(ctx.cwd)
-        if current_branch is None:
-            user_output(click.style("Error: ", fg="red") + "Could not determine current branch")
-            raise SystemExit(1)
+        current_branch = Ensure.not_none(
+            ctx.git.get_current_branch(ctx.cwd), "Could not determine current branch"
+        )
 
         runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml", limit=50)
         branch_runs = [r for r in runs if r.branch == current_branch]

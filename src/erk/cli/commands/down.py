@@ -47,22 +47,18 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     trunk_branch = ctx.trunk_branch
 
     # Get current branch
-    current_branch = ctx.git.get_current_branch(ctx.cwd)
-    if current_branch is None:
-        user_output("Error: Not currently on a branch (detached HEAD)")
-        raise SystemExit(1)
+    current_branch = Ensure.not_none(
+        ctx.git.get_current_branch(ctx.cwd), "Not currently on a branch (detached HEAD)"
+    )
 
     # Store current worktree path for deletion (before navigation)
     # Find the worktree for the current branch
     current_worktree_path = None
     if delete_current:
-        current_worktree_path = ctx.git.find_worktree_for_branch(repo.root, current_branch)
-        if current_worktree_path is None:
-            user_output(
-                click.style("Error: ", fg="red")
-                + f"Cannot find worktree for current branch '{current_branch}'."
-            )
-            raise SystemExit(1)
+        current_worktree_path = Ensure.not_none(
+            ctx.git.find_worktree_for_branch(repo.root, current_branch),
+            f"Cannot find worktree for current branch '{current_branch}'.",
+        )
 
     # Safety checks before navigation (if --delete-current flag is set)
     if delete_current:
@@ -114,14 +110,10 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             activate_root_repo(ctx, repo, script, "down")
 
     # Resolve target branch to actual worktree path
-    target_wt_path = ctx.git.find_worktree_for_branch(repo.root, target_name)
-    if target_wt_path is None:
-        # This should not happen because _resolve_down_navigation already checks
-        # But include defensive error handling
-        user_output(
-            f"Error: Branch '{target_name}' has no worktree. This should not happen.",
-        )
-        raise SystemExit(1)
+    target_wt_path = Ensure.not_none(
+        ctx.git.find_worktree_for_branch(repo.root, target_name),
+        f"Branch '{target_name}' has no worktree. This should not happen.",
+    )
 
     if delete_current and current_worktree_path is not None:
         # Handle activation inline so we can do cleanup before exiting

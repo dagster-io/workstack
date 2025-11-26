@@ -11,6 +11,7 @@ from erk_shared.output.output import user_output
 from erk_shared.plan_utils import extract_title_from_plan
 
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
@@ -49,11 +50,10 @@ def create_plan(
 
     # LBYL: Check input sources - exactly one required
     # Priority: --file flag takes precedence over stdin
+    content = ""  # Initialize to ensure type safety
     if file is not None:
         # Use file input
-        if not file.exists():
-            user_output(click.style("Error: ", fg="red") + f"File not found: {file}")
-            raise SystemExit(1)
+        Ensure.path_exists(ctx, file, f"File not found: {file}")
         try:
             content = file.read_text(encoding="utf-8")
         except OSError as e:
@@ -68,30 +68,19 @@ def create_plan(
             raise SystemExit(1) from e
     else:
         # No input provided
-        user_output(
-            click.style("Error: ", fg="red")
-            + "No input provided. Use --file or pipe content to stdin."
-        )
-        raise SystemExit(1)
+        Ensure.invariant(False, "No input provided. Use --file or pipe content to stdin.")
 
     # Validate content is not empty
-    if not content.strip():
-        user_output(
-            click.style("Error: ", fg="red") + "Plan content is empty. Provide a non-empty plan."
-        )
-        raise SystemExit(1)
+    Ensure.not_empty(content.strip(), "Plan content is empty. Provide a non-empty plan.")
 
     # Extract or use provided title
     if title is None:
         title = extract_title_from_plan(content)
 
     # Validate title is not empty
-    if not title.strip():
-        user_output(
-            click.style("Error: ", fg="red")
-            + "Could not extract title from plan. Use --title to specify one."
-        )
-        raise SystemExit(1)
+    Ensure.not_empty(
+        title.strip(), "Could not extract title from plan. Use --title to specify one."
+    )
 
     # Derive worktree name from title
     worktree_name = sanitize_worktree_name(title)

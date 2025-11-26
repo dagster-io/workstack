@@ -254,3 +254,54 @@ def test_submit_displays_workflow_run_url(tmp_path: Path) -> None:
         "View workflow run: https://github.com/test-owner/test-repo/actions/runs/1234567890"
     )
     assert expected_url in result.output
+
+
+def test_submit_requires_gh_authentication(tmp_path: Path) -> None:
+    """Test submit fails early if gh CLI is not authenticated (LBYL)."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create valid issue with erk-plan label
+    now = datetime.now(UTC)
+    issue = IssueInfo(
+        number=123,
+        title="Implement feature X",
+        body="# Plan\n\nImplementation details...",
+        state="OPEN",
+        url="https://github.com/test-owner/test-repo/issues/123",
+        labels=[ERK_PLAN_LABEL],
+        assignees=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    fake_github_issues = FakeGitHubIssues(issues={123: issue})
+    fake_git = FakeGit()
+    # Configure FakeGitHub to simulate unauthenticated state
+    fake_github = FakeGitHub(authenticated=False)
+
+    repo_dir = tmp_path / ".erk" / "repos" / "test-repo"
+    repo = RepoContext(
+        root=repo_root,
+        repo_name="test-repo",
+        repo_dir=repo_dir,
+        worktrees_dir=repo_dir / "worktrees",
+    )
+    ctx = create_test_context(
+        cwd=repo_root,
+        git=fake_git,
+        github=fake_github,
+        issues=fake_github_issues,
+        repo=repo,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(submit_cmd, ["123"], obj=ctx)
+
+    # Should fail early with authentication error (LBYL)
+    assert result.exit_code == 1
+    assert "Error: GitHub CLI (gh) is not authenticated" in result.output
+    assert "gh auth login" in result.output
+
+    # Verify workflow was NOT triggered (failure happened before workflow dispatch)
+    assert len(fake_github.triggered_workflows) == 0

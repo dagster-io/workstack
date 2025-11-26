@@ -23,9 +23,9 @@ artifacts:
     - docs/erk/includes/validate-github-cli.md
     - docs/erk/includes/validate-plan-structure.md
 kit_cli_commands:
-  - name: plan-save-from-session
-    path: kit_cli_commands/erk/plan_save_from_session.py
-    description: Extract plan from Claude session and save to disk with minimal frontmatter
+  - name: plan-save-to-issue
+    path: kit_cli_commands/erk/plan_save_to_issue.py
+    description: Extract plan from ~/.claude/plans/ and create GitHub issue in one operation
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
@@ -65,9 +65,6 @@ kit_cli_commands:
   - name: create-plan-from-context
     path: kit_cli_commands/erk/create_plan_from_context.py
     description: Create GitHub issue from plan content (stdin) with erk-plan label
-  - name: create-enriched-plan-from-context
-    path: kit_cli_commands/erk/create_enriched_plan_from_context.py
-    description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
   - name: check-impl
     path: kit_cli_commands/erk/check_impl.py
     description: Check .impl/ folder structure and validate prerequisites

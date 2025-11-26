@@ -1,5 +1,6 @@
 ---
 description: Save plan from ~/.claude/plans/ to GitHub issue (no enrichment)
+model: haiku
 ---
 
 # /erk:plan-save
@@ -60,19 +61,15 @@ Create plan → ExitPlanMode → /erk:plan-save-enriched → GitHub issue
 /erk:plan-save (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
-  ├─→ Extract plan from ~/.claude/plans/ via kit CLI
+  ├─→ Call kit CLI: dot-agent run erk plan-save-to-issue --format json
   │     ↓
-  │     dot-agent run erk save-plan-from-session --extract-only
-  │     Returns JSON: {plan_content, title}
-  ├─→ Detect enrichment status (check for "Enrichment Details" section)
-  ├─→ Save plan to temp file
-  ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
-  │     ↓
-  │     Kit CLI creates GitHub issue
+  │     ├─→ Extracts plan from ~/.claude/plans/
+  │     ├─→ Creates GitHub issue (schema v2)
+  │     └─→ Returns JSON: {issue_number, issue_url, title, enriched}
   └─→ Display results with enrichment status
 ```
 
-**No Agent Required:** This command does not launch any agents. It simply reads from `~/.claude/plans/` and creates a GitHub issue.
+**No Agent Required:** This command does not launch any agents. It simply reads from `~/.claude/plans/` and creates a GitHub issue via a single kit CLI call.
 
 ---
 
@@ -84,102 +81,75 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Extract Plan from Plans Directory
+### Step 2: Extract Plan and Create GitHub Issue
 
-@../../docs/erk/includes/planning/extract-plan-from-session.md
-
-### Step 3: Detect Enrichment Status
-
-Check whether the plan has been enriched by looking for the "Enrichment Details" section:
+Use the combined kit CLI command that extracts the plan and creates the issue in one step:
 
 ```bash
-# Check for enrichment markers in plan content
-if echo "$plan_content" | grep -q "## Enrichment Details"; then
-    enrichment_status="Enriched"
-    enrichment_note="This plan includes semantic context (8 categories)"
+# Call the combined kit CLI command
+result=$(dot-agent run erk plan-save-to-issue --format json 2>&1)
+```
+
+**Parse the result:**
+
+```bash
+# Check if command succeeded
+if echo "$result" | jq -e '.success' > /dev/null 2>&1; then
+    # SUCCESS - extract values
+    issue_number=$(echo "$result" | jq -r '.issue_number')
+    issue_url=$(echo "$result" | jq -r '.issue_url')
+    title=$(echo "$result" | jq -r '.title')
+    enriched=$(echo "$result" | jq -r '.enriched')
+
+    # Set enrichment status message
+    if [ "$enriched" = "true" ]; then
+        enrichment_status="Enriched"
+        enrichment_note="This plan includes semantic context (8 categories)"
+    else
+        enrichment_status="Raw"
+        enrichment_note="This plan has no enrichment. Use /erk:plan-save-enriched to add context."
+    fi
 else
-    enrichment_status="Raw"
-    enrichment_note="This plan has no enrichment. Use /erk:plan-save-enriched to add context."
+    # FAILURE - extract error message
+    error_msg=$(echo "$result" | jq -r '.error // "Unknown error"')
+    echo "❌ Error: $error_msg"
+    exit 1
 fi
 ```
 
-**Note:** The enrichment status is informational only - the plan is saved regardless.
-
-### Step 4: Save Plan to Temporary File
-
-Write plan content to a temporary file for kit CLI:
-
-```bash
-# Create temp file
-temp_plan=$(mktemp)
-
-# Write plan content
-cat > "$temp_plan" <<'PLAN_EOF'
-[plan_content from ~/.claude/plans/]
-PLAN_EOF
-```
-
-**Why temp file:** Kit CLI command expects `--plan-file` option for clean separation of concerns.
-
-### Step 5: Create GitHub Issue via Kit CLI
-
-Call the kit CLI command to create the issue:
-
-```bash
-# Call kit CLI with plan file
-result=$(dot-agent run erk create-enriched-plan-from-context --plan-file "$temp_plan")
-
-# Clean up temp file
-rm "$temp_plan"
-
-# Parse JSON result
-echo "$result" | jq .
-```
-
-**Expected output:**
+**Expected success output:**
 
 ```json
 {
   "success": true,
   "issue_number": 123,
-  "issue_url": "https://github.com/owner/repo/issues/123"
+  "issue_url": "https://github.com/owner/repo/issues/123",
+  "title": "Plan Title",
+  "enriched": false
 }
 ```
 
 **Error handling:**
 
-If command fails:
+The kit CLI returns JSON with error details on failure:
 
+```json
+{
+  "success": false,
+  "error": "No plan found in ~/.claude/plans/"
+}
 ```
-❌ Error: Failed to create GitHub issue
 
-[Display kit CLI error output]
+Common error causes:
 
-Common causes:
+- No plan in `~/.claude/plans/` directory
 - Repository has issues disabled
 - Network connectivity issue
 - GitHub API rate limit
-```
 
-### Step 6: Display Success Output
+### Step 3: Display Success Output
 
-#### Substep 6a: Generate and Display Execution Summary
-
-After receiving the successful response from the kit CLI, generate a concise summary:
-
-```
-**Execution Summary:**
-
-[One sentence overview of what was accomplished]
-
-- [Key bullet point 1]
-- [Key bullet point 2]
-- [Key bullet point 3]
-```
-
-**Implementation note:** Extract summary from the plan_content. Look for major sections, objectives, or implementation phases.
-
-#### Substep 6b: Display Issue URL, Enrichment Status, and Next Steps
+Display the issue URL, enrichment status, and next steps:
 
 ```
 ✅ Plan saved to GitHub issue

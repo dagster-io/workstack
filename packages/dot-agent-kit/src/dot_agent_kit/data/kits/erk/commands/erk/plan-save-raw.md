@@ -123,7 +123,7 @@ You are executing the `/erk:plan-save-raw` command. Follow these steps carefully
 
 ### Step 1: Validate Prerequisites
 
-@../docs/save-plan-workflow.md#shared-step-validate-prerequisites
+@../../docs/erk/includes/save-plan-workflow.md#shared-step-validate-prerequisites
 
 ### Step 1.5: Determine Session ID
 
@@ -219,15 +219,15 @@ Try:
 
 ### Step 3: Parse Agent Response
 
-@../docs/save-plan-workflow.md#shared-step-parse-agent-response
+@../../docs/erk/includes/save-plan-workflow.md#shared-step-parse-agent-response
 
 ### Step 4: Save Plan to Temporary File
 
-@../docs/save-plan-workflow.md#shared-step-save-plan-to-temporary-file
+@../../docs/erk/includes/save-plan-workflow.md#shared-step-save-plan-to-temporary-file
 
 ### Step 5: Create GitHub Issue via Kit CLI
 
-@../docs/save-plan-workflow.md#shared-step-create-github-issue-via-kit-cli
+@../../docs/erk/includes/save-plan-workflow.md#shared-step-create-github-issue-via-kit-cli
 
 ### Step 6: Display Success Output
 
@@ -255,7 +255,7 @@ After receiving the successful response from the kit CLI, generate a concise sum
 
 #### Substep 6b: Display Issue URL and Next Steps
 
-@../docs/save-plan-workflow.md#shared-step-display-issue-url-and-next-steps
+@../../docs/erk/includes/save-plan-workflow.md#shared-step-display-issue-url-and-next-steps
 
 **Note:** Add this footer after the standard next steps:
 
@@ -297,15 +297,15 @@ Suggested action:
   3. Use /erk:plan-save with conversation context instead
 ```
 
-@../docs/save-plan-workflow.md#shared-error-scenarios
+@../../docs/erk/includes/save-plan-workflow.md#shared-error-scenarios
 
 ## Architecture Benefits
 
-@../docs/save-plan-workflow.md#shared-architecture-benefits
+@../../docs/erk/includes/save-plan-workflow.md#shared-architecture-benefits
 
 ## Troubleshooting
 
-@../docs/save-plan-workflow.md#shared-troubleshooting
+@../../docs/erk/includes/save-plan-workflow.md#shared-troubleshooting
 
 ## Technical Details
 

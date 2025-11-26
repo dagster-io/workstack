@@ -24,7 +24,7 @@ This command extracts a plan from conversation context, optionally applies guida
 **What happens AFTER (in separate commands):**
 
 - ⏭️ Create worktree: `/erk:create-wt-from-plan-file`
-- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:plan-implement"`
 
 ## What Happens
 
@@ -405,7 +405,7 @@ Before saving the plan, confirm you ONLY gathered information and did NOT implem
 
 Details: You used [tool name] which is forbidden in /erk:save-context-enriched-plan
 
-This command ONLY writes markdown. Implementation happens in /erk:implement-plan.
+This command ONLY writes markdown. Implementation happens in /erk:plan-implement.
 
 Suggested action:
   1. Stop immediately - do NOT save the plan

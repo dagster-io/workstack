@@ -1,4 +1,4 @@
-# /debug-agent
+# /agent-debug
 
 Inspect failed agent runs from the current session and display results as structured Markdown.
 
@@ -7,7 +7,7 @@ When agents fail during execution, this command analyzes their logs and presents
 ## Usage
 
 ```bash
-/debug-agent
+/agent-debug
 ```
 
 The command auto-detects the current session ID and shows all failed agents with their errors.

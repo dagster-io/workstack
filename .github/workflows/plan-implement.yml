@@ -88,7 +88,7 @@ jobs:
             --output-format stream-json \
             --dangerously-skip-permissions \
             --verbose \
-            "/erk:implement-plan"
+            "/erk:plan-implement"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

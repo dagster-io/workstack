@@ -10,7 +10,7 @@
 - **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
 - **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
 - **Plan-first development**: Each worktree can be created from a structured plan (`.impl/`) that travels with the workspace, providing persistent context for both human and AI implementers
-- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:save-plan`, `/erk:implement-plan`, `erk implement <issue>`)
+- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:plan-save`, `/erk:plan-implement`, `erk implement <issue>`)
 
 ## Why Parallel Worktrees Matter for AI-Native Engineering
 
@@ -142,7 +142,7 @@ The `erk implement` command is a unified interface for creating worktrees from e
 - Sets up the `.impl/` folder with plan content
 - For GitHub issues: saves issue reference for PR linking
 - For plan files: moves the file into the worktree (uses move semantics)
-- Provides next steps for running `/erk:implement-plan` with Claude
+- Provides next steps for running `/erk:plan-implement` with Claude
 
 **Target detection:**
 
@@ -502,7 +502,7 @@ This workflow emerged from experience - checking in planning documents created n
 
 **AI-Augmented Planning:**
 
-The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:save-plan`, `/erk:implement-plan`, and `erk implement <issue>` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
+The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:plan-save`, `/erk:plan-implement`, and `erk implement <issue>` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
 
 ### Remote Implementation via GitHub Actions
 
@@ -534,7 +534,7 @@ gh run watch --branch <your-branch>
 2. **Server-side (GitHub Actions):**
    - Workflow detects `.worker-impl/**` path in push event
    - Copies `.worker-impl/` → `.impl/` on runner
-   - Executes `/erk:implement-plan` with CI checks
+   - Executes `/erk:plan-implement` with CI checks
    - Commits implementation changes
    - Deletes `.worker-impl/` folder (cleanup)
    - Pushes all changes back to branch
@@ -597,13 +597,13 @@ The traditional erk planning workflow can be fully automated with kit-installed 
 **AI-Augmented Approach (With Kits):**
 
 1. Discuss and plan with Claude in conversation
-2. `/erk:save-plan` - Automatically extracts, enhances, and creates GitHub issue
+2. `/erk:plan-save` - Automatically extracts, enhances, and creates GitHub issue
 3. `erk implement <issue>` - Creates worktree and executes plan
 4. Progress tracked automatically in GitHub issue comments
 
 ### Planning Workflow Commands
 
-#### `/erk:save-plan` - Save Enhanced Plan
+#### `/erk:plan-save` - Save Enhanced Plan
 
 Extracts the implementation plan from your conversation with Claude, interactively enhances it, and saves to disk.
 
@@ -619,10 +619,10 @@ Extracts the implementation plan from your conversation with Claude, interactive
 
 ```bash
 # In conversation with Claude after planning
-/erk:save-plan
+/erk:plan-save
 
 # With optional guidance corrections
-/erk:save-plan "Focus on security validation in authentication phase"
+/erk:plan-save "Focus on security validation in authentication phase"
 ```
 
 **Why context preservation matters:**
@@ -634,7 +634,7 @@ Plans include expensive discoveries made during planning so implementing agents 
 
 This prevents bugs and speeds up implementation. See [Context Preservation Examples](.claude/docs/erk/EXAMPLES.md) for comprehensive details.
 
-#### `/erk:implement-plan` - Execute Implementation Plan
+#### `/erk:plan-implement` - Execute Implementation Plan
 
 Executes the implementation plan in the current worktree with automated progress tracking.
 
@@ -653,7 +653,7 @@ Executes the implementation plan in the current worktree with automated progress
 ```bash
 # After switching to planned worktree
 erk checkout <branch>
-claude --permission-mode acceptEdits "/erk:implement-plan"
+claude --permission-mode acceptEdits "/erk:plan-implement"
 ```
 
 #### `erk implement <issue>` - Unified Implementation Command
@@ -666,7 +666,7 @@ Creates a worktree from a GitHub issue and executes the plan automatically.
 - Creates dedicated worktree for the issue
 - Sets up `.impl/` folder with plan content
 - Links worktree to GitHub issue for progress tracking
-- Executes `/erk:implement-plan` automatically
+- Executes `/erk:plan-implement` automatically
 - Posts progress updates to issue comments
 
 **Usage:**
@@ -676,7 +676,7 @@ Creates a worktree from a GitHub issue and executes the plan automatically.
 erk implement 123
 ```
 
-#### `/erk:implement-planned-issue` - Execute Plan from GitHub Issue (Legacy)
+#### `/erk:plan-implementned-issue` - Execute Plan from GitHub Issue (Legacy)
 
 Fetches a GitHub issue body and executes it as an implementation plan.
 
@@ -685,7 +685,7 @@ Fetches a GitHub issue body and executes it as an implementation plan.
 - Reads `.impl/issue.json` to get issue number
 - Fetches issue body from GitHub
 - Saves issue body to `.impl/plan.md`
-- Delegates to `/erk:implement-plan` for execution
+- Delegates to `/erk:plan-implement` for execution
 - Posts progress comments back to the issue
 
 **Usage:**
@@ -693,7 +693,7 @@ Fetches a GitHub issue body and executes it as an implementation plan.
 ```bash
 # After switching to planned worktree with linked issue
 erk checkout <branch>
-claude --permission-mode acceptEdits "/erk:implement-planned-issue"
+claude --permission-mode acceptEdits "/erk:plan-implementned-issue"
 ```
 
 ### Complete Workflow Example
@@ -704,7 +704,7 @@ erk checkout root
 # ... discuss with Claude, create implementation plan ...
 
 # 2. Save enhanced plan and create GitHub issue
-/erk:save-plan
+/erk:plan-save
 # Output: Created GitHub issue #123
 
 # 3. Create worktree and implement
@@ -715,7 +715,7 @@ erk implement 123
 erk checkout add-user-auth
 
 # 5. Execute implementation
-claude --permission-mode acceptEdits "/erk:implement-plan"
+claude --permission-mode acceptEdits "/erk:plan-implement"
 # Claude implements the plan, updates progress.md, runs CI
 
 # 6. Submit PR (optional)
@@ -746,7 +746,7 @@ Automatically creates a git commit with AI-generated message and submits the cur
 /gt:submit-branch "Add user authentication feature"
 ```
 
-#### `/gt:update-pr` - Update Existing PR
+#### `/gt:pr-update` - Update Existing PR
 
 Updates an existing PR by staging changes, committing, restacking, and submitting.
 
@@ -760,7 +760,7 @@ Updates an existing PR by staging changes, committing, restacking, and submittin
 **Usage:**
 
 ```bash
-/gt:update-pr
+/gt:pr-update
 ```
 
 ### Progress Tracking System
@@ -797,8 +797,8 @@ The `erk status` command shows:
 
 Erk bundles several kits that provide Claude Code artifacts:
 
-- **erk** - Planning workflow commands (`/erk:save-plan`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `/erk:fix-merge-conflicts`)
-- **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
+- **erk** - Planning workflow commands (`/erk:plan-save`, `/erk:plan-implement`, `/erk:plan-implementned-issue`, `/erk:merge-conflicts-fix`)
+- **gt** - Graphite integration (`/gt:submit-branch`, `/gt:pr-update`, `gt-graphite` skill)
 - **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
 - **dignified-python-313** - Python 3.13+ coding standards
 - **fake-driven-testing** - Testing architecture patterns
@@ -1134,8 +1134,8 @@ See [`.agent/README.md`](.agent/README.md) for more details.
 Erk includes bundled kits that provide slash commands, agents, and skills for AI-assisted workflows. For comprehensive documentation of all installed kits and their artifacts, see:
 
 - **[Kit Registry](.claude/docs/kit-registry.md)** - Complete catalog of installed kits, commands, agents, and skills
-- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:save-plan`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `erk implement <issue>`
-- **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:update-pr`
+- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:plan-save`, `/erk:plan-implement`, `/erk:plan-implementned-issue`, `erk implement <issue>`
+- **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:pr-update`
 
 ## Links
 

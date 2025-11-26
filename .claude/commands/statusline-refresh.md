@@ -2,14 +2,14 @@
 description: Trigger an immediate status line refresh
 ---
 
-# /refresh-statusline
+# /statusline-refresh
 
 Triggers an immediate status line refresh by generating conversation activity.
 
 ## Usage
 
 ```bash
-/refresh-statusline
+/statusline-refresh
 ```
 
 ## When to Use

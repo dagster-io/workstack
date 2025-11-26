@@ -4,18 +4,18 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: MIT
 artifacts:
   command:
-    - commands/erk/save-plan.md
-    - commands/erk/save-raw-plan.md
-    - commands/erk/implement-plan.md
-    - commands/erk/fix-merge-conflicts.md
-    - commands/erk/submit-plan.md
+    - commands/erk/plan-save.md
+    - commands/erk/plan-save-raw.md
+    - commands/erk/plan-implement.md
+    - commands/erk/merge-conflicts-fix.md
+    - commands/erk/plan-submit.md
   agent:
     - agents/erk/issue-wt-creator.md
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
-  - name: save-plan-from-session
-    path: kit_cli_commands/erk/save_plan_from_session.py
+  - name: plan-save-from-session
+    path: kit_cli_commands/erk/plan_save_from_session.py
     description: Extract plan from Claude session and save to disk with minimal frontmatter
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
@@ -62,8 +62,8 @@ kit_cli_commands:
   - name: check-impl
     path: kit_cli_commands/erk/check_impl.py
     description: Check .impl/ folder structure and validate prerequisites
-  - name: debug-agent
-    path: kit_cli_commands/erk/debug_agent.py
+  - name: agent-debug
+    path: kit_cli_commands/erk/agent_debug.py
     description: Inspect failed agent runs from the current session
   - name: validate-plan-content
     path: kit_cli_commands/erk/validate_plan_content.py
@@ -88,5 +88,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:save-plan is invoked
+    description: Injects session ID into context when /erk:plan-save is invoked
     timeout: 30

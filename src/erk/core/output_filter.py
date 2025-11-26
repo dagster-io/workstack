@@ -90,7 +90,7 @@ def summarize_tool_use(tool_use: dict, worktree_path: Path) -> str | None:
         if not isinstance(cmd, str):
             return None
 
-        if "/gt:submit-pr" in cmd or "/git:push-pr" in cmd:
+        if "/gt:pr-submit" in cmd or "/git:pr-push" in cmd:
             return "Creating pull request..."
 
         if "/fast-ci" in cmd or "/all-ci" in cmd:
@@ -188,8 +188,8 @@ def determine_spinner_status(tool_use: dict | None, command: str, worktree_path:
         Status message for spinner
 
     Example:
-        >>> determine_spinner_status(None, "/erk:implement-plan", Path("/repo"))
-        'Running /erk:implement-plan...'
+        >>> determine_spinner_status(None, "/erk:plan-implement", Path("/repo"))
+        'Running /erk:plan-implement...'
     """
     if tool_use is None:
         return f"Running {command}..."

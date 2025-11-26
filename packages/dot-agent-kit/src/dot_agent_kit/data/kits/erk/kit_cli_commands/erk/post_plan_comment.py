@@ -50,7 +50,7 @@ def post_plan_comment(
     one_liner = (
         f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan-issue '
         f'#{issue_number} {worktree_name}" && erk co {worktree_name} && '
-        f'claude --permission-mode acceptEdits "/erk:implement-plan"'
+        f'claude --permission-mode acceptEdits "/erk:plan-implement"'
     )
     step_1_cmd = (
         f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan-issue '
@@ -77,7 +77,7 @@ Or step-by-step:
 
 3. Implement the plan:
    ```bash
-   claude --permission-mode acceptEdits "/erk:implement-plan"
+   claude --permission-mode acceptEdits "/erk:plan-implement"
    ```"""
 
     # Combine plan content and workflow instructions

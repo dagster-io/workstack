@@ -2,14 +2,14 @@
 description: Extract plan from Claude session and create GitHub issue (no enrichment)
 ---
 
-# /erk:save-raw-plan
+# /erk:plan-save-raw
 
 Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This command uses an **agent-based architecture** with structural enforcement instead of text warnings.
 
 ## Usage
 
 ```bash
-/erk:save-raw-plan
+/erk:plan-save-raw
 ```
 
 ## Purpose
@@ -39,7 +39,7 @@ This command provides a **fast path** for creating GitHub issues from session pl
 This command uses the same **plan-extractor agent** but in `raw` mode:
 
 ```
-/erk:save-raw-plan (orchestrator)
+/erk:plan-save-raw (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
   ├─→ Determine session ID (from environment or current session)
@@ -70,7 +70,7 @@ This command uses the same **plan-extractor agent** but in `raw` mode:
 
 ## Command Instructions
 
-You are executing the `/erk:save-raw-plan` command. Follow these steps carefully:
+You are executing the `/erk:plan-save-raw` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
@@ -193,7 +193,7 @@ Common causes:
 Try:
 - Ensure you used ExitPlanMode to present a plan
 - Check session files exist: ls ~/.claude/projects/[session_id]/data/
-- Use /erk:save-plan with conversation context instead
+- Use /erk:plan-save with conversation context instead
 ```
 
 ### Step 4: Parse Agent Response
@@ -379,7 +379,7 @@ Details: No ExitPlanMode tool use found in session JSONL files
 Suggested action:
   1. Ensure you used ExitPlanMode to present a plan in this session
   2. Check session files: ls ~/.claude/projects/[session_id]/data/
-  3. Try /erk:save-plan with conversation context instead
+  3. Try /erk:plan-save with conversation context instead
 ```
 
 ### Session Files Not Found
@@ -393,7 +393,7 @@ Expected location: ~/.claude/projects/[session_id]/data/*.jsonl
 Suggested action:
   1. Verify session ID is correct
   2. Check directory exists and has read permissions
-  3. Use /erk:save-plan with conversation context instead
+  3. Use /erk:plan-save with conversation context instead
 ```
 
 ### GitHub CLI Not Authenticated

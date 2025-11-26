@@ -7,16 +7,16 @@ argument-hint: <description>
 
 Automatically create a git commit with a helpful summary message and submit the current branch as a pull request.
 
-**Note:** This command squashes commits and rebases the stack. If you prefer a simpler workflow that preserves your commit history, use `/git:push-pr` instead.
+**Note:** This command squashes commits and rebases the stack. If you prefer a simpler workflow that preserves your commit history, use `/git:pr-push` instead.
 
 ## Usage
 
 ```bash
 # Invoke the command (description argument is optional but recommended)
-/gt:submit-pr "Add user authentication feature"
+/gt:pr-submit "Add user authentication feature"
 
 # Without argument (will analyze changes automatically)
-/gt:submit-pr
+/gt:pr-submit
 ```
 
 ## What This Command Does

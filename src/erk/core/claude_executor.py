@@ -81,7 +81,7 @@ class ClaudeExecutor(ABC):
         """Execute Claude CLI command and yield StreamEvents in real-time.
 
         Args:
-            command: The slash command to execute (e.g., "/erk:implement-plan")
+            command: The slash command to execute (e.g., "/erk:plan-implement")
             worktree_path: Path to worktree directory to run command in
             dangerous: Whether to skip permission prompts
             verbose: Whether to show raw output (True) or filtered output (False)
@@ -93,7 +93,7 @@ class ClaudeExecutor(ABC):
         Example:
             >>> executor = RealClaudeExecutor()
             >>> for event in executor.execute_command_streaming(
-            ...     "/erk:implement-plan",
+            ...     "/erk:plan-implement",
             ...     Path("/repos/my-project"),
             ...     dangerous=False
             ... ):
@@ -116,7 +116,7 @@ class ClaudeExecutor(ABC):
         for real-time updates.
 
         Args:
-            command: The slash command to execute (e.g., "/erk:implement-plan")
+            command: The slash command to execute (e.g., "/erk:plan-implement")
             worktree_path: Path to worktree directory to run command in
             dangerous: Whether to skip permission prompts
             verbose: Whether to show raw output (True) or filtered output (False)
@@ -127,7 +127,7 @@ class ClaudeExecutor(ABC):
         Example:
             >>> executor = RealClaudeExecutor()
             >>> result = executor.execute_command(
-            ...     "/erk:implement-plan",
+            ...     "/erk:plan-implement",
             ...     Path("/repos/my-project"),
             ...     dangerous=False
             ... )
@@ -429,7 +429,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         Implementation details:
         - Verifies Claude CLI is available
         - Changes to worktree directory
-        - Builds command arguments with /erk:implement-plan
+        - Builds command arguments with /erk:plan-implement
         - Replaces current process using os.execvp
 
         Note:
@@ -446,7 +446,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         cmd_args = ["claude", "--permission-mode", "acceptEdits"]
         if dangerous:
             cmd_args.append("--dangerously-skip-permissions")
-        cmd_args.append("/erk:implement-plan")
+        cmd_args.append("/erk:plan-implement")
 
         # Replace current process with Claude
         os.execvp("claude", cmd_args)

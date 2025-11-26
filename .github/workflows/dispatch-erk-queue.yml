@@ -432,7 +432,7 @@ jobs:
             --output-format stream-json \
             --dangerously-skip-permissions \
             --verbose \
-            "/erk:implement-plan"
+            "/erk:plan-implement"
 
           EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
@@ -470,7 +470,7 @@ jobs:
             --output-format stream-json \
             --dangerously-skip-permissions \
             --verbose \
-            "/gt:submit-pr Implement issue #$ISSUE_NUMBER"
+            "/gt:pr-submit Implement issue #$ISSUE_NUMBER"
 
       - name: Mark PR ready for review
         if: steps.implement.outputs.implementation_success == 'true'

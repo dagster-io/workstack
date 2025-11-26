@@ -34,7 +34,7 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 Start by creating an enriched plan from your conversation, which creates a GitHub issue directly:
 
 ```bash
-/erk:save-plan
+/erk:plan-save
 ```
 
 This creates a GitHub issue with the enhanced plan content and the `erk-plan` label. The issue becomes the source of truth.
@@ -59,7 +59,7 @@ This command:
 If you didn't use `erk implement` (which auto-implements), run the implementation command manually:
 
 ```bash
-/erk:implement-plan
+/erk:plan-implement
 ```
 
 The agent reads `.impl/plan.md`, executes each phase, and updates `.impl/progress.md` as steps complete.
@@ -128,7 +128,7 @@ gh run watch
 
 ### Primary Workflow (Issue-Based)
 
-- `/erk:save-plan` - Create GitHub issue with enriched plan from conversation
-- `/erk:save-raw-plan` - Create GitHub issue with basic plan (no enrichment)
+- `/erk:plan-save` - Create GitHub issue with enriched plan from conversation
+- `/erk:plan-save-raw` - Create GitHub issue with basic plan (no enrichment)
 - `erk implement <issue>` - Create worktree and implement plan from GitHub issue
-- `/erk:implement-plan` - Execute plan in current worktree (called by `erk implement`)
+- `/erk:plan-implement` - Execute plan in current worktree (called by `erk implement`)

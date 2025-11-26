@@ -9,7 +9,7 @@ Streamlined workflow to update an existing PR with fail-fast execution and natur
 ## Usage
 
 ```bash
-/gt:update-pr
+/gt:pr-update
 ```
 
 ## Output

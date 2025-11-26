@@ -2,7 +2,7 @@
 description: Extract plan from conversation, fully enhance it, and create GitHub issue directly
 ---
 
-# /erk:save-plan
+# /erk:plan-save
 
 ⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT implement code!**
 
@@ -34,14 +34,14 @@ This command uses an **agent-based architecture** with structural enforcement (t
 ## Usage
 
 ```bash
-/erk:save-plan [guidance]
+/erk:plan-save [guidance]
 ```
 
 **Examples:**
 
-- `/erk:save-plan` - Create GitHub issue with enhanced plan
-- `/erk:save-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/erk:save-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/erk:plan-save` - Create GitHub issue with enhanced plan
+- `/erk:plan-save "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/erk:plan-save "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
@@ -56,7 +56,7 @@ This command uses an **agent-based architecture** with structural enforcement (t
 This command uses a **specialized agent** for plan extraction/enrichment instead of inline command logic:
 
 ```
-/erk:save-plan (orchestrator)
+/erk:plan-save (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
   ├─→ Extract plan from session logs via kit CLI
@@ -140,7 +140,7 @@ This command succeeds when ALL of the following are true:
 
 ## Command Instructions
 
-You are executing the `/erk:save-plan` command. Follow these steps carefully:
+You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 

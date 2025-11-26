@@ -478,19 +478,20 @@ class TestRealGitHubGtKitOps:
         mock_result.returncode = 0
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Test Title", "Test Body")
 
-            # Verify correct command was called
+            # Verify correct command was called with stdin (--body-file -)
             mock_run.assert_called_once_with(
-                ["gh", "pr", "edit", "--title", "Test Title", "--body", "Test Body"],
+                ["gh", "pr", "edit", "--title", "Test Title", "--body-file", "-"],
+                timeout=30,
+                input="Test Body",
                 capture_output=True,
                 text=True,
                 check=False,
-                timeout=30,
             )
 
             # Verify return type matches interface contract
@@ -500,7 +501,7 @@ class TestRealGitHubGtKitOps:
         # Test failure case
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
             return_value=mock_result,
         ):
             ops = RealGitHubGtKit()
@@ -508,10 +509,10 @@ class TestRealGitHubGtKitOps:
             assert result is False
 
     def test_update_pr_metadata_timeout(self) -> None:
-        """Test update_pr_metadata handles TimeoutExpired exception correctly."""
+        """Test update_pr_metadata handles timeout correctly."""
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd=["gh", "pr", "edit"], timeout=30),
+            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
+            return_value=None,  # Helper returns None on timeout
         ):
             ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Test Title", "Test Body")

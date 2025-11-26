@@ -121,7 +121,7 @@ def ensure_worktree_for_branch(
             user_output(
                 f"Error: Branch '{branch}' does not exist.\n"
                 f"To create a new branch and worktree, run:\n"
-                f"  erk create --branch {branch}"
+                f"  erk wt create --branch {branch}"
             )
             raise SystemExit(1)
 
@@ -136,7 +136,7 @@ def ensure_worktree_for_branch(
                 f"Suggested action:\n"
                 f"  1. Check git status and resolve any issues\n"
                 f"  2. Manually create branch: git branch --track {branch} {remote_ref}\n"
-                f"  3. Or use: erk create --branch {branch}"
+                f"  3. Or use: erk wt create --branch {branch}"
             )
             raise SystemExit(1) from e
 
@@ -655,10 +655,13 @@ def create_wt(
 
     # Regular create (no special flags)
     else:
-        if not name:
+        # Allow --branch alone to derive name from branch
+        if not name and branch:
+            name = sanitize_worktree_name(branch)
+        elif not name:
             user_output(
                 "Must provide NAME or --from-plan or --from-branch "
-                "or --from-current-branch or --from-issue option."
+                "or --from-current-branch or --from-issue or --branch option."
             )
             raise SystemExit(1)
 

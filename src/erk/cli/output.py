@@ -46,15 +46,42 @@ def format_implement_summary(results: list[CommandResult], total_duration: float
     duration_str = format_duration(total_duration)
     lines.append(Text(f"⏱  Duration: {duration_str}"))
 
-    # PR link (if any)
+    # PR and issue metadata (if any)
     pr_url: str | None = None
+    pr_number: int | None = None
+    pr_title: str | None = None
+    issue_number: int | None = None
     for result in results:
         if result.pr_url:
             pr_url = result.pr_url
+            pr_number = result.pr_number
+            pr_title = result.pr_title
+            issue_number = result.issue_number
             break
 
     if pr_url:
-        lines.append(Text(f"🔗 PR: {pr_url}", style="blue"))
+        # Add blank line for spacing
+        lines.append(Text(""))
+
+        # Show PR number with URL
+        if pr_number:
+            lines.append(Text(f"🔗 PR: #{pr_number}", style="blue bold"))
+        else:
+            lines.append(Text("🔗 PR: Created", style="blue bold"))
+
+        # Show PR title
+        if pr_title:
+            lines.append(Text(f"   {pr_title}", style="cyan"))
+
+        # Show PR URL
+        lines.append(Text(f"   {pr_url}", style="dim"))
+
+        # Show linked issue (if any)
+        if issue_number:
+            lines.append(Text(""))
+            lines.append(
+                Text(f"📋 Linked Issue: #{issue_number} (will auto-close on merge)", style="yellow")
+            )
 
     # Error details (if failed)
     if not overall_success:
@@ -118,6 +145,9 @@ def stream_command_with_feedback(
     start_time = time.time()
     filtered_messages: list[str] = []
     pr_url: str | None = None
+    pr_number: int | None = None
+    pr_title: str | None = None
+    issue_number: int | None = None
     error_message: str | None = None
     success = True
     last_spinner_update: str | None = None
@@ -151,6 +181,16 @@ def stream_command_with_feedback(
                 last_spinner_update = event.content
         elif event.event_type == "pr_url":
             pr_url = event.content
+        elif event.event_type == "pr_number":
+            # Convert string back to int - safe because we control the source
+            if event.content.isdigit():
+                pr_number = int(event.content)
+        elif event.event_type == "pr_title":
+            pr_title = event.content
+        elif event.event_type == "issue_number":
+            # Convert string back to int - safe because we control the source
+            if event.content.isdigit():
+                issue_number = int(event.content)
         elif event.event_type == "error":
             console.print(f"  ! {event.content}", style="red")
             error_message = event.content
@@ -171,6 +211,9 @@ def stream_command_with_feedback(
     return CommandResult(
         success=success,
         pr_url=pr_url,
+        pr_number=pr_number,
+        pr_title=pr_title,
+        issue_number=issue_number,
         duration_seconds=duration,
         error_message=error_message,
         filtered_messages=filtered_messages,

@@ -42,6 +42,9 @@ def _execute_streaming_submit(
         start_time = time.time()
         filtered_messages: list[str] = []
         pr_url: str | None = None
+        pr_number: int | None = None
+        pr_title: str | None = None
+        issue_number: int | None = None
         error_message: str | None = None
         success = True
 
@@ -58,6 +61,16 @@ def _execute_streaming_submit(
                 status.update(event.content)
             elif event.event_type == "pr_url":
                 pr_url = event.content
+            elif event.event_type == "pr_number":
+                # Convert string back to int - safe because we control the source
+                if event.content.isdigit():
+                    pr_number = int(event.content)
+            elif event.event_type == "pr_title":
+                pr_title = event.content
+            elif event.event_type == "issue_number":
+                # Convert string back to int - safe because we control the source
+                if event.content.isdigit():
+                    issue_number = int(event.content)
             elif event.event_type == "error":
                 error_message = event.content
                 success = False
@@ -70,6 +83,9 @@ def _execute_streaming_submit(
         return CommandResult(
             success=success,
             pr_url=pr_url,
+            pr_number=pr_number,
+            pr_title=pr_title,
+            issue_number=issue_number,
             duration_seconds=duration,
             error_message=error_message,
             filtered_messages=filtered_messages,

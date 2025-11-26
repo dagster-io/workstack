@@ -21,8 +21,10 @@ class StreamEvent:
     """Event emitted during streaming execution.
 
     Attributes:
-        event_type: Type of event ("text", "tool", "spinner_update", "pr_url")
-        content: The content of the event (text message, tool summary, spinner text, or PR URL)
+        event_type: Type of event ("text", "tool", "spinner_update", "pr_url",
+            "pr_number", "pr_title", "issue_number")
+        content: The content of the event (text message, tool summary, spinner text,
+            PR URL, PR number, PR title, or issue number)
     """
 
     event_type: str
@@ -36,6 +38,9 @@ class CommandResult:
     Attributes:
         success: Whether the command completed successfully
         pr_url: Pull request URL if one was created, None otherwise
+        pr_number: Pull request number if one was created, None otherwise
+        pr_title: Pull request title if one was created, None otherwise
+        issue_number: GitHub issue number if one was linked, None otherwise
         duration_seconds: Execution time in seconds
         error_message: Error description if command failed, None otherwise
         filtered_messages: List of text messages and tool summaries for display
@@ -43,6 +48,9 @@ class CommandResult:
 
     success: bool
     pr_url: str | None
+    pr_number: int | None
+    pr_title: str | None
+    issue_number: int | None
     duration_seconds: float
     error_message: str | None
     filtered_messages: list[str] = field(default_factory=list)
@@ -137,6 +145,9 @@ class ClaudeExecutor(ABC):
         start_time = time.time()
         filtered_messages: list[str] = []
         pr_url: str | None = None
+        pr_number: int | None = None
+        pr_title: str | None = None
+        issue_number: int | None = None
         error_message: str | None = None
         success = True
 
@@ -147,6 +158,16 @@ class ClaudeExecutor(ABC):
                 filtered_messages.append(event.content)
             elif event.event_type == "pr_url":
                 pr_url = event.content
+            elif event.event_type == "pr_number":
+                # Convert string back to int - safe because we control the source
+                if event.content.isdigit():
+                    pr_number = int(event.content)
+            elif event.event_type == "pr_title":
+                pr_title = event.content
+            elif event.event_type == "issue_number":
+                # Convert string back to int - safe because we control the source
+                if event.content.isdigit():
+                    issue_number = int(event.content)
             elif event.event_type == "error":
                 error_message = event.content
                 success = False
@@ -155,6 +176,9 @@ class ClaudeExecutor(ABC):
         return CommandResult(
             success=success,
             pr_url=pr_url,
+            pr_number=pr_number,
+            pr_title=pr_title,
+            issue_number=issue_number,
             duration_seconds=duration,
             error_message=error_message,
             filtered_messages=filtered_messages,
@@ -297,25 +321,53 @@ class RealClaudeExecutor(ClaudeExecutor):
                     print(f"[DEBUG executor] Line #{line_count} parsed: {parsed}", file=sys.stderr)
                     sys.stderr.flush()
 
-                # Yield text content
+                # Yield text content and extract metadata from it
                 text_content = parsed.get("text_content")
-                if text_content is not None:
+                if text_content is not None and isinstance(text_content, str):
                     yield StreamEvent("text", text_content)
+
+                    # Also try to extract PR metadata from text (simpler than nested JSON)
+                    from erk.core.output_filter import extract_pr_metadata_from_text
+
+                    text_metadata = extract_pr_metadata_from_text(text_content)
+                    if text_metadata.get("pr_url"):
+                        yield StreamEvent("pr_url", str(text_metadata["pr_url"]))
+                    if text_metadata.get("pr_number"):
+                        yield StreamEvent("pr_number", str(text_metadata["pr_number"]))
+                    if text_metadata.get("pr_title"):
+                        yield StreamEvent("pr_title", str(text_metadata["pr_title"]))
+                    if text_metadata.get("issue_number"):
+                        yield StreamEvent("issue_number", str(text_metadata["issue_number"]))
 
                 # Yield tool summaries
                 tool_summary = parsed.get("tool_summary")
-                if tool_summary is not None:
+                if tool_summary is not None and isinstance(tool_summary, str):
                     yield StreamEvent("tool", tool_summary)
 
                 # Yield spinner updates
                 spinner_text = parsed.get("spinner_update")
-                if spinner_text is not None:
+                if spinner_text is not None and isinstance(spinner_text, str):
                     yield StreamEvent("spinner_update", spinner_text)
 
                 # Yield PR URL
                 pr_url_value = parsed.get("pr_url")
                 if pr_url_value is not None:
-                    yield StreamEvent("pr_url", pr_url_value)
+                    yield StreamEvent("pr_url", str(pr_url_value))
+
+                # Yield PR number
+                pr_number_value = parsed.get("pr_number")
+                if pr_number_value is not None:
+                    yield StreamEvent("pr_number", str(pr_number_value))
+
+                # Yield PR title
+                pr_title_value = parsed.get("pr_title")
+                if pr_title_value is not None:
+                    yield StreamEvent("pr_title", str(pr_title_value))
+
+                # Yield issue number
+                issue_number_value = parsed.get("issue_number")
+                if issue_number_value is not None:
+                    yield StreamEvent("issue_number", str(issue_number_value))
 
         if debug:
             print(
@@ -338,7 +390,7 @@ class RealClaudeExecutor(ClaudeExecutor):
 
     def _parse_stream_json_line(
         self, line: str, worktree_path: Path, command: str
-    ) -> dict[str, str | None] | None:
+    ) -> dict[str, str | int | None] | None:
         """Parse a single stream-json line and extract relevant information.
 
         Args:
@@ -347,13 +399,13 @@ class RealClaudeExecutor(ClaudeExecutor):
             command: The slash command being executed
 
         Returns:
-            Dict with text_content, tool_summary, spinner_update, and pr_url keys,
-            or None if not JSON
+            Dict with text_content, tool_summary, spinner_update, pr_url, pr_number,
+            pr_title, and issue_number keys, or None if not JSON
         """
         # Import here to avoid circular dependency
         from erk.core.output_filter import (
             determine_spinner_status,
-            extract_pr_url,
+            extract_pr_metadata,
             extract_text_content,
             summarize_tool_use,
         )
@@ -374,11 +426,14 @@ class RealClaudeExecutor(ClaudeExecutor):
         if data is None:
             return None
 
-        result: dict[str, str | None] = {
+        result: dict[str, str | int | None] = {
             "text_content": None,
             "tool_summary": None,
             "spinner_update": None,
             "pr_url": None,
+            "pr_number": None,
+            "pr_title": None,
+            "issue_number": None,
         }
 
         # stream-json format uses "type": "assistant" with nested "message" object
@@ -408,17 +463,38 @@ class RealClaudeExecutor(ClaudeExecutor):
                         result["spinner_update"] = spinner_text
                         break
 
-        # Extract PR URL from tool results
+        # Extract PR metadata from tool results
         if msg_type == "user":
             content = message.get("content", [])
             if isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "tool_result":
                         tool_content = item.get("content")
+                        # Handle both string and list formats
+                        # String format: raw JSON string
+                        # List format: [{"type": "text", "text": "..."}]
+                        content_str: str | None = None
                         if isinstance(tool_content, str):
-                            pr_url = extract_pr_url(tool_content)
-                            if pr_url:
-                                result["pr_url"] = pr_url
+                            content_str = tool_content
+                        elif isinstance(tool_content, list):
+                            # Extract text from list of content items
+                            for content_item in tool_content:
+                                is_text_item = (
+                                    isinstance(content_item, dict)
+                                    and content_item.get("type") == "text"
+                                )
+                                if is_text_item:
+                                    text = content_item.get("text")
+                                    if isinstance(text, str):
+                                        content_str = text
+                                        break
+                        if content_str is not None:
+                            pr_metadata = extract_pr_metadata(content_str)
+                            if pr_metadata.get("pr_url"):
+                                result["pr_url"] = pr_metadata["pr_url"]
+                                result["pr_number"] = pr_metadata["pr_number"]
+                                result["pr_title"] = pr_metadata["pr_title"]
+                                result["issue_number"] = pr_metadata.get("issue_number")
                                 break
 
         return result

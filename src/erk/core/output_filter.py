@@ -176,6 +176,130 @@ def extract_pr_url(tool_result_content: str) -> str | None:
     return None
 
 
+def extract_pr_metadata(tool_result_content: str) -> dict[str, str | int | None]:
+    """Extract PR metadata from simple_submit JSON output.
+
+    Args:
+        tool_result_content: Content string from tool_result
+
+    Returns:
+        Dict with pr_url, pr_number, pr_title, and issue_number (all may be None)
+
+    Example:
+        >>> content = '{"success": true, "pr_url": "https://...", "pr_number": 123, '
+        >>> content += '"pr_title": "Fix bug", "issue_number": 456}'
+        >>> extract_pr_metadata(content)
+        {'pr_url': 'https://...', 'pr_number': 123, 'pr_title': 'Fix bug', 'issue_number': 456}
+    """
+    if not isinstance(tool_result_content, str):
+        return {"pr_url": None, "pr_number": None, "pr_title": None, "issue_number": None}
+
+    # Parse JSON safely - JSON parsing requires exception handling
+    data: dict | None = None
+    if tool_result_content.strip():
+        try:
+            parsed = json.loads(tool_result_content)
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            return {"pr_url": None, "pr_number": None, "pr_title": None, "issue_number": None}
+
+    if data is None:
+        return {"pr_url": None, "pr_number": None, "pr_title": None, "issue_number": None}
+
+    pr_url = data.get("pr_url")
+    pr_number = data.get("pr_number")
+    pr_title = data.get("pr_title")
+    issue_number = data.get("issue_number")
+
+    return {
+        "pr_url": pr_url if isinstance(pr_url, str) else None,
+        "pr_number": pr_number if isinstance(pr_number, int) else None,
+        "pr_title": pr_title if isinstance(pr_title, str) else None,
+        "issue_number": issue_number if isinstance(issue_number, int) else None,
+    }
+
+
+def extract_pr_metadata_from_text(text: str) -> dict[str, str | int | None]:
+    """Extract PR metadata from agent text output using pattern matching.
+
+    This is simpler and more robust than parsing nested JSON from tool results.
+    The agent's text output contains PR info in human-readable format like:
+    - "PR #1311" or "**PR #1311**"
+    - "https://github.com/.../pull/1311" or "https://app.graphite.com/.../1311"
+    - "issue #1308" or "Linked to issue #1308"
+
+    Args:
+        text: Agent text output containing PR information
+
+    Returns:
+        Dict with pr_url, pr_number, and issue_number (pr_title always None)
+
+    Example:
+        >>> text = "**PR #123** created\\n- **Link**: https://github.com/o/r/pull/123"
+        >>> extract_pr_metadata_from_text(text)
+        {'pr_url': 'https://github.com/o/r/pull/123', 'pr_number': 123, ...}
+    """
+    import re
+
+    result: dict[str, str | int | None] = {
+        "pr_url": None,
+        "pr_number": None,
+        "pr_title": None,
+        "issue_number": None,
+    }
+
+    if not isinstance(text, str):
+        return result
+
+    # Extract PR number and title from various patterns:
+    # - "PR #123: Title" or "PR #123 - Title"
+    # - "#123 - Title" or '#123 - "Title"'
+    # - "**PR Updated**: #123 - Title"
+    pr_with_title_match = re.search(
+        r"#(\d+)\s*[-:]\s*[\"']?(.+?)[\"']?(?:\n|$)", text, re.IGNORECASE
+    )
+    if pr_with_title_match:
+        result["pr_number"] = int(pr_with_title_match.group(1))
+        result["pr_title"] = pr_with_title_match.group(2).strip().strip("\"'")
+    else:
+        # Fallback: just extract PR number without title
+        pr_num_match = re.search(r"#(\d+)", text)
+        if pr_num_match:
+            result["pr_number"] = int(pr_num_match.group(1))
+
+    # Extract GitHub PR URL
+    github_url_match = re.search(r"https://github\.com/[^/]+/[^/]+/pull/(\d+)", text)
+    if github_url_match:
+        result["pr_url"] = github_url_match.group(0)
+        # Also extract pr_number from URL if not found earlier
+        if result["pr_number"] is None:
+            result["pr_number"] = int(github_url_match.group(1))
+
+    # Extract Graphite URL as fallback
+    if result["pr_url"] is None:
+        graphite_url_match = re.search(
+            r"https://app\.graphite\.com/github/pr/[^/]+/[^/]+/(\d+)", text
+        )
+        if graphite_url_match:
+            result["pr_url"] = graphite_url_match.group(0)
+            if result["pr_number"] is None:
+                result["pr_number"] = int(graphite_url_match.group(1))
+
+    # Extract issue number from patterns like "issue #123" or "Linked to issue #123"
+    # or "#1308 (will auto-close"
+    issue_match = re.search(r"issue\s*#(\d+)", text, re.IGNORECASE)
+    if issue_match:
+        result["issue_number"] = int(issue_match.group(1))
+    else:
+        # Try "Closes #123" pattern
+        closes_match = re.search(r"Closes\s*#(\d+)", text, re.IGNORECASE)
+        if closes_match:
+            result["issue_number"] = int(closes_match.group(1))
+
+    return result
+
+
 def determine_spinner_status(tool_use: dict | None, command: str, worktree_path: Path) -> str:
     """Map current activity to spinner status message.
 

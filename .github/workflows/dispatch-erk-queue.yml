@@ -276,6 +276,9 @@ jobs:
               exit 1
             fi
 
+            # Fetch trunk branch locally (required for gt track's merge-base)
+            git fetch origin "$TRUNK_BRANCH:$TRUNK_BRANCH"
+
             # Initialize Graphite metadata
             gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
             echo "✅ Graphite metadata initialized (parent: $TRUNK_BRANCH)"

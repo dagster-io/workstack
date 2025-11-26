@@ -84,11 +84,11 @@ Plan → Save → Implement → Review and Iterate → Ship
 
 The philosophy is general, but the current implementation is opinionated and specific. To use `erk` effectively today, you need:
 
-- Python
-- Claude Code
-- `uv` for environment management
-- Graphite for stacked PRs
-- GitHub for issues, PRs, and Actions
+- `python`: Programming Language
+- `claude`: Claude Code
+- `uv`: Fast Python Environment Management
+- `gt`: Graphite for stacked PRs
+- `gh`: Github for issues, PRs, and Actions
 
 This is the toolchain we use internally. erk is designed to be extensible to other languages, systems of record, and compute backends. Our next toolchain will be a Typescript-focused one. Beyond that we have no plans for additional stacks of tools.
 

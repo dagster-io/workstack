@@ -55,11 +55,13 @@ def test_create_enriched_plan_issue_success() -> None:
     assert "created_by: testuser" in body
     assert "worktree_name: my-feature" in body
 
-    # Verify first comment has plan content (schema v2)
+    # Verify first comment has plan content in collapsible metadata block (schema v2)
     assert len(fake_gh.added_comments) == 1
     issue_num, comment_body = fake_gh.added_comments[0]
     assert issue_num == 1
-    assert "<!-- erk:plan-content -->" in comment_body
+    assert "<!-- erk:metadata-block:plan-body -->" in comment_body
+    assert "<details>" in comment_body
+    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in comment_body
     assert "Step 1" in comment_body
     assert "Step 2" in comment_body
 
@@ -271,10 +273,12 @@ def test_create_enriched_plan_schema_v2_format() -> None:
     assert "Step 1" not in body
     assert "Step 2" not in body
 
-    # Verify plan content in first comment with markers (schema v2)
+    # Verify plan content in first comment with collapsible metadata block (schema v2)
     assert len(fake_gh.added_comments) == 1
     _issue_num, comment_body = fake_gh.added_comments[0]
-    assert "<!-- erk:plan-content -->" in comment_body
+    assert "<!-- erk:metadata-block:plan-body -->" in comment_body
+    assert "<details>" in comment_body
+    assert "<summary><strong>📋 Implementation Plan</strong></summary>" in comment_body
     assert "Step 1" in comment_body
     assert "Step 2" in comment_body
-    assert "<!-- /erk:plan-content -->" in comment_body
+    assert "<!-- /erk:metadata-block:plan-body -->" in comment_body

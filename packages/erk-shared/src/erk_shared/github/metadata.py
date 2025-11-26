@@ -1267,23 +1267,24 @@ def format_plan_header_body(
 def format_plan_content_comment(plan_content: str) -> str:
     """Format plan content for the first comment (schema version 2).
 
-    Wraps plan content in marker comments for reliable extraction.
+    Wraps plan content in collapsible metadata block for GitHub display.
 
     Args:
         plan_content: The full plan markdown content
 
     Returns:
-        Comment body with plan wrapped in markers
+        Comment body with plan wrapped in collapsible metadata block
     """
-    return f"""<!-- erk:plan-content -->
-
-{plan_content.strip()}
-
-<!-- /erk:plan-content -->"""
+    block = create_plan_body_block(plan_content.strip())
+    return render_plan_body_block(block)
 
 
 def extract_plan_from_comment(comment_body: str) -> str | None:
-    """Extract plan content from a comment with markers.
+    """Extract plan content from a comment with plan-body metadata block.
+
+    Extracts from both:
+    - New format: <!-- erk:metadata-block:plan-body --> with <details>
+    - Old format: <!-- erk:plan-content --> (backward compatibility)
 
     Args:
         comment_body: Comment body potentially containing plan content
@@ -1291,7 +1292,18 @@ def extract_plan_from_comment(comment_body: str) -> str | None:
     Returns:
         Extracted plan content, or None if markers not found
     """
-    # Pattern to match content between markers
+    # Try new format first (plan-body metadata block)
+    raw_blocks = extract_raw_metadata_blocks(comment_body)
+    for block in raw_blocks:
+        if block.key == "plan-body":
+            # Extract content from <details> structure
+            # The plan-body block uses <strong> tags in summary (not <code>)
+            pattern = r"<details>\s*<summary>.*?</summary>\s*(.*?)\s*</details>"
+            match = re.search(pattern, block.body, re.DOTALL)
+            if match:
+                return match.group(1).strip()
+
+    # Fall back to old format (backward compatibility)
     pattern = r"<!-- erk:plan-content -->\s*(.*?)\s*<!-- /erk:plan-content -->"
     match = re.search(pattern, comment_body, re.DOTALL)
 

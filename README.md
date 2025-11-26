@@ -1145,6 +1145,6 @@ Erk includes bundled kits that provide slash commands, agents, and skills for AI
 
 ## License
 
-MIT - Nick Schrock ([@schrockn](https://github.com/schrockn))
+See [LICENSE.md](LICENSE.md) for license terms.
 
 Originally developed by [@schrockn](https://github.com/schrockn), now maintained by [Dagster Labs](https://github.com/dagster-io).

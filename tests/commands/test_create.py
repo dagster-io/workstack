@@ -441,3 +441,80 @@ def test_create_with_from_branch_trunk_errors() -> None:
 
         # Verify no worktree was created
         assert len(git_ops.added_worktrees) == 0
+
+
+def test_create_from_current_branch_shows_shell_integration_instructions() -> None:
+    """Test that create --from-current-branch shows setup instructions without --script."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Set up git state: in root worktree on feature branch
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                ]
+            },
+            current_branches={env.cwd: "my-feature"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        test_ctx = env.build_context(git=git_ops)
+
+        # Act: Create worktree from current branch WITHOUT --script flag
+        result = runner.invoke(
+            cli,
+            ["wt", "create", "--from-current-branch"],
+            obj=test_ctx,
+            catch_exceptions=False,
+        )
+
+        # Assert: Command succeeded
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+        assert result.exit_code == 0
+
+        # Assert: Output contains shell integration setup instructions
+        assert "Shell integration not detected" in result.stderr
+        assert "erk init --shell" in result.stderr
+        assert "source <(erk wt create --from-current-branch --script)" in result.stderr
+
+
+def test_create_from_current_branch_with_stay_flag() -> None:
+    """Test that create --from-current-branch --stay shows minimal output."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Set up git state: in root worktree on feature branch
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                ]
+            },
+            current_branches={env.cwd: "my-feature"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        test_ctx = env.build_context(git=git_ops)
+
+        # Act: Create worktree with --stay flag
+        result = runner.invoke(
+            cli,
+            ["wt", "create", "--from-current-branch", "--stay"],
+            obj=test_ctx,
+            catch_exceptions=False,
+        )
+
+        # Assert: Command succeeded
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+        assert result.exit_code == 0
+
+        # Assert: Output contains only creation message, no navigation instructions
+        assert "Created worktree at" in result.stderr
+        assert "Shell integration not detected" not in result.stderr
+        assert "erk init --shell" not in result.stderr
+        assert "source <(" not in result.stderr

@@ -953,9 +953,14 @@ def create_wt(
             status="created",
         )
         user_output(json_response)
-    else:
+    elif stay:
+        # User explicitly opted out of navigation
         user_output(f"Created worktree at {wt_path} checked out at branch '{branch}'")
-        user_output(f"\nerk checkout {branch}")
+    else:
+        # Shell integration not detected - provide setup instructions
+        user_output(f"Created worktree at {wt_path} checked out at branch '{branch}'")
+        user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
+        user_output("Or use: source <(erk wt create --from-current-branch --script)")
 
 
 def run_commands_in_worktree(

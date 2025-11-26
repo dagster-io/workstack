@@ -18,9 +18,12 @@ from erk.core.context import ErkContext
     help="Filter by state",
 )
 @click.option(
-    "--action-state",
-    type=click.Choice(["-", "pending", "running", "complete", "failed"], case_sensitive=False),
-    help="Filter by action state",
+    "--run-state",
+    type=click.Choice(
+        ["queued", "in_progress", "success", "failure", "cancelled"],
+        case_sensitive=False,
+    ),
+    help="Filter by workflow run state",
 )
 @click.option(
     "--runs",
@@ -37,7 +40,7 @@ def ls_cmd(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
-    action_state: str | None,
+    run_state: str | None,
     runs: bool,
     limit: int | None,
 ) -> None:
@@ -48,4 +51,4 @@ def ls_cmd(
         erk ls --label erk-plan          # List plans with label
         erk ls --runs                    # List plans with workflow run columns
     """
-    _list_plans_impl(ctx, label, state, action_state, runs, limit)
+    _list_plans_impl(ctx, label, state, run_state, runs, limit)

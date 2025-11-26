@@ -1126,7 +1126,11 @@ query {{
     def get_workflow_runs_batch(
         self, repo_root: Path, run_ids: list[str]
     ) -> dict[str, WorkflowRun | None]:
-        """Get details for multiple workflow runs by ID in a single GraphQL request.
+        """Get details for multiple workflow runs by ID using REST API.
+
+        Note: Uses get_workflow_run() for each run ID. The previous GraphQL
+        implementation was broken because database IDs cannot be used directly
+        in GraphQL Global ID format (gid://github/WorkflowRun/{db_id}).
 
         Note: Uses try/except as an acceptable error boundary for handling gh CLI
         availability and authentication. We cannot reliably check gh installation
@@ -1136,105 +1140,8 @@ query {{
         if not run_ids:
             return {}
 
-        try:
-            # Get owner/repo from repository
-            cmd = ["gh", "repo", "view", "--json", "owner,name"]
-            stdout = execute_gh_command(cmd, repo_root)
-            repo_info = json.loads(stdout)
-            owner = repo_info["owner"]["login"]
-            repo = repo_info["name"]
-
-            # Build and execute batched GraphQL query
-            query = self._build_workflow_runs_batch_query(run_ids, owner, repo)
-            response = self._execute_batch_pr_query(query, repo_root)
-
-            # Parse response and build result mapping
-            return self._parse_workflow_runs_batch_response(response, run_ids)
-
-        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
-            # gh not installed, not authenticated, or parsing failed
-            return {}
-
-    def _build_workflow_runs_batch_query(self, run_ids: list[str], owner: str, repo: str) -> str:
-        """Build GraphQL query to fetch multiple workflow runs by ID.
-
-        Args:
-            run_ids: List of workflow run IDs to query
-            owner: Repository owner
-            repo: Repository name
-
-        Returns:
-            GraphQL query string
-        """
-        # Build aliased run queries
-        run_queries = []
-        for run_id in run_ids:
-            run_query = f"""    run_{run_id}: node(id: "gid://github/WorkflowRun/{run_id}") {{
-      ... on WorkflowRun {{
-        databaseId
-        status
-        conclusion
-        headBranch {{
-          name
-        }}
-        headSha
-        displayTitle
-      }}
-    }}"""
-            run_queries.append(run_query)
-
-        # Combine into single query
-        query = f"""query {{
-{chr(10).join(run_queries)}
-}}"""
-        return query
-
-    def _parse_workflow_runs_batch_response(
-        self, response: dict[str, Any], run_ids: list[str]
-    ) -> dict[str, WorkflowRun | None]:
-        """Parse GraphQL response for batch workflow run query.
-
-        Args:
-            response: GraphQL response data
-            run_ids: Original list of run IDs requested
-
-        Returns:
-            Mapping of run_id -> WorkflowRun or None if not found
-        """
+        # Use get_workflow_run() for each ID (REST API via gh run view)
         result: dict[str, WorkflowRun | None] = {}
-        data = response.get("data", {})
-
         for run_id in run_ids:
-            alias = f"run_{run_id}"
-            run_data = data.get(alias)
-
-            if run_data is None:
-                result[run_id] = None
-                continue
-
-            # Extract fields with LBYL checks
-            database_id = run_data.get("databaseId")
-            if database_id is None:
-                result[run_id] = None
-                continue
-
-            status = run_data.get("status", "").lower()
-            conclusion = run_data.get("conclusion")
-            if conclusion is not None:
-                conclusion = conclusion.lower()
-
-            head_branch = run_data.get("headBranch")
-            branch = head_branch.get("name", "") if head_branch else ""
-            head_sha = run_data.get("headSha", "")
-            display_title = run_data.get("displayTitle")
-
-            result[run_id] = WorkflowRun(
-                run_id=str(database_id),
-                status=status,
-                conclusion=conclusion,
-                branch=branch,
-                head_sha=head_sha,
-                display_title=display_title,
-            )
-
+            result[run_id] = self.get_workflow_run(repo_root, run_id)
         return result

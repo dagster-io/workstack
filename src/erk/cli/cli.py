@@ -51,7 +51,7 @@ cli.add_command(implement)
 cli.add_command(init_cmd)
 cli.add_command(list_plans, name="list")  # Plan command
 cli.add_command(plan_log, name="log")  # Plan command
-cli.add_command(ls_cmd)  # Unified ls command (plans by default, --worktrees for worktrees)
+cli.add_command(ls_cmd)  # List plans
 cli.add_command(pr_group)
 cli.add_command(retry_plan, name="retry")  # Plan command
 cli.add_command(runs_cmd)

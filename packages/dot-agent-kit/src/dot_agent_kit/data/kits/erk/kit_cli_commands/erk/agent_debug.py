@@ -364,7 +364,7 @@ def export_json(agents: list[dict], session_id: str) -> str:
 @click.option("--tool", type=str, default=None, help="Filter to specific tool (e.g., 'Bash')")
 @click.option("--json", "json_output", is_flag=True, help="Output JSON instead of Rich UI")
 @click.option("--full", is_flag=True, help="Include full tool outputs (not truncated)")
-def debug_agent(
+def agent_debug(
     session_id: str | None,
     agent_id: str | None,
     agent_type: str | None,
@@ -464,4 +464,4 @@ def debug_agent(
 
 
 if __name__ == "__main__":
-    debug_agent()
+    agent_debug()

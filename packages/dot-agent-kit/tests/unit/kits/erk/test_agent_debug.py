@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from erk.data.kits.erk.kit_cli_commands.erk.agent_debug import (
-    debug_agent,
+    agent_debug,
     discover_agent_logs,
     export_json,
     find_project_dir_for_session,
@@ -302,7 +302,7 @@ def test_export_json_multiple_agents() -> None:
 def test_cli_missing_session_id() -> None:
     """Test CLI error when no session ID provided."""
     runner = CliRunner()
-    result = runner.invoke(debug_agent, [])
+    result = runner.invoke(agent_debug, [])
 
     assert result.exit_code == 1
     assert "No session ID provided" in result.output
@@ -367,7 +367,7 @@ def test_cli_with_explicit_session_id(tmp_path: Path, monkeypatch: pytest.Monkey
     )
 
     runner = CliRunner()
-    result = runner.invoke(debug_agent, ["--session-id", "test-123"])
+    result = runner.invoke(agent_debug, ["--session-id", "test-123"])
 
     assert result.exit_code == 0
     assert "Agent Runs for Session" in result.output
@@ -406,7 +406,7 @@ def test_cli_json_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     )
 
     runner = CliRunner()
-    result = runner.invoke(debug_agent, ["--session-id", "test-456", "--json", "--all"])
+    result = runner.invoke(agent_debug, ["--session-id", "test-456", "--json", "--all"])
 
     assert result.exit_code == 0
 
@@ -470,7 +470,7 @@ def test_cli_filters_by_agent_type(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
     runner = CliRunner()
     result = runner.invoke(
-        debug_agent, ["--session-id", "test-789", "--agent-type", "devrun", "--json", "--all"]
+        agent_debug, ["--session-id", "test-789", "--agent-type", "devrun", "--json", "--all"]
     )
 
     assert result.exit_code == 0

@@ -9,6 +9,7 @@ from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.ls import ls_cmd
 from erk.cli.commands.plan.close_cmd import close_plan
+from erk.cli.commands.plan.create_cmd import create_plan
 from erk.cli.commands.plan.get import get_plan
 from erk.cli.commands.plan.list_cmd import list_plans
 from erk.cli.commands.plan.log_cmd import plan_log
@@ -45,6 +46,7 @@ cli.add_command(checkout_cmd, name="co")  # Alias
 cli.add_command(close_plan, name="close")  # Plan command
 cli.add_command(completion_group)
 cli.add_command(config_group)
+cli.add_command(create_plan, name="create")  # Plan command
 cli.add_command(down_cmd)
 cli.add_command(get_plan, name="get")  # Plan command
 cli.add_command(implement)

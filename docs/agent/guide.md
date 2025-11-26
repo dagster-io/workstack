@@ -62,5 +62,6 @@ docs/
 | Implementing script mode          | [cli-script-mode.md](cli-script-mode.md)                                                                       |
 | Styling CLI output                | [cli-output-styling.md](cli-output-styling.md)                                                                 |
 | Working with session logs         | [claude-code-session-layout.md](claude-code-session-layout.md)                                                 |
+| Organizing CLI commands           | [cli-command-organization.md](cli-command-organization.md)                                                     |
 | Python coding standards           | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

@@ -1,6 +1,7 @@
 """Type definitions for GitHub operations."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, NamedTuple
 
 PRState = Literal["OPEN", "MERGED", "CLOSED", "NONE"]
@@ -48,6 +49,7 @@ class WorkflowRun:
     branch: str
     head_sha: str
     display_title: str | None = None  # The display title (e.g., issue title for dispatch workflows)
+    created_at: datetime | None = None  # Timestamp when the workflow run was created (UTC)
 
 
 @dataclass(frozen=True)

@@ -6,6 +6,7 @@ filesystem access.
 """
 
 import re
+from datetime import datetime
 
 import click
 from erk_shared.github.types import PullRequestInfo, WorkflowRun
@@ -434,3 +435,22 @@ def format_plan_display(
         )
 
     return f"{clickable_id} ({state_str}){labels_str} {title}"
+
+
+def format_submission_time(created_at: datetime | None) -> str:
+    """Format workflow run submission time as MM-DD HH:MM in local timezone.
+
+    Args:
+        created_at: UTC datetime when run was created, or None
+
+    Returns:
+        Formatted string like "11-26 14:30" in local timezone, or "[dim]-[/dim]" if None
+    """
+    if created_at is None:
+        return "[dim]-[/dim]"
+
+    # Convert UTC to local timezone
+    local_time = created_at.astimezone()
+
+    # Format as MM-DD HH:MM
+    return local_time.strftime("%m-%d %H:%M")

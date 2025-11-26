@@ -646,7 +646,7 @@ query {{
                 "--workflow",
                 workflow,
                 "--json",
-                "databaseId,status,conclusion,headBranch,headSha,displayTitle",
+                "databaseId,status,conclusion,headBranch,headSha,displayTitle,createdAt",
                 "--limit",
                 str(limit),
             ]
@@ -663,6 +663,12 @@ query {{
             # Map to WorkflowRun dataclasses
             runs = []
             for run in data:
+                # Parse created_at timestamp if present
+                created_at = None
+                created_at_str = run.get("createdAt")
+                if created_at_str:
+                    created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+
                 workflow_run = WorkflowRun(
                     run_id=str(run["databaseId"]),
                     status=run["status"],
@@ -670,6 +676,7 @@ query {{
                     branch=run["headBranch"],
                     head_sha=run["headSha"],
                     display_title=run.get("displayTitle"),
+                    created_at=created_at,
                 )
                 runs.append(workflow_run)
 
@@ -693,7 +700,7 @@ query {{
                 "view",
                 run_id,
                 "--json",
-                "databaseId,status,conclusion,headBranch,headSha,displayTitle",
+                "databaseId,status,conclusion,headBranch,headSha,displayTitle,createdAt",
             ]
 
             result = run_subprocess_with_context(
@@ -705,6 +712,12 @@ query {{
             # Parse JSON response
             data = json.loads(result.stdout)
 
+            # Parse created_at timestamp if present
+            created_at = None
+            created_at_str = data.get("createdAt")
+            if created_at_str:
+                created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+
             return WorkflowRun(
                 run_id=str(data["databaseId"]),
                 status=data["status"],
@@ -712,6 +725,7 @@ query {{
                 branch=data["headBranch"],
                 head_sha=data["headSha"],
                 display_title=data.get("displayTitle"),
+                created_at=created_at,
             )
 
         except (RuntimeError, json.JSONDecodeError, KeyError, FileNotFoundError):

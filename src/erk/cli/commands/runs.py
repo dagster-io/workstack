@@ -10,7 +10,11 @@ from erk.cli.commands.plan.list_cmd import format_pr_cell, select_display_pr
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
-from erk.core.display_utils import format_workflow_outcome, format_workflow_run_id
+from erk.core.display_utils import (
+    format_submission_time,
+    format_workflow_outcome,
+    format_workflow_run_id,
+)
 
 
 @click.group("runs", invoke_without_command=True)
@@ -112,6 +116,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     table = Table(show_header=True, header_style="bold")
     table.add_column("run-id", style="cyan", no_wrap=True)
     table.add_column("status", no_wrap=True, width=14)
+    table.add_column("submitted", no_wrap=True, width=11)
     table.add_column("plan", no_wrap=True)
     table.add_column("state", no_wrap=True, width=4)
     table.add_column("title", no_wrap=True)
@@ -139,6 +144,9 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
 
         # Format status
         status_cell = format_workflow_outcome(run)
+
+        # Format submission time
+        submitted_cell = format_submission_time(run.created_at)
 
         # Handle legacy runs where we can't parse the issue number
         # Show "X" to indicate "can't parse" vs "-" for "no data"
@@ -194,6 +202,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
         table.add_row(
             run_id_cell,
             status_cell,
+            submitted_cell,
             plan_cell,
             state_cell,
             title_cell,

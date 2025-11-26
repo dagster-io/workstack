@@ -1,8 +1,11 @@
 """Unit tests for display_utils.py color formatting."""
 
+from datetime import UTC, datetime
+
 from erk_shared.github.types import WorkflowRun
 
 from erk.core.display_utils import (
+    format_submission_time,
     format_workflow_outcome,
     format_workflow_run_id,
     format_worktree_line,
@@ -550,3 +553,68 @@ def test_format_workflow_outcome_cancelled() -> None:
     )
     result = format_workflow_outcome(workflow_run)
     assert result == "[dim]⛔ Cancelled[/dim]"
+
+
+# Tests for format_submission_time
+
+
+def test_format_submission_time_none() -> None:
+    """Test that None created_at returns dim dash."""
+    result = format_submission_time(None)
+    assert result == "[dim]-[/dim]"
+
+
+def test_format_submission_time_utc_datetime() -> None:
+    """Test formatting UTC datetime to local timezone."""
+    # Create a known UTC timestamp
+    utc_time = datetime(2024, 11, 26, 14, 30, 45, tzinfo=UTC)
+    result = format_submission_time(utc_time)
+
+    # Result should be MM-DD HH:MM format
+    # The exact time depends on local timezone, but format should be consistent
+    assert len(result) == 11, f"Expected 11 chars (MM-DD HH:MM), got: {result}"
+    # Check it has the expected format structure
+    assert result[2] == "-", f"Expected dash at position 2, got: {result}"
+    assert result[5] == " ", f"Expected space at position 5, got: {result}"
+    assert result[8] == ":", f"Expected colon at position 8, got: {result}"
+
+
+def test_format_submission_time_preserves_date() -> None:
+    """Test that the date part is correctly formatted."""
+    # Use a timezone that's UTC+0 to verify the date parsing
+    utc_time = datetime(2024, 12, 25, 10, 15, 0, tzinfo=UTC)
+    result = format_submission_time(utc_time)
+
+    # The result should contain "12-25" for December 25
+    # (unless the local timezone shifts the date, which is correct behavior)
+    # At minimum, verify the result is valid MM-DD HH:MM format
+    parts = result.split(" ")
+    assert len(parts) == 2, f"Expected date and time parts, got: {result}"
+    date_part, time_part = parts
+    assert len(date_part) == 5, f"Expected MM-DD format (5 chars), got: {date_part}"
+    assert len(time_part) == 5, f"Expected HH:MM format (5 chars), got: {time_part}"
+
+
+def test_format_submission_time_timezone_conversion() -> None:
+    """Test that UTC time is converted to local timezone."""
+    # Create a UTC timestamp at midnight
+    utc_time = datetime(2024, 11, 26, 0, 0, 0, tzinfo=UTC)
+    result = format_submission_time(utc_time)
+
+    # Convert manually to compare
+    expected_local = utc_time.astimezone()
+    expected_result = expected_local.strftime("%m-%d %H:%M")
+
+    assert result == expected_result, f"Expected {expected_result}, got {result}"
+
+
+def test_format_submission_time_with_explicit_timezone() -> None:
+    """Test that explicit timezone info is handled correctly."""
+    # Create a timestamp with explicit UTC timezone
+    explicit_time = datetime(2024, 7, 15, 18, 45, 30, tzinfo=UTC)
+    result = format_submission_time(explicit_time)
+
+    # Verify format
+    assert len(result) == 11, f"Expected 11 chars, got: {result}"
+    # The date should be July 15
+    assert "07-15" in result or result.startswith("07-1"), f"Expected July date, got: {result}"

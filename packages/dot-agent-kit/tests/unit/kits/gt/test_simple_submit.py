@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+from erk_shared.integrations.time.fake import FakeTime
 
 from erk.data.kits.gt.kit_cli_commands.gt.simple_submit import (
     complete_submission,
@@ -380,34 +381,39 @@ class TestPRInfoRetry:
 
     def test_complete_retries_pr_info_when_initially_unavailable(self) -> None:
         """Test that PR info is retried when not immediately available after submit."""
+        fake_time = FakeTime()
         ops = (
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123, url="https://github.com/repo/pull/123")
-            .with_pr_delay(attempts_until_visible=2)  # PR visible on 2nd attempt
+            .with_pr_delay(attempts_until_visible=2)  # PR visible on 3rd attempt (after 2 failures)
         )
-        result = complete_submission("Add feature", verbose=True, ops=ops)
+        result = complete_submission("Add feature", verbose=True, ops=ops, time=fake_time)
 
         assert result["success"] is True
         assert result["pr_number"] == 123
         assert result["pr_url"] == "https://github.com/repo/pull/123"
-        # PR was found after retry
+        # Verify exponential backoff: 2 failed attempts with 1s, 2s delays, then success on 3rd
+        assert fake_time.sleep_calls == [1, 2]
 
     def test_complete_succeeds_when_pr_info_never_available(self) -> None:
         """Test that complete succeeds with message when PR info never becomes available."""
+        fake_time = FakeTime()
         ops = (
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr_delay(attempts_until_visible=999)  # PR never visible within retry window
         )
-        result = complete_submission("Add feature", verbose=True, ops=ops)
+        result = complete_submission("Add feature", verbose=True, ops=ops, time=fake_time)
 
         assert result["success"] is True
         assert result["pr_number"] is None
         assert result["pr_url"] is None
         assert "PR submitted but could not retrieve PR info after retries" in result["message"]
+        # Verify all 3 attempts with backoff: 1s, 2s (no sleep after last attempt)
+        assert fake_time.sleep_calls == [1, 2]
 
 
 class TestMarkPRReady:

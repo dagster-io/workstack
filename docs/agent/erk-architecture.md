@@ -129,7 +129,7 @@ time.sleep(2.0)  # Actually sleeps for 2 seconds
 **Testing (FakeTime)**:
 
 ```python
-from tests.fakes.time import FakeTime
+from erk_shared.integrations.time.fake import FakeTime
 
 fake_time = FakeTime()
 fake_time.sleep(2.0)  # Returns immediately, tracks call

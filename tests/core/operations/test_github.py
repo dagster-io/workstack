@@ -2,9 +2,9 @@
 
 import pytest
 from erk_shared.github.parsing import _parse_github_pr_url
+from erk_shared.integrations.time.fake import FakeTime
 
 from erk.core.github.real import RealGitHub
-from tests.fakes.time import FakeTime
 
 
 def test_parse_github_pr_url_valid_urls() -> None:

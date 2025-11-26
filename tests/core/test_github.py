@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 from erk_shared.github.types import PullRequestInfo
+from erk_shared.integrations.time.fake import FakeTime
 from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
-from tests.fakes.time import FakeTime
 
 
 @pytest.fixture

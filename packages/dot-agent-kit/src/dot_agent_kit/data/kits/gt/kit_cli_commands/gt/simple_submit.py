@@ -13,11 +13,12 @@ Design goals:
 
 import json
 import sys
-import time
 from pathlib import Path
 
 import click
 from erk_shared.impl_folder import has_issue_reference, read_issue_reference
+from erk_shared.integrations.time.abc import Time
+from erk_shared.integrations.time.real import RealTime
 
 from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
@@ -271,7 +272,7 @@ def _submit_pr(ops: GtKit, logger: DebugLogger) -> dict | None:
     return None
 
 
-def _get_pr_info(ops: GtKit, logger: DebugLogger) -> tuple[int, str] | None:
+def _get_pr_info(ops: GtKit, logger: DebugLogger, time: Time) -> tuple[int, str] | None:
     """Get PR info from GitHub with exponential backoff retry.
 
     The GitHub API may not immediately have PR info available after submission,
@@ -280,6 +281,7 @@ def _get_pr_info(ops: GtKit, logger: DebugLogger) -> tuple[int, str] | None:
     Args:
         ops: GtKit operations instance
         logger: Debug logger
+        time: Time abstraction for sleep operations
 
     Returns:
         Tuple of (pr_number, pr_url) if found, None otherwise
@@ -344,6 +346,7 @@ def complete_submission(
     verbose: bool = False,
     issue_number: int | None = None,
     ops: GtKit | None = None,
+    time: Time | None = None,
 ) -> dict:
     """Complete the submission by amending commit and submitting PR.
 
@@ -353,6 +356,7 @@ def complete_submission(
         verbose: Show detailed diagnostic output
         issue_number: Optional GitHub issue number for linking
         ops: Optional GtKit instance for dependency injection
+        time: Optional Time instance for dependency injection
 
     Returns:
         JSON dict with:
@@ -364,6 +368,8 @@ def complete_submission(
     """
     if ops is None:
         ops = RealGtKit()
+    if time is None:
+        time = RealTime()
 
     logger = DebugLogger(verbose)
 
@@ -391,7 +397,7 @@ def complete_submission(
         return error
 
     # Get PR info with retry (may not be immediately available)
-    pr_info = _get_pr_info(ops, logger)
+    pr_info = _get_pr_info(ops, logger, time)
     if pr_info is None:
         return {
             "success": True,

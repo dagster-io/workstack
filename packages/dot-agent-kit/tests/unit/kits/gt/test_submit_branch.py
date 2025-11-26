@@ -585,7 +585,9 @@ class TestPostAnalysisExecution:
         github_ops = ops.github()
         github_state = github_ops.get_state()
         assert github_state.pr_titles[456] == "Add feature"
-        assert github_state.pr_bodies[456] == "Closes #123\n\nFull description"
+        assert github_state.pr_bodies[456] == (
+            "Closes #123\n\nFull description\n📥 **Checkout:** `erk pr checkout 456`"
+        )
 
     def test_post_analysis_without_issue_reference(self, tmp_path: Path) -> None:
         """Test that PR body is unchanged when issue.json does not exist."""
@@ -608,11 +610,13 @@ class TestPostAnalysisExecution:
 
         assert isinstance(result, PostAnalysisResult)
         assert result.success is True
-        # Verify that PR body is unchanged (no "Closes #N")
+        # Verify that PR body has checkout command but no "Closes #N"
         github_ops = ops.github()
         github_state = github_ops.get_state()
         assert github_state.pr_titles[456] == "Add feature"
-        assert github_state.pr_bodies[456] == "Full description"
+        assert github_state.pr_bodies[456] == (
+            "Full description\n📥 **Checkout:** `erk pr checkout 456`"
+        )
 
     def test_post_analysis_with_issue_reference_empty_body(self, tmp_path: Path) -> None:
         """Test that PR body is just 'Closes #N' when commit message has only title."""
@@ -645,11 +649,13 @@ class TestPostAnalysisExecution:
 
         assert isinstance(result, PostAnalysisResult)
         assert result.success is True
-        # Verify that PR body is just "Closes #789\n\n" (no extra content)
+        # Verify that PR body has "Closes #789" and checkout command (no extra content)
         github_ops = ops.github()
         github_state = github_ops.get_state()
         assert github_state.pr_titles[456] == "Add feature"
-        assert github_state.pr_bodies[456] == "Closes #789\n\n"
+        assert github_state.pr_bodies[456] == (
+            "Closes #789\n\n\n📥 **Checkout:** `erk pr checkout 456`"
+        )
 
     def test_post_analysis_with_plan_author(self, tmp_path: Path) -> None:
         """Test that PR body includes plan author attribution when plan.md has created_by."""

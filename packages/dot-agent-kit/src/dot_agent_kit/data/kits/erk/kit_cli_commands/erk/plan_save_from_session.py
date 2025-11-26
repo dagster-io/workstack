@@ -78,7 +78,7 @@ def _format_error_display(error_message: str, details: str | None = None) -> Non
     is_flag=True,
     help="Extract plan without saving to disk (returns plan_content in JSON)",
 )
-def save_plan_from_session(session_id: str | None, output_format: str, extract_only: bool) -> None:
+def plan_save_from_session(session_id: str | None, output_format: str, extract_only: bool) -> None:
     """Extract plan from Claude session and save to disk.
 
     Combines plan extraction with file saving in a single operation.

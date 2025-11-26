@@ -1,7 +1,7 @@
 """Runs command implementation."""
 
 import click
-from erk_shared.github.emoji import get_checks_status_emoji
+from erk_shared.github.emoji import get_checks_status_emoji, get_issue_state_emoji
 from erk_shared.output.output import user_output
 from rich.console import Console
 from rich.table import Table
@@ -74,6 +74,32 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     issues = ctx.issues.list_issues(repo.root, labels=["erk-plan"])
     issue_map = {issue.number: issue for issue in issues}
 
+    # Second filtering pass - remove runs where we can't display title
+    if not show_all:
+        filtered_runs = []
+        for run in runs:
+            issue_num = _extract_issue_number(run.display_title)
+            if issue_num is None:
+                continue  # Already filtered, but defensive check
+
+            # Filter if issue not found
+            if issue_num not in issue_map:
+                continue
+
+            # Filter if title is empty
+            issue = issue_map[issue_num]
+            if not issue.title or not issue.title.strip():
+                continue
+
+            filtered_runs.append(run)
+
+        runs = filtered_runs
+
+        # Show message if ALL runs filtered
+        if not runs:
+            user_output("No runs with plans found. Use --show-legacy to see all runs.")
+            return
+
     # 4. Batch fetch PRs linked to issues
     pr_linkages: dict[int, list] = {}
     if issue_numbers:
@@ -87,6 +113,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     table.add_column("run-id", style="cyan", no_wrap=True)
     table.add_column("status", no_wrap=True, width=14)
     table.add_column("plan", no_wrap=True)
+    table.add_column("state", no_wrap=True, width=4)
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
@@ -118,6 +145,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
         if issue_num is None:
             # Legacy format - can't extract issue linkage
             plan_cell = "[dim]X[/dim]"
+            state_cell = "[dim]X[/dim]"
             title_cell = "[dim]X[/dim]"
             pr_cell = "[dim]X[/dim]"
             checks_cell = "[dim]X[/dim]"
@@ -132,15 +160,21 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
             else:
                 plan_cell = f"[cyan]#{issue_num}[/cyan]"
 
-            # Get title from issue map
+            # Get title and state from issue map
             if issue_num in issue_map:
-                title = issue_map[issue_num].title
+                issue = issue_map[issue_num]
+
+                # Get state emoji
+                state_cell = get_issue_state_emoji(issue.state)
+
+                title = issue.title
                 # Truncate to 50 characters
                 if len(title) > 50:
                     title = title[:47] + "..."
                 title_cell = title
             else:
-                title_cell = "-"
+                state_cell = "[dim]-[/dim]"
+                title_cell = "[dim]-[/dim]"
 
             # Format PR column
             pr_cell = "-"
@@ -161,6 +195,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
             run_id_cell,
             status_cell,
             plan_cell,
+            state_cell,
             title_cell,
             pr_cell,
             checks_cell,

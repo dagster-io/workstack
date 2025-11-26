@@ -679,6 +679,210 @@ def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
     assert "This is a very long" in result.output
 
 
+def test_runs_cmd_filters_missing_issue_data(tmp_path: Path) -> None:
+    """Runs with missing/empty issue data are filtered by default."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        # Valid run with issue
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",
+        ),
+        # Run with issue not found in issue_map
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-2",
+            head_sha="def456",
+            display_title="999:def456",  # Issue 999 doesn't exist
+        ),
+        # Run with empty title
+        WorkflowRun(
+            run_id="789",
+            status="completed",
+            conclusion="success",
+            branch="feat-3",
+            head_sha="ghi789",
+            display_title="143:ghi789",  # Issue 143 has empty title
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    # Only create issues 142 (valid) and 143 (empty title)
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Valid issue with title",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        143: IssueInfo(
+            number=143,
+            title="",  # Empty title
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/143",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act - Default behavior (without --show-legacy)
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert - Only run 123 should appear
+    assert result.exit_code == 0
+    assert "123" in result.output
+    assert "#142" in result.output
+    # Runs 456 and 789 should be filtered out
+    assert "456" not in result.output
+    assert "789" not in result.output
+    assert "999" not in result.output
+    assert "143" not in result.output
+
+
+def test_runs_cmd_displays_issue_state(tmp_path: Path) -> None:
+    """Issue state is displayed with emoji."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",
+        ),
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-2",
+            head_sha="def456",
+            display_title="143:def456",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Open issue",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        143: IssueInfo(
+            number=143,
+            title="Closed issue",
+            body="",
+            state="CLOSED",
+            url="https://github.com/owner/repo/issues/143",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # OPEN issue should show green emoji
+    assert "🟢" in result.output
+    # CLOSED issue should show red emoji
+    assert "🔴" in result.output
+
+
+def test_runs_cmd_legacy_runs_show_x_for_state(tmp_path: Path) -> None:
+    """Legacy runs show X in state column with --show-legacy."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    workflow_runs = [
+        # Legacy run with old display_title format
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="Add feature [abc123]",  # Old format
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    issues_ops = FakeGitHubIssues(issues={})
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act - With --show-legacy flag
+    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # Legacy run should appear
+    assert "123" in result.output
+    # State column should show "X" (dimmed)
+    assert "X" in result.output
+
+
 # ============================================================================
 # Tests for logs subcommand (unchanged from original)
 # ============================================================================

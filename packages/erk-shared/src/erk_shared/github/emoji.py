@@ -69,3 +69,15 @@ def get_checks_status_emoji(pr: PullRequestInfo | None) -> str:
     if pr.checks_passing:
         return CHECKS_PASSING_EMOJI  # All pass
     return CHECKS_FAILING_EMOJI  # Any failing
+
+
+def get_issue_state_emoji(state: str) -> str:
+    """Get emoji for issue state.
+
+    Args:
+        state: Issue state ("OPEN" or "CLOSED")
+
+    Returns:
+        🟢 for OPEN, 🔴 for CLOSED
+    """
+    return "🟢" if state == "OPEN" else "🔴"

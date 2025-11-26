@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from erk.data.kits.gt.kit_cli_commands.gt.pr_update import (
     execute_update_pr,
-    update_pr,
+    pr_update,
 )
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
@@ -155,10 +155,10 @@ class TestExecuteUpdatePr:
         assert "Failed to stage changes" in result["error"]
 
 
-class TestUpdatePrCLI:
-    """Tests for update_pr CLI command."""
+class TestPrUpdateCLI:
+    """Tests for pr_update CLI command."""
 
-    def test_update_pr_cli_success(self, runner: CliRunner) -> None:
+    def test_pr_update_cli_success(self, runner: CliRunner) -> None:
         """Test CLI command with successful execution."""
         ops = (
             FakeGtKitOps()
@@ -171,14 +171,14 @@ class TestUpdatePrCLI:
             "erk.data.kits.gt.kit_cli_commands.gt.pr_update.RealGtKit",
             return_value=ops,
         ):
-            result = runner.invoke(update_pr)
+            result = runner.invoke(pr_update)
 
         assert result.exit_code == 0
         output = json.loads(result.output)
         assert output["success"] is True
         assert output["pr_number"] == 123
 
-    def test_update_pr_cli_failure_exit_code(self, runner: CliRunner) -> None:
+    def test_pr_update_cli_failure_exit_code(self, runner: CliRunner) -> None:
         """Test CLI command returns non-zero exit code on failure."""
         ops = (
             FakeGtKitOps()
@@ -191,7 +191,7 @@ class TestUpdatePrCLI:
             "erk.data.kits.gt.kit_cli_commands.gt.pr_update.RealGtKit",
             return_value=ops,
         ):
-            result = runner.invoke(update_pr)
+            result = runner.invoke(pr_update)
 
         assert result.exit_code == 1
         output = json.loads(result.output)

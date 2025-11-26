@@ -33,7 +33,7 @@ def test_close_plan_with_issue_number() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["close", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "close", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -53,7 +53,7 @@ def test_close_plan_not_found() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["close", "999"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "close", "999"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1

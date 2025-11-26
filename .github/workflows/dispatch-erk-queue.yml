@@ -498,24 +498,30 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ github.token }}
 
-      - name: Validate Graphite metadata
+      - name: Initialize Graphite metadata
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
           source $HOME/.cargo/env
 
-          echo "Validating Graphite stack metadata..."
+          echo "Initializing Graphite stack metadata..."
 
-          # Check if branch has parent tracking
-          if ! gt parent &>/dev/null; then
-            echo "❌ Branch is missing Graphite parent metadata"
-            echo "This will cause /gt:pr-submit to fail with 'no_parent' error"
-            echo ""
-            echo "Branch should have been initialized in setup phase."
-            echo "This indicates a workflow bug that needs investigation."
+          # Graphite metadata is stored in local .git/config, which doesn't
+          # persist across jobs (different runners). Re-initialize it here.
+
+          # Determine trunk branch
+          if git ls-remote --heads origin main | grep -q main; then
+            TRUNK_BRANCH="main"
+          elif git ls-remote --heads origin master | grep -q master; then
+            TRUNK_BRANCH="master"
+          else
+            echo "❌ Could not detect trunk branch (main or master)"
             exit 1
           fi
 
-          PARENT=$(gt parent)
-          echo "✅ Branch has valid Graphite metadata (parent: $PARENT)"
+          # Initialize Graphite metadata for parent branch tracking
+          gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
+          echo "✅ Graphite metadata initialized (parent: $TRUNK_BRANCH)"
 
       - name: Submit branch with proper commit message
         if: steps.implement.outputs.implementation_success == 'true'

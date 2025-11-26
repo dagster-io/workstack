@@ -1,6 +1,7 @@
 """Shared utilities and interfaces for erk and dot-agent-kit.
 
 Import from submodules:
+- env: in_github_actions
 - git.abc: Git, WorktreeInfo, find_worktree_for_branch
 - git.real: RealGit
 - github.abc: GitHub

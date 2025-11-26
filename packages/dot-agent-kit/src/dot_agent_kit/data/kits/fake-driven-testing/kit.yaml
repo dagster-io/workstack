@@ -1,7 +1,7 @@
 name: fake-driven-testing
 version: 0.1.0
 description: Defense-in-depth testing architecture for Python with fake implementations and automatic suggestion hook
-license: MIT
+license: See LICENSE.md
 artifacts:
   skill:
     - skills/fake-driven-testing/SKILL.md

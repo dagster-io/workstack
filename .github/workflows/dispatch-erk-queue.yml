@@ -169,6 +169,28 @@ jobs:
           echo "✅ Branch created and pushed: $BRANCH_NAME"
           echo "setup_success=true" >> $GITHUB_OUTPUT
 
+      - name: Initialize Graphite metadata
+        if: steps.create_new_branch.outputs.setup_success == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+        run: |
+          source $HOME/.cargo/env
+
+          # Determine trunk branch (same logic as branch creation)
+          if git ls-remote --heads origin main | grep -q main; then
+            TRUNK_BRANCH="main"
+          elif git ls-remote --heads origin master | grep -q master; then
+            TRUNK_BRANCH="master"
+          else
+            echo "❌ Could not detect trunk branch"
+            exit 1
+          fi
+
+          # Initialize Graphite metadata for parent branch tracking
+          # This allows gt:pr-submit to determine the parent branch
+          gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
+          echo "✅ Graphite metadata initialized (parent: $TRUNK_BRANCH)"
+
       - name: Reuse existing branch
         id: reuse_branch
         if: steps.check_branch.outputs.branch_exists == 'true'
@@ -231,6 +253,31 @@ jobs:
             echo "✅ Branch reused with updated plan: $BRANCH_NAME"
           else
             echo "✅ Branch reused (plan unchanged): $BRANCH_NAME"
+          fi
+
+          # Ensure Graphite metadata exists for this branch
+          # In case the branch was created without Graphite tracking
+          source $HOME/.cargo/env
+
+          # Check if branch has Graphite parent
+          if ! gt parent &>/dev/null; then
+            echo "⚠️  Branch missing Graphite metadata, initializing..."
+
+            # Determine trunk branch
+            if git ls-remote --heads origin main | grep -q main; then
+              TRUNK_BRANCH="main"
+            elif git ls-remote --heads origin master | grep -q master; then
+              TRUNK_BRANCH="master"
+            else
+              echo "❌ Could not detect trunk branch"
+              exit 1
+            fi
+
+            # Initialize Graphite metadata
+            gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
+            echo "✅ Graphite metadata initialized (parent: $TRUNK_BRANCH)"
+          else
+            echo "✅ Graphite metadata already exists"
           fi
 
           # Set output
@@ -448,6 +495,25 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ github.token }}
 
+      - name: Validate Graphite metadata
+        run: |
+          source $HOME/.cargo/env
+
+          echo "Validating Graphite stack metadata..."
+
+          # Check if branch has parent tracking
+          if ! gt parent &>/dev/null; then
+            echo "❌ Branch is missing Graphite parent metadata"
+            echo "This will cause /gt:pr-submit to fail with 'no_parent' error"
+            echo ""
+            echo "Branch should have been initialized in setup phase."
+            echo "This indicates a workflow bug that needs investigation."
+            exit 1
+          fi
+
+          PARENT=$(gt parent)
+          echo "✅ Branch has valid Graphite metadata (parent: $PARENT)"
+
       - name: Submit branch with proper commit message
         if: steps.implement.outputs.implementation_success == 'true'
         env:
@@ -489,8 +555,19 @@ jobs:
         run: |
           echo "Triggering CI workflows for branch $BRANCH_NAME..."
 
+          # Check if local is ahead of remote (unpushed commits from failed submission)
+          git fetch origin "$BRANCH_NAME"
+
+          AHEAD=$(git rev-list --count "origin/$BRANCH_NAME..$BRANCH_NAME" 2>/dev/null || echo "0")
+
+          if [ "$AHEAD" -gt 0 ]; then
+            echo "⚠️  Local branch is ahead by $AHEAD commit(s)"
+            echo "This usually means /gt:pr-submit failed after creating commits"
+            echo "Pushing pending commits before triggering CI..."
+            git push origin "$BRANCH_NAME"
+          fi
+
           # Push empty commit to trigger CI via synchronize event
-          # This ensures workflows are properly associated with the PR
           git commit --allow-empty -m "Trigger CI workflows"
           git push origin "$BRANCH_NAME"
 

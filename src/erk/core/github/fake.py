@@ -351,62 +351,6 @@ class FakeGitHub(GitHub):
 
         return result
 
-    def get_workflow_runs_by_titles(
-        self, repo_root: Path, workflow: str, titles: list[str]
-    ) -> dict[str, WorkflowRun | None]:
-        """Get the most relevant workflow run for each display title.
-
-        Returns a mapping of title -> WorkflowRun for titles that have
-        matching workflow runs. Uses priority: in_progress/queued > failed > success > other.
-
-        The workflow parameter is accepted but ignored - fake returns runs from
-        all pre-configured workflow runs regardless of workflow name.
-        """
-        if not titles:
-            return {}
-
-        # Group runs by display_title
-        runs_by_title: dict[str, list[WorkflowRun]] = {}
-        for run in self._workflow_runs:
-            if run.display_title in titles:
-                if run.display_title not in runs_by_title:
-                    runs_by_title[run.display_title] = []
-                runs_by_title[run.display_title].append(run)
-
-        # Select most relevant run for each title
-        result: dict[str, WorkflowRun | None] = {}
-        for title in titles:
-            if title not in runs_by_title:
-                continue
-
-            title_runs = runs_by_title[title]
-
-            # Priority 1: in_progress or queued (active runs)
-            active_runs = [r for r in title_runs if r.status in ("in_progress", "queued")]
-            if active_runs:
-                result[title] = active_runs[0]
-                continue
-
-            # Priority 2: failed completed runs
-            failed_runs = [
-                r for r in title_runs if r.status == "completed" and r.conclusion == "failure"
-            ]
-            if failed_runs:
-                result[title] = failed_runs[0]
-                continue
-
-            # Priority 3: successful completed runs (most recent = first in list)
-            completed_runs = [r for r in title_runs if r.status == "completed"]
-            if completed_runs:
-                result[title] = completed_runs[0]
-                continue
-
-            # Priority 4: any other runs (unknown status, etc.)
-            if title_runs:
-                result[title] = title_runs[0]
-
-        return result
-
     def poll_for_workflow_run(
         self,
         repo_root: Path,
@@ -447,3 +391,27 @@ class FakeGitHub(GitHub):
         Returns None if pr_number not found in pr_checkout_infos mapping.
         """
         return self._pr_checkout_infos.get(pr_number)
+
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get details for multiple workflow runs by ID (returns pre-configured data).
+
+        Looks up each run_id in the pre-configured workflow_runs list.
+
+        Args:
+            repo_root: Repository root directory (ignored in fake)
+            run_ids: List of GitHub Actions run IDs to lookup
+
+        Returns:
+            Mapping of run_id -> WorkflowRun or None if not found
+        """
+        result: dict[str, WorkflowRun | None] = {}
+        for run_id in run_ids:
+            found = None
+            for run in self._workflow_runs:
+                if run.run_id == run_id:
+                    found = run
+                    break
+            result[run_id] = found
+        return result

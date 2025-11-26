@@ -336,12 +336,25 @@ def test_ls_alias_works() -> None:
 
 
 def test_list_plans_shows_worktree_status() -> None:
-    """Test that list command displays worktree names from issue comments."""
-    # Arrange - Create issue with metadata field containing issue number
+    """Test that list command displays worktree names from issue body plan-header."""
+    # Arrange - Create issue with plan-header block containing worktree_name
+    body_with_worktree = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+worktree_name: rename-erk-slash-commands
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+Implementation details here."""
+
     plan1 = Plan(
         plan_identifier="867",
         title="Rename Erk Slash Commands",
-        body="",
+        body=body_with_worktree,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/867",
         labels=["erk-plan"],
@@ -364,29 +377,9 @@ def test_list_plans_shows_worktree_status() -> None:
         metadata={"number": 868},
     )
 
-    # Create comment with worktree metadata block
-    comment_with_metadata = """
-<!-- erk:metadata-block:erk-worktree-creation -->
-<details>
-<summary><code>erk-worktree-creation</code></summary>
-
-```yaml
-worktree_name: rename-erk-slash-commands
-branch_name: rename-erk-slash-commands
-timestamp: "2024-11-23T10:00:00Z"
-issue_number: 867
-```
-</details>
-<!-- /erk:metadata-block -->
-"""
-
-    # Configure fake GitHub issues with issues and comments
+    # Configure fake GitHub issues
     issues = FakeGitHubIssues(
         issues={867: plan_to_issue(plan1), 868: plan_to_issue(plan2)},
-        comments={
-            867: [comment_with_metadata],
-            868: [],  # No comments for issue 868
-        },
     )
 
     runner = CliRunner()
@@ -407,12 +400,25 @@ issue_number: 867
 
 
 def test_list_plans_shows_most_recent_worktree() -> None:
-    """Test that list command shows the most recent worktree when multiple exist."""
-    # Arrange
+    """Test that list command shows worktree from issue body (schema v2 only has one)."""
+    # Arrange - Issue body with plan-header containing current worktree
+    body_with_worktree = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+worktree_name: second-attempt
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+Issue updated with current worktree name."""
+
     plan1 = Plan(
         plan_identifier="900",
-        title="Issue with Multiple Worktrees",
-        body="",
+        title="Issue with Updated Worktree",
+        body=body_with_worktree,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/900",
         labels=["erk-plan"],
@@ -422,43 +428,9 @@ def test_list_plans_shows_most_recent_worktree() -> None:
         metadata={"number": 900},
     )
 
-    # Create multiple comments with different timestamps
-    older_comment = """
-<!-- erk:metadata-block:erk-worktree-creation -->
-<details>
-<summary><code>erk-worktree-creation</code></summary>
-
-```yaml
-worktree_name: first-attempt
-branch_name: first-attempt
-timestamp: "2024-11-20T10:00:00Z"
-issue_number: 900
-```
-</details>
-<!-- /erk:metadata-block -->
-"""
-
-    newer_comment = """
-<!-- erk:metadata-block:erk-worktree-creation -->
-<details>
-<summary><code>erk-worktree-creation</code></summary>
-
-```yaml
-worktree_name: second-attempt
-branch_name: second-attempt
-timestamp: "2024-11-23T10:00:00Z"
-issue_number: 900
-```
-</details>
-<!-- /erk:metadata-block -->
-"""
-
-    # Configure fake with issues and comments
+    # Configure fake with issue
     issues = FakeGitHubIssues(
         issues={900: plan_to_issue(plan1)},
-        comments={
-            900: [older_comment, newer_comment],
-        },
     )
 
     runner = CliRunner()
@@ -468,10 +440,9 @@ issue_number: 900
         # Act
         result = runner.invoke(cli, ["list"], obj=ctx)
 
-        # Assert - Should show most recent worktree
+        # Assert - Should show worktree from plan-header
         assert result.exit_code == 0
         assert "second-attempt" in result.output
-        assert "first-attempt" not in result.output
 
 
 def test_list_plans_shows_worktree_from_local_impl() -> None:
@@ -622,12 +593,25 @@ issue_number: 960
 
 
 def test_list_plans_falls_back_to_github_when_no_local() -> None:
-    """Test that GitHub comment detection works when no local .impl/issue.json exists."""
-    # Arrange
+    """Test that issue body plan-header extraction works when no local .impl/issue.json exists."""
+    # Arrange - Issue with plan-header containing worktree_name
+    body_with_worktree = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+worktree_name: github-worktree
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->
+
+Plan content."""
+
     plan1 = Plan(
         plan_identifier="970",
         title="Test Fallback",
-        body="",
+        body=body_with_worktree,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/970",
         labels=["erk-plan"],
@@ -637,34 +621,16 @@ def test_list_plans_falls_back_to_github_when_no_local() -> None:
         metadata={"number": 970},
     )
 
-    # Create GitHub comment
-    github_comment = """
-<!-- erk:metadata-block:erk-worktree-creation -->
-<details>
-<summary><code>erk-worktree-creation</code></summary>
-
-```yaml
-worktree_name: github-worktree
-branch_name: github-worktree
-timestamp: "2024-11-20T10:00:00Z"
-issue_number: 970
-```
-</details>
-<!-- /erk:metadata-block -->
-"""
-
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # No local worktrees with .impl folders
-        issues = FakeGitHubIssues(
-            issues={970: plan_to_issue(plan1)}, comments={970: [github_comment]}
-        )
+        issues = FakeGitHubIssues(issues={970: plan_to_issue(plan1)})
         ctx = build_workspace_test_context(env, issues=issues)
 
         # Act
         result = runner.invoke(cli, ["list"], obj=ctx)
 
-        # Assert - Should show GitHub worktree name
+        # Assert - Should show worktree name from issue body
         assert result.exit_code == 0
         assert "#970" in result.output
         assert "github-worktree" in result.output
@@ -948,11 +914,33 @@ def test_list_plans_filter_by_run_state_queued() -> None:
 
     from erk.core.github.fake import FakeGitHub
 
-    # Arrange - Create plans with different workflow run states
+    # Arrange - Create plans with workflow run IDs in plan-header
+    queued_plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '11111'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    running_plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '22222'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
     queued_plan = Plan(
         plan_identifier="1010",
         title="Queued Plan",
-        body="",
+        body=queued_plan_body,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1010",
         labels=["erk-plan", "erk-queue"],
@@ -965,7 +953,7 @@ def test_list_plans_filter_by_run_state_queued() -> None:
     running_plan = Plan(
         plan_identifier="1011",
         title="Running Plan",
-        body="",
+        body=running_plan_body,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1011",
         labels=["erk-plan"],
@@ -975,14 +963,13 @@ def test_list_plans_filter_by_run_state_queued() -> None:
         metadata={"number": 1011},
     )
 
-    # Configure workflow runs - queued run matches first plan's title
+    # Configure workflow runs with run_id lookup
     queued_run = WorkflowRun(
         run_id="11111",
         status="queued",
         conclusion=None,
         branch="master",
         head_sha="abc123",
-        display_title="Queued Plan",
     )
     running_run = WorkflowRun(
         run_id="22222",
@@ -990,14 +977,12 @@ def test_list_plans_filter_by_run_state_queued() -> None:
         conclusion=None,
         branch="master",
         head_sha="def456",
-        display_title="Running Plan",
     )
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         issues = FakeGitHubIssues(
             issues={1010: plan_to_issue(queued_plan), 1011: plan_to_issue(running_plan)},
-            comments={1010: [], 1011: []},
         )
         github = FakeGitHub(workflow_runs=[queued_run, running_run])
         ctx = build_workspace_test_context(env, issues=issues, github=github)
@@ -1018,11 +1003,33 @@ def test_list_plans_filter_by_run_state_success() -> None:
 
     from erk.core.github.fake import FakeGitHub
 
-    # Arrange
+    # Arrange - Create plans with workflow run IDs in plan-header
+    success_plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '11111'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    failed_plan_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+last_dispatched_run_id: '22222'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
     success_plan = Plan(
         plan_identifier="1020",
         title="Success Plan",
-        body="",
+        body=success_plan_body,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1020",
         labels=["erk-plan", "erk-queue"],
@@ -1035,7 +1042,7 @@ def test_list_plans_filter_by_run_state_success() -> None:
     failed_plan = Plan(
         plan_identifier="1021",
         title="Failed Plan",
-        body="",
+        body=failed_plan_body,
         state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/1021",
         labels=["erk-plan", "erk-queue"],
@@ -1045,14 +1052,13 @@ def test_list_plans_filter_by_run_state_success() -> None:
         metadata={"number": 1021},
     )
 
-    # Configure workflow runs - success run matches first plan's title
+    # Configure workflow runs with run_id lookup
     success_run = WorkflowRun(
         run_id="11111",
         status="completed",
         conclusion="success",
         branch="master",
         head_sha="abc123",
-        display_title="Success Plan",
     )
     failed_run = WorkflowRun(
         run_id="22222",
@@ -1060,14 +1066,12 @@ def test_list_plans_filter_by_run_state_success() -> None:
         conclusion="failure",
         branch="master",
         head_sha="def456",
-        display_title="Failed Plan",
     )
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         issues = FakeGitHubIssues(
             issues={1020: plan_to_issue(success_plan), 1021: plan_to_issue(failed_plan)},
-            comments={1020: [], 1021: []},
         )
         github = FakeGitHub(workflow_runs=[success_run, failed_run])
         ctx = build_workspace_test_context(env, issues=issues, github=github)

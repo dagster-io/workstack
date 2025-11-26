@@ -273,33 +273,6 @@ class GitHub(ABC):
         ...
 
     @abstractmethod
-    def get_workflow_runs_by_titles(
-        self, repo_root: Path, workflow: str, titles: list[str]
-    ) -> dict[str, WorkflowRun | None]:
-        """Get the most relevant workflow run for each display title.
-
-        Queries GitHub Actions for workflow runs and returns the most relevant
-        run for each requested display title. This is useful for workflows
-        triggered by issue events where the headBranch is always the default
-        branch but the display_title contains the issue title.
-
-        Priority order:
-        1. In-progress or queued runs (active runs take precedence)
-        2. Failed completed runs (failures are more actionable than successes)
-        3. Successful completed runs (most recent)
-
-        Args:
-            repo_root: Repository root directory
-            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
-            titles: List of display titles to match (e.g., issue titles)
-
-        Returns:
-            Mapping of title -> WorkflowRun or None if no runs found.
-            Only includes entries for titles that have matching workflow runs.
-        """
-        ...
-
-    @abstractmethod
     def poll_for_workflow_run(
         self,
         repo_root: Path,
@@ -337,5 +310,24 @@ class GitHub(ABC):
 
         Returns:
             PRCheckoutInfo with checkout details, or None if PR not found
+        """
+        ...
+
+    @abstractmethod
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get details for multiple workflow runs by ID in a single request.
+
+        Uses GraphQL to fetch multiple workflow runs efficiently in one API call,
+        avoiding N+1 query patterns when fetching runs for multiple issues.
+
+        Args:
+            repo_root: Repository root directory
+            run_ids: List of GitHub Actions run IDs to fetch
+
+        Returns:
+            Mapping of run_id -> WorkflowRun or None if not found.
+            Run IDs that don't exist will have None as their value.
         """
         ...

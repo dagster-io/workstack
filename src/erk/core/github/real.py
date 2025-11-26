@@ -525,7 +525,8 @@ query {{
 
         # Poll for the run by matching displayTitle containing the distinct ID
         # The workflow uses run-name: "<issue_number>:<distinct_id>"
-        max_attempts = 5
+        # GitHub API eventual consistency: fast path (5×1s) then slow path (10×2s)
+        max_attempts = 15
         for attempt in range(max_attempts):
             runs_cmd = [
                 "gh",
@@ -566,8 +567,10 @@ query {{
                     return str(run_id)
 
             # No matching run found, retry if attempts remaining
+            # Fast path: 1s delay for first 5 attempts, then 2s delay for remaining
             if attempt < max_attempts - 1:
-                self._time.sleep(1)
+                delay = 1 if attempt < 5 else 2
+                self._time.sleep(delay)
 
         # All attempts exhausted without finding matching run
         msg = (
@@ -767,46 +770,51 @@ query {{
             return {}
 
     def _build_issue_pr_linkage_query(self, issue_numbers: list[int], owner: str, repo: str) -> str:
-        """Build GraphQL query to fetch PRs linked to issues.
+        """Build GraphQL query to fetch PRs linked to issues via timeline.
 
-        Query all PRs in the repository and extract their closingIssuesReferences
-        to build the issue-to-PR mapping.
+        Uses CrossReferencedEvent on issue timelines to find PRs that will close
+        each issue. This is O(issues) instead of O(all PRs in repo).
 
         Args:
-            issue_numbers: List of issue numbers to query (used for filtering results)
+            issue_numbers: List of issue numbers to query
             owner: Repository owner
             repo: Repository name
 
         Returns:
             GraphQL query string
         """
-        # Query PRs with closingIssuesReferences field
-        # We fetch up to 100 PRs at a time - this should cover most repositories
-        query = f"""query {{
-  repository(owner: "{owner}", name: "{repo}") {{
-    pullRequests(
-      first: 100,
-      states: [OPEN, MERGED, CLOSED],
-      orderBy: {{field: CREATED_AT, direction: DESC}}
-    ) {{
-      nodes {{
-        number
-        state
-        url
-        isDraft
-        title
-        createdAt
-        statusCheckRollup {{
-          state
-        }}
-        mergeable
-        closingIssuesReferences(first: 100) {{
-          nodes {{
-            number
+        # Build aliased issue queries (following _build_workflow_runs_batch_query pattern)
+        issue_queries = []
+        for issue_num in issue_numbers:
+            issue_query = f"""    issue_{issue_num}: issue(number: {issue_num}) {{
+      timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], first: 20) {{
+        nodes {{
+          ... on CrossReferencedEvent {{
+            willCloseTarget
+            source {{
+              ... on PullRequest {{
+                number
+                state
+                url
+                isDraft
+                title
+                createdAt
+                statusCheckRollup {{
+                  state
+                }}
+                mergeable
+              }}
+            }}
           }}
         }}
       }}
-    }}
+    }}"""
+            issue_queries.append(issue_query)
+
+        # Combine into single query under repository context
+        query = f"""query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+{chr(10).join(issue_queries)}
   }}
 }}"""
         return query
@@ -814,10 +822,10 @@ query {{
     def _parse_issue_pr_linkages(
         self, response: dict[str, Any], owner: str, repo: str
     ) -> dict[int, list[PullRequestInfo]]:
-        """Parse GraphQL response to extract issue-to-PR mappings.
+        """Parse GraphQL response from issue timeline query.
 
-        Processes PR data with closingIssuesReferences to build the inverse mapping
-        from issue numbers to PRs that close them.
+        Processes CrossReferencedEvent timeline items to extract PRs that
+        will close each issue (willCloseTarget=true).
 
         Args:
             response: GraphQL response data
@@ -827,87 +835,88 @@ query {{
         Returns:
             Mapping of issue_number -> list of PRs sorted by created_at descending
         """
-        # Build inverse mapping: issue_number -> list[(pr_info, created_at)]
-        issue_to_prs: dict[int, list[tuple[PullRequestInfo, str]]] = {}
-
-        # Extract repository data
+        result: dict[int, list[PullRequestInfo]] = {}
         repo_data = response.get("data", {}).get("repository", {})
-        pull_requests = repo_data.get("pullRequests", {})
-        pr_nodes = pull_requests.get("nodes", [])
 
-        # Process each PR
-        for pr_node in pr_nodes:
-            if pr_node is None:
+        # Iterate over aliased issue results
+        for key, issue_data in repo_data.items():
+            # Skip non-issue aliases or missing issues
+            if not key.startswith("issue_") or issue_data is None:
                 continue
 
-            # Extract PR fields
-            pr_number = pr_node.get("number")
-            state = pr_node.get("state")
-            url = pr_node.get("url")
-            is_draft = pr_node.get("isDraft")
-            title = pr_node.get("title")
-            created_at = pr_node.get("createdAt")
+            # Extract issue number from alias
+            issue_number = int(key.removeprefix("issue_"))
 
-            # Skip if essential fields are missing
-            if pr_number is None or state is None or url is None:
-                continue
+            # Collect PRs with timestamps for sorting
+            prs_with_timestamps: list[tuple[PullRequestInfo, str]] = []
 
-            # Parse checks status
-            checks_passing = None
-            status_rollup = pr_node.get("statusCheckRollup")
-            if status_rollup is not None:
-                rollup_state = status_rollup.get("state")
-                if rollup_state == "SUCCESS":
-                    checks_passing = True
-                elif rollup_state in ("FAILURE", "ERROR"):
-                    checks_passing = False
+            timeline_items = issue_data.get("timelineItems", {})
+            nodes = timeline_items.get("nodes", [])
 
-            # Parse conflicts status
-            has_conflicts = None
-            mergeable = pr_node.get("mergeable")
-            if mergeable == "CONFLICTING":
-                has_conflicts = True
-            elif mergeable == "MERGEABLE":
-                has_conflicts = False
-
-            # Create PullRequestInfo
-            pr_info = PullRequestInfo(
-                number=pr_number,
-                state=state,
-                url=url,
-                is_draft=is_draft if is_draft is not None else False,
-                title=title,
-                checks_passing=checks_passing,
-                owner=owner,
-                repo=repo,
-                has_conflicts=has_conflicts,
-            )
-
-            # Extract linked issues from closingIssuesReferences
-            closing_issues = pr_node.get("closingIssuesReferences", {})
-            issue_nodes = closing_issues.get("nodes", [])
-
-            for issue_node in issue_nodes:
-                if issue_node is None:
+            for node in nodes:
+                if node is None:
                     continue
 
-                issue_number = issue_node.get("number")
-                if issue_number is None:
+                # Filter to only closing PRs
+                if not node.get("willCloseTarget"):
                     continue
 
-                # Add this PR to the issue's list
-                if issue_number not in issue_to_prs:
-                    issue_to_prs[issue_number] = []
+                source = node.get("source")
+                if source is None:
+                    continue
+
+                # Extract required PR fields
+                pr_number = source.get("number")
+                state = source.get("state")
+                url = source.get("url")
+
+                # Skip if essential fields are missing (source may be Issue, not PR)
+                if pr_number is None or state is None or url is None:
+                    continue
+
+                # Extract optional fields
+                is_draft = source.get("isDraft")
+                title = source.get("title")
+                created_at = source.get("createdAt")
+
+                # Parse checks status
+                checks_passing = None
+                status_rollup = source.get("statusCheckRollup")
+                if status_rollup is not None:
+                    rollup_state = status_rollup.get("state")
+                    if rollup_state == "SUCCESS":
+                        checks_passing = True
+                    elif rollup_state in ("FAILURE", "ERROR"):
+                        checks_passing = False
+
+                # Parse conflicts status
+                has_conflicts = None
+                mergeable = source.get("mergeable")
+                if mergeable == "CONFLICTING":
+                    has_conflicts = True
+                elif mergeable == "MERGEABLE":
+                    has_conflicts = False
+
+                pr_info = PullRequestInfo(
+                    number=pr_number,
+                    state=state,
+                    url=url,
+                    is_draft=is_draft if is_draft is not None else False,
+                    title=title,
+                    checks_passing=checks_passing,
+                    owner=owner,
+                    repo=repo,
+                    has_conflicts=has_conflicts,
+                )
 
                 # Store with timestamp for sorting
                 if created_at:
-                    issue_to_prs[issue_number].append((pr_info, created_at))
+                    prs_with_timestamps.append((pr_info, created_at))
 
-        # Sort PRs for each issue by created_at descending (most recent first)
-        result: dict[int, list[PullRequestInfo]] = {}
-        for issue_number, prs_with_timestamps in issue_to_prs.items():
-            prs_with_timestamps.sort(key=lambda x: x[1], reverse=True)
-            result[issue_number] = [pr for pr, _ in prs_with_timestamps]
+            # Sort by created_at descending and store
+            if prs_with_timestamps:
+                prs_with_timestamps.sort(key=lambda x: x[1], reverse=True)
+                result[issue_number] = [pr for pr, _ in prs_with_timestamps]
 
         return result
 
@@ -971,78 +980,6 @@ query {{
             # Priority 4: any other runs (unknown status, etc.)
             if branch_runs:
                 result[branch] = branch_runs[0]
-
-        return result
-
-    def get_workflow_runs_by_titles(
-        self, repo_root: Path, workflow: str, titles: list[str]
-    ) -> dict[str, WorkflowRun | None]:
-        """Get the most relevant workflow run for each display title.
-
-        Queries GitHub Actions for workflow runs and returns the most relevant
-        run for each requested display title. This is useful for workflows
-        triggered by issue events where the headBranch is always the default
-        branch but the display_title contains the issue title.
-
-        Priority order:
-        1. In-progress or queued runs (active runs take precedence)
-        2. Failed completed runs (failures are more actionable than successes)
-        3. Successful completed runs (most recent)
-
-        Note: Uses list_workflow_runs internally, which already handles gh CLI
-        errors gracefully.
-        """
-        if not titles:
-            return {}
-
-        # Get all workflow runs
-        all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
-
-        # Filter to requested titles, excluding skipped runs
-        # Skipped runs indicate conditions weren't met (path filters, conditionals)
-        # and shouldn't hide previous meaningful runs
-        title_set = set(titles)
-        runs_by_title: dict[str, list[WorkflowRun]] = {}
-        for run in all_runs:
-            # Skip runs with "skipped" conclusion - they're not meaningful for tracking
-            if run.status == "completed" and run.conclusion == "skipped":
-                continue
-            if run.display_title in title_set:
-                if run.display_title not in runs_by_title:
-                    runs_by_title[run.display_title] = []
-                runs_by_title[run.display_title].append(run)
-
-        # Select most relevant run for each title using priority rules
-        result: dict[str, WorkflowRun | None] = {}
-        for title in titles:
-            if title not in runs_by_title:
-                continue
-
-            title_runs = runs_by_title[title]
-
-            # Priority 1: in_progress or queued (active runs)
-            active_runs = [r for r in title_runs if r.status in ("in_progress", "queued")]
-            if active_runs:
-                result[title] = active_runs[0]
-                continue
-
-            # Priority 2: failed completed runs
-            failed_runs = [
-                r for r in title_runs if r.status == "completed" and r.conclusion == "failure"
-            ]
-            if failed_runs:
-                result[title] = failed_runs[0]
-                continue
-
-            # Priority 3: successful completed runs (most recent = first in list)
-            completed_runs = [r for r in title_runs if r.status == "completed"]
-            if completed_runs:
-                result[title] = completed_runs[0]
-                continue
-
-            # Priority 4: any other runs (unknown status, etc.)
-            if title_runs:
-                result[title] = title_runs[0]
 
         return result
 
@@ -1185,3 +1122,119 @@ query {{
             is_cross_repository=data["isCrossRepository"],
             state=data["state"],
         )
+
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get details for multiple workflow runs by ID in a single GraphQL request.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        # Early exit for empty input
+        if not run_ids:
+            return {}
+
+        try:
+            # Get owner/repo from repository
+            cmd = ["gh", "repo", "view", "--json", "owner,name"]
+            stdout = execute_gh_command(cmd, repo_root)
+            repo_info = json.loads(stdout)
+            owner = repo_info["owner"]["login"]
+            repo = repo_info["name"]
+
+            # Build and execute batched GraphQL query
+            query = self._build_workflow_runs_batch_query(run_ids, owner, repo)
+            response = self._execute_batch_pr_query(query, repo_root)
+
+            # Parse response and build result mapping
+            return self._parse_workflow_runs_batch_response(response, run_ids)
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
+            # gh not installed, not authenticated, or parsing failed
+            return {}
+
+    def _build_workflow_runs_batch_query(self, run_ids: list[str], owner: str, repo: str) -> str:
+        """Build GraphQL query to fetch multiple workflow runs by ID.
+
+        Args:
+            run_ids: List of workflow run IDs to query
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            GraphQL query string
+        """
+        # Build aliased run queries
+        run_queries = []
+        for run_id in run_ids:
+            run_query = f"""    run_{run_id}: node(id: "gid://github/WorkflowRun/{run_id}") {{
+      ... on WorkflowRun {{
+        databaseId
+        status
+        conclusion
+        headBranch {{
+          name
+        }}
+        headSha
+        displayTitle
+      }}
+    }}"""
+            run_queries.append(run_query)
+
+        # Combine into single query
+        query = f"""query {{
+{chr(10).join(run_queries)}
+}}"""
+        return query
+
+    def _parse_workflow_runs_batch_response(
+        self, response: dict[str, Any], run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Parse GraphQL response for batch workflow run query.
+
+        Args:
+            response: GraphQL response data
+            run_ids: Original list of run IDs requested
+
+        Returns:
+            Mapping of run_id -> WorkflowRun or None if not found
+        """
+        result: dict[str, WorkflowRun | None] = {}
+        data = response.get("data", {})
+
+        for run_id in run_ids:
+            alias = f"run_{run_id}"
+            run_data = data.get(alias)
+
+            if run_data is None:
+                result[run_id] = None
+                continue
+
+            # Extract fields with LBYL checks
+            database_id = run_data.get("databaseId")
+            if database_id is None:
+                result[run_id] = None
+                continue
+
+            status = run_data.get("status", "").lower()
+            conclusion = run_data.get("conclusion")
+            if conclusion is not None:
+                conclusion = conclusion.lower()
+
+            head_branch = run_data.get("headBranch")
+            branch = head_branch.get("name", "") if head_branch else ""
+            head_sha = run_data.get("headSha", "")
+            display_title = run_data.get("displayTitle")
+
+            result[run_id] = WorkflowRun(
+                run_id=str(database_id),
+                status=status,
+                conclusion=conclusion,
+                branch=branch,
+                head_sha=head_sha,
+                display_title=display_title,
+            )
+
+        return result

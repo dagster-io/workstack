@@ -134,12 +134,6 @@ class DryRunGitHub(GitHub):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_workflow_runs_by_branches(repo_root, workflow, branches)
 
-    def get_workflow_runs_by_titles(
-        self, repo_root: Path, workflow: str, titles: list[str]
-    ) -> dict[str, WorkflowRun | None]:
-        """Delegate read operation to wrapped implementation."""
-        return self._wrapped.get_workflow_runs_by_titles(repo_root, workflow, titles)
-
     def poll_for_workflow_run(
         self,
         repo_root: Path,
@@ -156,3 +150,9 @@ class DryRunGitHub(GitHub):
     def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_checkout_info(repo_root, pr_number)
+
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_workflow_runs_batch(repo_root, run_ids)

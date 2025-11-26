@@ -2,8 +2,9 @@
 
 Schema Version 2 Optimization:
 - Extracts last_dispatched_run_id directly from issue body metadata
-- Uses direct workflow run lookup by ID (single API call per plan)
+- Uses batch workflow run lookup by IDs (single GraphQL query for all plans)
 - Eliminates expensive get_workflow_runs_by_titles() which fetched 100+ runs
+- Eliminates comments fetch (worktree_name now in issue body)
 """
 
 from dataclasses import dataclass
@@ -17,20 +18,17 @@ from erk_shared.github.types import PullRequestInfo, WorkflowRun
 
 @dataclass(frozen=True)
 class PlanListData:
-    """Combined data for plan listing.
+    """Combined data for plan listing (schema v2 only).
 
     Attributes:
-        issues: List of IssueInfo objects with embedded comments
-        issue_comments: Mapping of issue_number -> list of comment bodies
+        issues: List of IssueInfo objects
         pr_linkages: Mapping of issue_number -> list of PRs that close that issue
-        workflow_runs: Mapping of issue_number -> most relevant WorkflowRun (schema v2)
-                       OR mapping of display_title -> WorkflowRun (schema v1 fallback)
+        workflow_runs: Mapping of issue_number -> most relevant WorkflowRun
     """
 
     issues: list[IssueInfo]
-    issue_comments: dict[int, list[str]]
     pr_linkages: dict[int, list[PullRequestInfo]]
-    workflow_runs: dict[str | int, WorkflowRun | None]
+    workflow_runs: dict[int, WorkflowRun | None]
 
 
 class PlanListService:
@@ -39,10 +37,10 @@ class PlanListService:
     Composes GitHub and GitHubIssues integrations to batch fetch all data
     needed for plan listing.
 
-    Schema Version 2 Optimization:
-    - New issues have last_dispatched_run_id in body metadata
-    - Uses get_workflow_run(run_id) for direct lookup (O(n) API calls)
-    - Falls back to title-based lookup for old-format issues
+    Schema Version 2 Only:
+    - Issues have last_dispatched_run_id in body metadata
+    - Uses get_workflow_runs_batch(run_ids) for single GraphQL query
+    - Extracts worktree_name from issue body (no comments needed)
     """
 
     def __init__(self, github: GitHub, github_issues: GitHubIssues) -> None:
@@ -59,28 +57,26 @@ class PlanListService:
         self,
         repo_root: Path,
         labels: list[str],
-        workflow_name: str,
         state: str | None = None,
         limit: int | None = None,
         skip_workflow_runs: bool = False,
     ) -> PlanListData:
         """Batch fetch all data needed for plan listing.
 
-        Schema Version 2 Optimization:
+        Schema Version 2 Only:
         - Extracts last_dispatched_run_id from issue body (plan-header block)
-        - Uses get_workflow_run(run_id) for direct lookup
-        - Falls back to title-based lookup only for old-format issues
+        - Uses get_workflow_runs_batch() for single GraphQL query
+        - Extracts worktree_name from issue body (no comments needed)
 
         Args:
             repo_root: Repository root directory
             labels: Labels to filter issues by (e.g., ["erk-plan"])
-            workflow_name: Workflow filename for run lookup (e.g., "dispatch-erk-queue.yml")
             state: Filter by state ("open", "closed", or None for all)
             limit: Maximum number of issues to return (None for no limit)
             skip_workflow_runs: If True, skip fetching workflow runs (for performance)
 
         Returns:
-            PlanListData containing issues, comments, PR linkages, and workflow runs
+            PlanListData containing issues, PR linkages, and workflow runs
         """
         # Fetch issues using GitHubIssues integration
         issues = self._github_issues.list_issues(repo_root, labels=labels, state=state, limit=limit)
@@ -88,41 +84,31 @@ class PlanListService:
         # Extract issue numbers for batch operations
         issue_numbers = [issue.number for issue in issues]
 
-        # Batch fetch comments for all issues
-        issue_comments = self._github_issues.get_multiple_issue_comments(repo_root, issue_numbers)
-
         # Batch fetch PR linkages for all issues
         pr_linkages = self._github.get_prs_linked_to_issues(repo_root, issue_numbers)
 
         # Conditionally fetch workflow runs (skip for performance when not needed)
-        workflow_runs: dict[str | int, WorkflowRun | None] = {}
+        workflow_runs: dict[int, WorkflowRun | None] = {}
         if not skip_workflow_runs:
-            # Schema v2: Extract run_id from issue body and do direct lookups
-            # Schema v1 fallback: Collect titles for title-based lookup
-            v1_titles: list[str] = []
-
+            # Collect all run IDs and build mapping back to issue numbers
+            run_id_to_issue: dict[str, int] = {}
             for issue in issues:
                 run_id, _ = extract_plan_header_dispatch_info(issue.body)
                 if run_id is not None:
-                    # Schema v2: Direct run lookup (efficient - single API call)
-                    run = self._github.get_workflow_run(repo_root, run_id)
-                    workflow_runs[issue.number] = run
-                else:
-                    # Schema v1: No run_id in body, will use title-based lookup
-                    v1_titles.append(issue.title)
+                    run_id_to_issue[run_id] = issue.number
 
-            # Fallback: Title-based lookup for old-format issues
-            if v1_titles:
-                title_runs = self._github.get_workflow_runs_by_titles(
-                    repo_root, workflow_name, v1_titles
-                )
-                # Merge title-based results (keyed by title, not issue number)
-                for title, run in title_runs.items():
-                    workflow_runs[title] = run
+            # Batch fetch all workflow runs in single GraphQL query
+            if run_id_to_issue:
+                run_ids = list(run_id_to_issue.keys())
+                runs_by_id = self._github.get_workflow_runs_batch(repo_root, run_ids)
+
+                # Map results back to issue numbers
+                for run_id, run in runs_by_id.items():
+                    issue_number = run_id_to_issue[run_id]
+                    workflow_runs[issue_number] = run
 
         return PlanListData(
             issues=issues,
-            issue_comments=issue_comments,
             pr_linkages=pr_linkages,
             workflow_runs=workflow_runs,
         )

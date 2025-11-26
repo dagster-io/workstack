@@ -35,40 +35,11 @@ class TestPlanListService:
         result = service.get_plan_list_data(
             repo_root=Path("/test/repo"),
             labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
         )
 
         assert len(result.issues) == 1
         assert result.issues[0].number == 42
         assert result.issues[0].title == "Test Plan"
-
-    def test_fetches_comments_from_github_issues_integration(self) -> None:
-        """Service delegates comment fetching to GitHubIssues integration."""
-        now = datetime.now(UTC)
-        issue = IssueInfo(
-            number=42,
-            title="Test Plan",
-            body="",
-            state="OPEN",
-            url="",
-            labels=["erk-plan"],
-            assignees=[],
-            created_at=now,
-            updated_at=now,
-        )
-        fake_issues = FakeGitHubIssues(
-            issues={42: issue}, comments={42: ["Comment 1", "Comment 2"]}
-        )
-        fake_github = FakeGitHub()
-
-        service = PlanListService(fake_github, fake_issues)
-        result = service.get_plan_list_data(
-            repo_root=Path("/test/repo"),
-            labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
-        )
-
-        assert result.issue_comments[42] == ["Comment 1", "Comment 2"]
 
     def test_fetches_pr_linkages_from_github_integration(self) -> None:
         """Service delegates PR linkage fetching to GitHub integration."""
@@ -101,48 +72,10 @@ class TestPlanListService:
         result = service.get_plan_list_data(
             repo_root=Path("/test/repo"),
             labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
         )
 
         assert 42 in result.pr_linkages
         assert result.pr_linkages[42][0].number == 123
-
-    def test_fetches_workflow_runs_from_github_integration(self) -> None:
-        """Service delegates workflow run fetching to GitHub integration."""
-        now = datetime.now(UTC)
-        issue = IssueInfo(
-            number=42,
-            title="Test Plan",
-            body="",
-            state="OPEN",
-            url="",
-            labels=["erk-plan"],
-            assignees=[],
-            created_at=now,
-            updated_at=now,
-        )
-        run = WorkflowRun(
-            run_id="999",
-            status="completed",
-            conclusion="success",
-            branch="main",
-            head_sha="abc123",
-            display_title="Test Plan",
-        )
-        fake_issues = FakeGitHubIssues(issues={42: issue})
-        fake_github = FakeGitHub(workflow_runs=[run])
-
-        service = PlanListService(fake_github, fake_issues)
-        result = service.get_plan_list_data(
-            repo_root=Path("/test/repo"),
-            labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
-        )
-
-        assert "Test Plan" in result.workflow_runs
-        workflow_run = result.workflow_runs["Test Plan"]
-        assert workflow_run is not None
-        assert workflow_run.run_id == "999"
 
     def test_empty_issues_returns_empty_data(self) -> None:
         """Service returns empty data when no issues match."""
@@ -153,11 +86,9 @@ class TestPlanListService:
         result = service.get_plan_list_data(
             repo_root=Path("/test/repo"),
             labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
         )
 
         assert result.issues == []
-        assert result.issue_comments == {}
         assert result.pr_linkages == {}
         assert result.workflow_runs == {}
 
@@ -193,7 +124,6 @@ class TestPlanListService:
         result = service.get_plan_list_data(
             repo_root=Path("/test/repo"),
             labels=["erk-plan"],
-            workflow_name="dispatch-erk-queue.yml",
             state="open",
         )
 
@@ -208,7 +138,6 @@ class TestPlanListData:
         """PlanListData instances are immutable."""
         data = PlanListData(
             issues=[],
-            issue_comments={},
             pr_linkages={},
             workflow_runs={},
         )
@@ -232,7 +161,6 @@ class TestPlanListData:
                 updated_at=now,
             )
         ]
-        comments = {1: ["Comment"]}
         pr = PullRequestInfo(
             number=10,
             state="OPEN",
@@ -251,16 +179,14 @@ class TestPlanListData:
             branch="main",
             head_sha="abc",
         )
-        runs: dict[str, WorkflowRun | None] = {"Plan": run}
+        runs: dict[int, WorkflowRun | None] = {1: run}
 
         data = PlanListData(
             issues=issues,
-            issue_comments=comments,
             pr_linkages=linkages,
             workflow_runs=runs,
         )
 
         assert data.issues == issues
-        assert data.issue_comments == comments
         assert data.pr_linkages == linkages
         assert data.workflow_runs == runs

@@ -1,1 +1,1 @@
-../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/validate-plan-structure.md
+../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/includes/validate-plan-structure.md

@@ -1,1 +1,1 @@
-../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/enrichment-process.md
+../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/includes/enrichment-process.md

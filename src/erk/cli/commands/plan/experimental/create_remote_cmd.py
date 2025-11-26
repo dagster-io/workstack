@@ -1,4 +1,4 @@
-"""Trigger remote planning workflow with a prompt."""
+"""[EXPERIMENTAL] Trigger remote planning workflow with a prompt."""
 
 import subprocess
 from datetime import UTC, datetime
@@ -28,7 +28,7 @@ The plan content will be updated automatically when the workflow completes.
 @click.option("--title", "-t", type=str, help="Issue title (default: derived from prompt)")
 @click.pass_obj
 def create_remote_cmd(ctx: ErkContext, prompt_file: str, title: str | None) -> None:
-    """Trigger remote planning workflow with a prompt file.
+    """[EXPERIMENTAL] Trigger remote planning workflow with a prompt file.
 
     Creates a placeholder issue immediately for tracking, then triggers
     a GitHub Actions workflow to generate the plan asynchronously.

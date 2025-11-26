@@ -1,8 +1,10 @@
 ---
-description: Refine prompt and trigger remote planning via GitHub Actions
+description: "[EXPERIMENTAL] Refine prompt and trigger remote planning via GitHub Actions"
 ---
 
 # /erk:plan-remote
+
+> **EXPERIMENTAL**: This command is experimental and may be removed.
 
 ## Goal
 

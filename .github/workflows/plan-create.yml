@@ -1,3 +1,7 @@
+# EXPERIMENTAL: Remote Planning via GitHub Actions
+# This workflow is experimental and may be removed.
+# Related files: src/erk/cli/commands/plan/experimental/
+
 name: Create Plan
 run-name: "plan:${{ inputs.distinct_id }}"
 

@@ -1,4 +1,4 @@
-"""Tests for plan create-remote command."""
+"""[EXPERIMENTAL] Tests for plan create-remote command."""
 
 from click.testing import CliRunner
 from erk_shared.github.issues.fake import FakeGitHubIssues

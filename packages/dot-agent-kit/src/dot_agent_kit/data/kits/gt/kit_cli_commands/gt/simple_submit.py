@@ -131,7 +131,7 @@ def _restack_branch(ops: GtKit, logger: DebugLogger) -> dict | None:
     """
     logger.log("Restacking branch...")
     result = ops.graphite().restack()
-    if not result:
+    if not result.success:
         logger.log("Restack failed")
         return {"success": False, "error": "Failed to restack branch"}
     logger.log("Restack successful")

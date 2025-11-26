@@ -273,7 +273,7 @@ class RealGraphiteGtKit(GraphiteGtKit):
             success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
         )
 
-    def restack(self) -> bool:
+    def restack(self) -> CommandResult:
         """Run gt restack in no-interactive mode."""
         result = subprocess.run(
             ["gt", "restack", "--no-interactive"],
@@ -282,7 +282,9 @@ class RealGraphiteGtKit(GraphiteGtKit):
             check=False,
         )
 
-        return result.returncode == 0
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
 
     def navigate_to_child(self) -> bool:
         """Navigate to child branch using gt up."""

@@ -15,11 +15,15 @@ import sys
 
 import click
 
+from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
 
 
-def execute_update_pr() -> dict:
+def execute_update_pr(ops: GtKit | None = None) -> dict:
     """Execute the update-pr workflow.
+
+    Args:
+        ops: Optional GtKit operations interface. Defaults to RealGtKit().
 
     Returns:
         JSON dict with:
@@ -28,26 +32,47 @@ def execute_update_pr() -> dict:
         - pr_url: str (if successful)
         - error: str (if failed)
     """
-    kit = RealGtKit()
+    if ops is None:
+        ops = RealGtKit()
 
     # 1. Commit if uncommitted changes
-    if kit.git().has_uncommitted_changes():
-        if not kit.git().add_all():
+    if ops.git().has_uncommitted_changes():
+        if not ops.git().add_all():
             return {"success": False, "error": "Failed to stage changes"}
-        if not kit.git().commit("Update changes"):
+        if not ops.git().commit("Update changes"):
             return {"success": False, "error": "Failed to commit changes"}
 
-    # 2. Restack
-    if not kit.graphite().restack():
-        return {"success": False, "error": "Failed to restack branch"}
+    # 2. Restack with conflict detection
+    restack_result = ops.graphite().restack()
+    if not restack_result.success:
+        combined_output = restack_result.stdout + restack_result.stderr
+        combined_lower = combined_output.lower()
+
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return {
+                "success": False,
+                "error_type": "restack_conflict",
+                "error": (
+                    "Merge conflict detected during restack. "
+                    "Resolve conflicts manually or run 'gt restack --continue' after fixing."
+                ),
+                "details": {"stderr": restack_result.stderr},
+            }
+
+        return {
+            "success": False,
+            "error_type": "restack_failed",
+            "error": "Failed to restack branch",
+            "details": {"stderr": restack_result.stderr},
+        }
 
     # 3. Submit update
-    result = kit.graphite().submit(publish=True, restack=False)
+    result = ops.graphite().submit(publish=True, restack=False)
     if not result.success:
         return {"success": False, "error": f"Failed to submit update: {result.stderr}"}
 
     # 4. Fetch PR info after submission
-    pr_info = kit.github().get_pr_info()
+    pr_info = ops.github().get_pr_info()
     if not pr_info:
         return {"success": False, "error": "PR submission succeeded but failed to retrieve PR info"}
 

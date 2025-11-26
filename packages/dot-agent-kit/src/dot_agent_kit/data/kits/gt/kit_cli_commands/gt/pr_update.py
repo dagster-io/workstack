@@ -82,11 +82,11 @@ def execute_update_pr(ops: GtKit | None = None) -> dict:
 
 
 @click.command()
-def update_pr() -> None:
+def pr_update() -> None:
     """Graphite update-pr workflow.
 
     Usage:
-        dot-agent run gt update-pr
+        dot-agent run gt pr-update
     """
     result = execute_update_pr()
     print(json.dumps(result))
@@ -94,4 +94,4 @@ def update_pr() -> None:
 
 
 if __name__ == "__main__":
-    update_pr()
+    pr_update()

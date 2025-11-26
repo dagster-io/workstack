@@ -556,7 +556,7 @@ def execute_post_analysis(
 
 
 @click.group()
-def submit_pr() -> None:
+def pr_submit() -> None:
     """Create git commit and submit current branch with Graphite (two-phase)."""
     pass
 
@@ -633,6 +633,6 @@ def get_diff_context_cmd() -> None:
 
 
 # Register subcommands
-submit_pr.add_command(pre_analysis)
-submit_pr.add_command(post_analysis)
-submit_pr.add_command(get_diff_context_cmd, name="get-diff-context")
+pr_submit.add_command(pre_analysis)
+pr_submit.add_command(post_analysis)
+pr_submit.add_command(get_diff_context_cmd, name="get-diff-context")

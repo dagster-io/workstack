@@ -1244,8 +1244,9 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
-        # The output should contain the normal message with "erk checkout"
-        assert "erk checkout" in result.output
+        # The output should contain only the creation message (no navigation instructions)
+        assert "Created worktree at" in result.output
+        assert "Shell integration not detected" not in result.output
         # Should still create the worktree
         repo_dir / "test-feature"
 
@@ -1326,8 +1327,9 @@ def test_create_with_stay_and_plan() -> None:
         assert (wt_path / ".impl" / "plan.md").exists()
         assert (wt_path / ".impl" / "progress.md").exists()
         assert not plan_file.exists()
-        # When --stay is used, output should contain "erk checkout" message
-        assert "erk checkout" in result.output
+        # When --stay is used, only show creation message (no navigation)
+        assert "Created worktree at" in result.output
+        assert "Shell integration not detected" not in result.output
 
 
 def test_create_default_behavior_generates_script() -> None:

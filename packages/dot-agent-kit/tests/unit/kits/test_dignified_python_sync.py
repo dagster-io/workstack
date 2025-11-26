@@ -11,18 +11,13 @@ def test_shared_files_exist():
     docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
 
     # Check universal reference files at root level
-    # Note: code-smells-dagster.md, patterns-reference-universal.md, and
-    # performance-patterns.md have been moved to .claude/docs/code-review/
-    # to reduce auto-loaded token usage
+    # Note: Core standards have been consolidated into dignified-python-core.md
+    # to reduce duplication and improve maintainability
     universal_files = [
-        "exception-handling.md",
-        "path-operations.md",
-        "dependency-injection.md",
-        "imports.md",
+        "dignified-python-core.md",
         "cli-patterns.md",
         "subprocess.md",
-        "core-standards-universal.md",
-        "type-annotations-base.md",
+        "type-annotations-common.md",
     ]
 
     for filename in universal_files:
@@ -134,30 +129,17 @@ def test_skill_references_correct_types():
 
 
 def test_skill_components_exist():
-    """Verify skill-components directory exists with expected files."""
+    """Verify core documentation file exists (skill components consolidated)."""
     repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
     docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
-    skill_components_dir = docs_dir / "skill-components"
 
-    if not skill_components_dir.exists():
+    # Core components have been consolidated into dignified-python-core.md
+    core_file = docs_dir / "dignified-python-core.md"
+    if not core_file.exists():
         pytest.fail(
-            "Skill components directory missing: .claude/docs/dignified-python/skill-components/"
+            "Core documentation file missing: "
+            ".claude/docs/dignified-python/dignified-python-core.md"
         )
-
-    # Check skill component files
-    component_files = [
-        "core-philosophy.md",
-        "checklist-universal.md",
-        "loading-instructions.md",
-    ]
-
-    for filename in component_files:
-        file_path = skill_components_dir / filename
-        if not file_path.exists():
-            pytest.fail(
-                f"Skill component file missing: "
-                f".claude/docs/dignified-python/skill-components/{filename}"
-            )
 
 
 def test_no_version_specific_language_in_universal():

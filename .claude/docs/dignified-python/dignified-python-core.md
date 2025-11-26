@@ -3,6 +3,7 @@
 This document contains the core Python coding standards that apply to 80%+ of Python code. These principles are loaded with every skill invocation.
 
 For conditional loading of specialized patterns:
+
 - CLI development → Load `cli-patterns.md`
 - Subprocess operations → Load `subprocess.md`
 

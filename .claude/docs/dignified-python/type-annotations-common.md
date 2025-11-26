@@ -1,6 +1,6 @@
 # Type Annotations - Common
 
-This document contains type annotation guidance shared across Python 3.10+.
+This document contains type annotation guidance shared across all supported Python versions.
 
 For version-specific features (PEP 695, type statement, deferred evaluation), see the version-specific delta files.
 

@@ -9,11 +9,11 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from erk_shared.integrations.time.fake import FakeTime
 from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
 from tests.conftest import load_fixture
-from tests.fakes.time import FakeTime
 from tests.integration.test_helpers import mock_subprocess_run
 
 # ============================================================================

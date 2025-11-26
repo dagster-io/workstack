@@ -126,11 +126,11 @@ class ErkContext:
         """
         from erk_shared.github.issues import FakeGitHubIssues
         from erk_shared.integrations.graphite.fake import FakeGraphite
+        from erk_shared.integrations.time.fake import FakeTime
         from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
-        from tests.fakes.time import FakeTime
         from tests.fakes.user_feedback import FakeUserFeedback
 
         from erk.core.config_store import FakeConfigStore
@@ -233,11 +233,11 @@ class ErkContext:
         """
         from erk_shared.github.issues import FakeGitHubIssues
         from erk_shared.integrations.graphite.fake import FakeGraphite
+        from erk_shared.integrations.time.fake import FakeTime
         from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
-        from tests.fakes.time import FakeTime
         from tests.fakes.user_feedback import FakeUserFeedback
         from tests.test_utils.paths import sentinel_path
 

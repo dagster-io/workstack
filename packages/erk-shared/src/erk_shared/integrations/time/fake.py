@@ -8,7 +8,7 @@ from erk_shared.integrations.time.abc import Time
 
 
 class FakeTime(Time):
-    """Fake implementation that tracks calls without sleeping.
+    """In-memory fake implementation that tracks calls without sleeping.
 
     This class has NO public setup methods. All state is provided via constructor
     or captured during execution.
@@ -20,9 +20,11 @@ class FakeTime(Time):
 
     @property
     def sleep_calls(self) -> list[float]:
-        """Read-only access to tracked sleep calls for test assertions.
+        """Get the list of sleep() calls that were made.
 
         Returns list of seconds values passed to sleep().
+
+        This property is for test assertions only.
         """
         return self._sleep_calls
 

@@ -144,33 +144,7 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
-Check that prerequisites are met:
-
-```bash
-# Verify we're in a git repository
-git rev-parse --is-inside-work-tree
-
-# Verify GitHub CLI is authenticated
-gh auth status
-```
-
-**Error handling:**
-
-If `git rev-parse` fails:
-
-```
-❌ Error: Not in a git repository
-
-This command must be run from within a git repository.
-```
-
-If `gh auth status` fails:
-
-```
-❌ Error: GitHub CLI not authenticated
-
-Run: gh auth login
-```
+@../docs/save-plan-workflow.md#shared-step-validate-prerequisites
 
 ### Step 1.5: Extract Plan from Session Logs (with Fallback)
 
@@ -227,7 +201,7 @@ fi
 2. **Fall back to conversation search**: Compatible with all plan creation methods
 3. **Only error if both fail**: Agent will report if no plan found anywhere
 
-### Step 2: Launch Plan-Extractor Agent
+### Step 2: Launch Plan-Extractor Agent (Enriched Mode)
 
 Use the Task tool to launch the specialized agent. The prompt varies based on extraction mode:
 
@@ -292,119 +266,15 @@ If agent returns error JSON:
 
 ### Step 3: Parse Agent Response
 
-The agent returns markdown in this format:
-
-```markdown
-# Plan: [title extracted from plan]
-
-## Enrichment Details
-
-### Process Summary
-
-- **Mode**: enriched
-- **Guidance applied**: yes/no
-- **Questions asked**: N
-- **Context categories extracted**: N of 8
-
----
-
-[Full plan content...]
-
-## Context & Understanding
-
-[Context sections...]
-```
-
-**Parse markdown response:**
-
-```bash
-# Check for error
-if echo "$result" | grep -q "^## Error:"; then
-    # Extract error message
-    error_msg=$(echo "$result" | sed -n 's/^## Error: //p')
-    echo "❌ Error: $error_msg"
-    exit 1
-fi
-
-# Extract title from first heading
-plan_title=$(echo "$result" | grep -m1 "^# Plan:" | sed 's/^# Plan: //')
-
-# Use full content for issue
-plan_content="$result"
-```
-
-**Validation:**
-
-- Check for `## Error:` prefix (indicates error)
-- Ensure `# Plan:` heading exists
-- Verify content is non-empty
-
-**Error handling:**
-
-If error prefix found:
-
-```
-❌ Error: [error message from markdown]
-```
-
-If no `# Plan:` heading:
-
-```
-❌ Error: Agent returned invalid markdown (missing # Plan: heading)
-
-[Display agent response for debugging]
-```
+@../docs/save-plan-workflow.md#shared-step-parse-agent-response
 
 ### Step 4: Save Plan to Temporary File
 
-Write plan content to a temporary file for kit CLI:
-
-```bash
-# Create temp file
-temp_plan=$(mktemp)
-
-# Write plan content
-cat > "$temp_plan" <<'PLAN_EOF'
-[plan_content from agent JSON]
-PLAN_EOF
-```
-
-**Why temp file:** Kit CLI command expects `--plan-file` option for clean separation of concerns.
+@../docs/save-plan-workflow.md#shared-step-save-plan-to-temporary-file
 
 ### Step 5: Create GitHub Issue via Kit CLI
 
-Call the kit CLI command to create the issue:
-
-```bash
-# Call kit CLI with plan file
-result=$(dot-agent run erk create-enriched-plan-from-context --plan-file "$temp_plan")
-
-# Clean up temp file
-rm "$temp_plan"
-
-# Parse JSON result
-echo "$result" | jq .
-```
-
-**Expected output:**
-
-```json
-{
-  "success": true,
-  "issue_number": 123,
-  "issue_url": "https://github.com/owner/repo/issues/123"
-}
-```
-
-**Error handling:**
-
-If command fails:
-
-```
-❌ Error: Failed to create GitHub issue
-
-[Display kit CLI error output]
-```
+@../docs/save-plan-workflow.md#shared-step-create-github-issue-via-kit-cli
 
 ### Step 6: Display Success Output
 
@@ -432,39 +302,7 @@ After receiving the successful response from the kit CLI, generate a concise sum
 
 #### Substep 6b: Display Issue URL and Next Steps
 
-Show the user the issue URL and copy-pastable commands:
-
-```
-✅ Plan saved to GitHub issue
-
-**Issue:** [issue_url]
-
-**Next steps:**
-
-View the plan:
-    gh issue view [issue_number]
-
-Implement directly:
-    erk implement [issue_number]
-
-Implement with auto-confirmation (yolo mode):
-    erk implement [issue_number] --yolo
-
-Implement and auto-submit PR (dangerous mode):
-    erk implement [issue_number] --dangerous
-
-Submit plan to erk queue:
-    erk submit [issue_number]
-```
-
-**Formatting requirements:**
-
-- Use `✅` for success indicator
-- Bold `**Issue:**` and `**Next steps:**`
-- Show actual issue URL (clickable)
-- Show actual issue number in commands (not `<issue-number>`)
-- Each command should be on its own line with proper indentation
-- Commands should be copy-pastable (no markdown formatting inside)
+@../docs/save-plan-workflow.md#shared-step-display-issue-url-and-next-steps
 
 ### Step 7: Note on Enrichment Details
 
@@ -488,7 +326,7 @@ This command requires a plan created with ExitPlanMode. To fix:
 The plan will be extracted from session logs automatically.
 ```
 
-### No Plan Found (Legacy)
+### No Plan Found (Fallback Failed)
 
 ```
 ❌ Error: No plan found in conversation
@@ -511,69 +349,15 @@ Guidance: "[guidance text]"
 Please create a plan first, then apply guidance.
 ```
 
-### GitHub CLI Not Authenticated
-
-```
-❌ Error: GitHub CLI not authenticated
-
-To use this command, authenticate with GitHub:
-
-    gh auth login
-
-Then try again.
-```
-
-### Kit CLI Error
-
-```
-❌ Error: Failed to create GitHub issue
-
-[Full kit CLI error output]
-
-Common causes:
-- Repository has issues disabled
-- Network connectivity issue
-- GitHub API rate limit
-```
+@../docs/save-plan-workflow.md#shared-error-scenarios
 
 ## Architecture Benefits
 
-| Aspect         | Previous Design             | Current Design                   |
-| -------------- | --------------------------- | -------------------------------- |
-| Enforcement    | Text warnings (7 instances) | Structural (tool restrictions)   |
-| Implementation | Inline command logic        | Dedicated agent                  |
-| Safety         | Behavioral compliance       | Physically impossible to violate |
-| Code size      | 402 lines                   | ~120 lines (orchestrator)        |
-| Bypass-safe    | ❌ No                       | ✅ Yes                           |
+@../docs/save-plan-workflow.md#shared-architecture-benefits
 
 ## Troubleshooting
 
-### "Agent returned error"
-
-**Cause:** Agent encountered issue during extraction/enrichment
-**Solution:**
-
-- Check agent error message for details
-- Ensure plan is in conversation context
-- Verify plan has clear structure
-
-### "Invalid JSON from agent"
-
-**Cause:** Agent output malformed or unexpected
-**Solution:**
-
-- Check agent output for debugging
-- Retry command
-- Report issue if persistent
-
-### "Temp file error"
-
-**Cause:** Cannot create temporary file (permissions, disk space)
-**Solution:**
-
-- Check temporary directory (`${TMPDIR:-/tmp}` on Unix, `%TEMP%` on Windows) permissions
-- Ensure disk space available
-- Check `mktemp` command availability
+@../docs/save-plan-workflow.md#shared-troubleshooting
 
 ## Development Notes
 
@@ -594,5 +378,7 @@ This command demonstrates the **agent-based orchestration pattern**:
 - Reusable agents (plan-extractor can be used elsewhere)
 - Testable components (agent can be tested independently)
 - Shorter commands (orchestration only)
+
+**Shared workflow:** This command shares common steps with `/erk:plan-save-raw` via `docs/save-plan-workflow.md`.
 
 **Agent file:** `.claude/agents/erk/plan-extractor.md`

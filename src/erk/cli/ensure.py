@@ -62,6 +62,36 @@ class Ensure:
         return value
 
     @staticmethod
+    def not_none[T](value: T | None, error_message: str) -> T:
+        """Ensure value is not None, otherwise output styled error and exit.
+
+        This method provides type narrowing: it takes `T | None` and returns `T`,
+        allowing the type checker to understand the value cannot be None after
+        this call.
+
+        Args:
+            value: Value to check for None
+            error_message: Error message to display if value is None.
+                          "Error: " prefix will be added automatically in red.
+
+        Returns:
+            The value unchanged if not None (with narrowed type T)
+
+        Raises:
+            SystemExit: If value is None (with exit code 1)
+
+        Example:
+            >>> # Type narrowing in action
+            >>> path: Path | None = get_worktree_path()
+            >>> safe_path: Path = Ensure.not_none(path, "Worktree path not found")
+            >>> # safe_path is now guaranteed to be Path, not Path | None
+        """
+        if value is None:
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+        return value
+
+    @staticmethod
     def path_exists(
         ctx: "ErkContext",
         path: Path,

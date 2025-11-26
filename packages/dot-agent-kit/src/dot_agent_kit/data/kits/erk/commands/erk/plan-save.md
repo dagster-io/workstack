@@ -1,59 +1,61 @@
 ---
-description: Extract plan from conversation, fully enhance it, and create GitHub issue directly
+description: Save plan from session logs to GitHub issue (no enrichment)
 ---
 
 # /erk:plan-save
 
-⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT implement code!**
-
 ## Goal
 
-**Extract an implementation plan from conversation, enhance it for autonomous execution, and create a GitHub issue directly.**
+**Save the latest implementation plan from session logs to a GitHub issue.**
 
-This command uses an **agent-based architecture** with structural enforcement (tool restrictions) to prevent accidental code implementation.
+This command saves whatever plan is currently in session logs - raw or enriched - to GitHub. It does NOT perform enrichment. Use `/erk:session-plan-enrich` or `/erk:plan-enrich` to enrich plans before saving.
 
 **What this command does:**
 
-- ✅ Find plan in conversation
-- ✅ Apply optional guidance to plan
-- ✅ Interactively enhance plan for autonomous execution
-- ✅ Extract semantic understanding and context
-- ✅ Structure complex plans into phases (when beneficial)
-- ✅ Create GitHub issue with enhanced plan
+- ✅ Extract latest plan from session logs (ExitPlanMode markers)
+- ✅ Detect enrichment status (raw vs enriched)
+- ✅ Create GitHub issue with plan content
+- ✅ Display enrichment status in output
+
+**What this command does NOT do:**
+
+- ❌ No plan enhancement or enrichment (use `/erk:session-plan-enrich`)
+- ❌ No interactive clarifying questions
+- ❌ No semantic understanding extraction
+- ❌ No guidance parameter
 
 **What this command CANNOT do:**
 
-- ❌ Edit files on current branch (structurally impossible - agent lacks tools)
-- ❌ Implement code (agent has no Write/Edit capabilities)
-- ❌ Make commits (agent restricted from git mutations)
+- ❌ Edit files on current branch
+- ❌ Implement code
+- ❌ Make commits
 
-**What happens AFTER:**
+**Workflow Options:**
 
-- ⏭️ Implement directly: `erk implement <issue>`
+```
+# Quick raw save (fast path - ~2 seconds)
+Create plan → ExitPlanMode → /erk:plan-save → GitHub issue
+
+# Enriched save (opt-in enrichment)
+Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save → GitHub issue
+```
 
 ## Usage
 
 ```bash
-/erk:plan-save [guidance]
+/erk:plan-save
 ```
 
-**Examples:**
-
-- `/erk:plan-save` - Create GitHub issue with enhanced plan
-- `/erk:plan-save "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/erk:plan-save "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+**Note:** This command takes no arguments. Use `/erk:session-plan-enrich [guidance]` to apply guidance before saving.
 
 ## Prerequisites
 
-- An implementation plan must exist in conversation
+- An implementation plan must exist in session logs (created with ExitPlanMode)
 - Current working directory must be in a git repository
 - GitHub CLI (gh) must be installed and authenticated
 - Repository must have issues enabled
-- (Optional) Guidance text for final corrections/additions to the plan
 
 ## Architecture
-
-This command uses a **specialized agent** for plan extraction/enrichment instead of inline command logic:
 
 ```
 /erk:plan-save (orchestrator)
@@ -63,78 +65,15 @@ This command uses a **specialized agent** for plan extraction/enrichment instead
   │     ↓
   │     dot-agent run erk save-plan-from-session --extract-only
   │     Returns JSON: {plan_content, title}
-  ├─→ Launch plan-extractor agent (Task tool) with pre-extracted plan
-  │     ↓
-  │     Agent enriches plan with context + guidance + questions
-  │     Agent returns markdown: # Plan: ... with Enrichment Details section
-  │     (Agent has NO Edit/Write tools - structurally safe)
+  ├─→ Detect enrichment status (check for "Enrichment Details" section)
   ├─→ Save plan to temp file
   ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
   │     ↓
   │     Kit CLI creates GitHub issue
-  └─→ Display results (issue URL + copy-pastable commands)
+  └─→ Display results with enrichment status
 ```
 
-**Key Innovation:** The agent has **tool restrictions** in YAML front matter:
-
-```yaml
----
-name: plan-extractor
-tools: Read, Bash, AskUserQuestion
----
-```
-
-This makes it **structurally impossible** to accidentally edit files, even with bypass permissions enabled.
-
-## What Happens
-
-When you run this command, these steps occur:
-
-1. **Verify Prerequisites** - Check git repo and GitHub CLI authentication
-2. **Extract Plan** - Use kit CLI to extract plan from session logs (ExitPlanMode markers)
-3. **Launch Agent** - Delegate to plan-extractor agent with pre-extracted plan
-4. **Enrich Plan** - Agent applies guidance, extracts context, asks questions
-5. **Receive Markdown** - Agent returns markdown with enrichment details
-6. **Create Issue** - Use kit CLI to create GitHub issue
-7. **Display Results** - Show issue URL and next-step commands
-
-## Semantic Understanding & Context Preservation
-
-**Why This Matters:** Planning agents often discover valuable insights that would be expensive for implementing agents to re-derive. Capturing this context saves time and prevents errors.
-
-The plan-extractor agent captures **8 categories of context:**
-
-1. **API/Tool Quirks** - Undocumented behaviors, timing issues
-2. **Architectural Insights** - WHY decisions were made
-3. **Domain Logic & Business Rules** - Non-obvious invariants
-4. **Complex Reasoning** - Alternatives considered and rejected
-5. **Known Pitfalls** - Anti-patterns that cause problems
-6. **Raw Discoveries Log** - Everything learned during planning
-7. **Planning Artifacts** - Code examined, commands run
-8. **Implementation Risks** - Uncertainties, performance concerns
-
-See agent documentation for full details: `.claude/agents/erk/plan-extractor.md`
-
-## Success Criteria
-
-This command succeeds when ALL of the following are true:
-
-**Plan Extraction:**
-✅ Implementation plan extracted from session logs (ExitPlanMode markers)
-✅ Kit CLI extraction returns valid JSON with plan_content
-✅ If guidance provided, it has been applied to the plan by agent
-✅ Semantic understanding extracted from conversation and integrated
-
-**Issue Creation:**
-✅ GitHub issue created with enhanced plan content
-✅ Issue has `erk-plan` label applied
-✅ Issue title matches plan title
-
-**Output:**
-✅ JSON output provided with issue URL and number
-✅ Copy-pastable commands displayed (view + implement variants)
-✅ All commands use actual issue number, not placeholders
-✅ Next steps clearly communicated to user
+**No Agent Required:** This command does not launch any agents. It simply reads from session logs and creates a GitHub issue.
 
 ---
 
@@ -144,18 +83,44 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
-@../docs/save-plan-workflow.md#shared-step-validate-prerequisites
+Check that prerequisites are met:
 
-### Step 1.5: Extract Plan from Session Logs (with Fallback)
+```bash
+# Verify we're in a git repository
+git rev-parse --is-inside-work-tree
 
-Use kit CLI to extract the plan from session logs before launching the agent:
+# Verify GitHub CLI is authenticated
+gh auth status
+```
+
+**Error handling:**
+
+If `git rev-parse` fails:
+
+```
+❌ Error: Not in a git repository
+
+This command must be run from within a git repository.
+```
+
+If `gh auth status` fails:
+
+```
+❌ Error: GitHub CLI not authenticated
+
+Run: gh auth login
+```
+
+### Step 2: Extract Plan from Session Logs
+
+Use kit CLI to extract the plan from session logs:
 
 ```bash
 # Extract plan using kit CLI
 plan_result=$(dot-agent run erk save-plan-from-session --extract-only --format json 2>&1)
 ```
 
-**Parse the result with fallback handling:**
+**Parse the result:**
 
 ```bash
 # Check if extraction succeeded
@@ -163,130 +128,108 @@ if echo "$plan_result" | jq -e '.success' > /dev/null 2>&1; then
     # SUCCESS: Extract plan content and title
     plan_content=$(echo "$plan_result" | jq -r '.plan_content')
     plan_title=$(echo "$plan_result" | jq -r '.title')
-
-    # Mark that we successfully extracted from session logs
-    extraction_mode="session_logs"
 else
-    # FALLBACK: Session log extraction failed - agent will search conversation
+    # FAILURE: Report error
     error_msg=$(echo "$plan_result" | jq -r '.error // "Unknown error"')
-
-    echo "⚠️  Warning: Could not extract plan from session logs"
+    echo "❌ Error: Failed to extract plan from session logs"
     echo "Details: $error_msg"
-    echo ""
-    echo "Falling back to conversation search..."
-    echo ""
-
-    # Set plan_content to empty - agent will search conversation
-    plan_content=""
-    extraction_mode="conversation_search"
 fi
 ```
 
-**Why this step:**
-
-- **Primary path (session logs)**: Kit CLI Push-Down Pattern
-  - Mechanical JSON parsing done by kit CLI
-  - ExitPlanMode markers provide unambiguous identification
-  - Token savings from avoiding conversation search
-  - Structured error handling
-
-- **Fallback path (conversation search)**: Backward compatibility
-  - Agent searches conversation context if session logs unavailable
-  - Supports workflows where plan wasn't created with ExitPlanMode
-  - Maintains compatibility with existing behavior
-
-**Error handling strategy:**
-
-1. **Try session logs first** (preferred): Fast, reliable, token-efficient
-2. **Fall back to conversation search**: Compatible with all plan creation methods
-3. **Only error if both fail**: Agent will report if no plan found anywhere
-
-### Step 2: Launch Plan-Extractor Agent (Enriched Mode)
-
-Use the Task tool to launch the specialized agent. The prompt varies based on extraction mode:
-
-**If extraction_mode == "session_logs" (plan_content populated):**
-
-```json
-{
-  "subagent_type": "plan-extractor",
-  "description": "Enrich plan with context",
-  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
-  "model": "haiku"
-}
-```
-
-**If extraction_mode == "conversation_search" (plan_content empty - fallback):**
-
-```json
-{
-  "subagent_type": "plan-extractor",
-  "description": "Extract and enrich plan",
-  "prompt": "Extract implementation plan from conversation context, then enrich with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nSession log extraction failed. Search conversation context for implementation plan.\nPlans typically appear after discussion. Your job:\n1. Find plan in conversation\n2. Apply guidance if provided (in-memory)\n3. Ask clarifying questions via AskUserQuestion tool\n4. Extract semantic understanding (8 categories) from conversation context\n5. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
-  "model": "haiku"
-}
-```
-
-**What the agent does:**
-
-**Primary path (session_logs):**
-
-1. Receives pre-extracted plan from kit CLI
-2. Applies guidance if provided (in-memory)
-3. Asks clarifying questions via AskUserQuestion tool
-4. Extracts semantic understanding (8 categories) from conversation
-5. Returns markdown output
-
-**Fallback path (conversation_search):**
-
-1. Searches conversation for plan
-2. Applies guidance if provided (in-memory)
-3. Asks clarifying questions via AskUserQuestion tool
-4. Extracts semantic understanding (8 categories) from conversation
-5. Returns markdown output
-
-**Agent tool restrictions (enforced in YAML):**
-
-- ✅ Read - Can read conversation and files
-- ✅ Bash - Can run git/kit CLI (read-only)
-- ✅ AskUserQuestion - Can clarify ambiguities
-- ❌ Edit - NO access to file editing
-- ❌ Write - NO access to file writing
-- ❌ Task - NO access to subagents
-
 **Error handling:**
 
-If agent returns error JSON:
+If no plan found:
 
 ```
-❌ Error: [agent error message]
+❌ Error: No plan found in session logs
 
-[Display agent error details]
+This command requires a plan created with ExitPlanMode. To fix:
+
+1. Create a plan (enter Plan mode if needed)
+2. Exit Plan mode using the ExitPlanMode tool
+3. Run this command again
+
+The plan will be extracted from session logs automatically.
 ```
 
-### Step 3: Parse Agent Response
+### Step 3: Detect Enrichment Status
 
-@../docs/save-plan-workflow.md#shared-step-parse-agent-response
+Check whether the plan has been enriched by looking for the "Enrichment Details" section:
+
+```bash
+# Check for enrichment markers in plan content
+if echo "$plan_content" | grep -q "## Enrichment Details"; then
+    enrichment_status="Enriched"
+    enrichment_note="This plan includes semantic context (8 categories)"
+else
+    enrichment_status="Raw"
+    enrichment_note="This plan has no enrichment. Use /erk:session-plan-enrich before saving to add context."
+fi
+```
+
+**Note:** The enrichment status is informational only - the plan is saved regardless.
 
 ### Step 4: Save Plan to Temporary File
 
-@../docs/save-plan-workflow.md#shared-step-save-plan-to-temporary-file
+Write plan content to a temporary file for kit CLI:
+
+```bash
+# Create temp file
+temp_plan=$(mktemp)
+
+# Write plan content
+cat > "$temp_plan" <<'PLAN_EOF'
+[plan_content from session logs]
+PLAN_EOF
+```
+
+**Why temp file:** Kit CLI command expects `--plan-file` option for clean separation of concerns.
 
 ### Step 5: Create GitHub Issue via Kit CLI
 
-@../docs/save-plan-workflow.md#shared-step-create-github-issue-via-kit-cli
+Call the kit CLI command to create the issue:
+
+```bash
+# Call kit CLI with plan file
+result=$(dot-agent run erk create-enriched-plan-from-context --plan-file "$temp_plan")
+
+# Clean up temp file
+rm "$temp_plan"
+
+# Parse JSON result
+echo "$result" | jq .
+```
+
+**Expected output:**
+
+```json
+{
+  "success": true,
+  "issue_number": 123,
+  "issue_url": "https://github.com/owner/repo/issues/123"
+}
+```
+
+**Error handling:**
+
+If command fails:
+
+```
+❌ Error: Failed to create GitHub issue
+
+[Display kit CLI error output]
+
+Common causes:
+- Repository has issues disabled
+- Network connectivity issue
+- GitHub API rate limit
+```
 
 ### Step 6: Display Success Output
 
 #### Substep 6a: Generate and Display Execution Summary
 
-After receiving the successful response from the kit CLI, generate a concise summary of what was accomplished:
-
-**Summary Generation Process:**
-
-1. **Extract one-sentence overview** - Create a brief, high-level summary of the plan's main objective from the plan_content
-2. **Extract three key bullet points** - Identify the three most important implementation steps or outcomes from the plan
-3. **Format and display** - Present summary before the issue URL using this format:
+After receiving the successful response from the kit CLI, generate a concise summary:
 
 ```
 **Execution Summary:**
@@ -298,24 +241,50 @@ After receiving the successful response from the kit CLI, generate a concise sum
 - [Key bullet point 3]
 ```
 
-**Implementation note:** Extract summary from the plan_content received from the agent. Look for major sections, objectives, or implementation phases to create meaningful bullet points.
+**Implementation note:** Extract summary from the plan_content. Look for major sections, objectives, or implementation phases.
 
-#### Substep 6b: Display Issue URL and Next Steps
+#### Substep 6b: Display Issue URL, Enrichment Status, and Next Steps
 
-@../docs/save-plan-workflow.md#shared-step-display-issue-url-and-next-steps
+```
+✅ Plan saved to GitHub issue
 
-### Step 7: Note on Enrichment Details
+**Enrichment status:** [Enriched/Raw]
+[enrichment_note]
 
-The enrichment details (guidance applied, questions asked, clarifications, context categories) are now embedded in the markdown output from the agent in the "Enrichment Details" section. No separate summary is needed - the GitHub issue will contain these details.
+**Issue:** [issue_url]
+
+**Next steps:**
+
+View the plan:
+    gh issue view [issue_number]
+
+Implement directly:
+    erk implement [issue_number]
+
+Implement with auto-confirmation (yolo mode):
+    erk implement [issue_number] --yolo
+
+Implement and auto-submit PR (dangerous mode):
+    erk implement [issue_number] --dangerous
+
+Submit plan to erk queue:
+    erk submit [issue_number]
+```
+
+**Formatting requirements:**
+
+- Use `✅` for success indicator
+- Bold `**Enrichment status:**`, `**Issue:**`, and `**Next steps:**`
+- Show enrichment status prominently
+- Show actual issue URL (clickable)
+- Show actual issue number in commands (not `<issue-number>`)
 
 ## Error Scenarios
 
 ### No Plan Found in Session Logs
 
 ```
-❌ Error: Failed to extract plan from session logs
-
-Details: No plan found in Claude session files
+❌ Error: No plan found in session logs
 
 This command requires a plan created with ExitPlanMode. To fix:
 
@@ -326,59 +295,69 @@ This command requires a plan created with ExitPlanMode. To fix:
 The plan will be extracted from session logs automatically.
 ```
 
-### No Plan Found (Fallback Failed)
+### GitHub CLI Not Authenticated
 
 ```
-❌ Error: No plan found in conversation
+❌ Error: GitHub CLI not authenticated
 
-Please present an implementation plan in the conversation, then run this command.
+To use this command, authenticate with GitHub:
 
-A plan typically includes:
-- Overview or objective
-- Implementation steps or phases
-- Success criteria
+    gh auth login
+
+Then try again.
 ```
 
-### Guidance Without Plan
+### Kit CLI Error
 
 ```
-❌ Error: Guidance provided but no plan found
+❌ Error: Failed to create GitHub issue
 
-Guidance: "[guidance text]"
+[Full kit CLI error output]
 
-Please create a plan first, then apply guidance.
+Common causes:
+- Repository has issues disabled
+- Network connectivity issue
+- GitHub API rate limit
 ```
 
-@../docs/save-plan-workflow.md#shared-error-scenarios
+## Success Criteria
 
-## Architecture Benefits
+This command succeeds when ALL of the following are true:
 
-@../docs/save-plan-workflow.md#shared-architecture-benefits
+**Plan Extraction:**
+✅ Implementation plan extracted from session logs (ExitPlanMode markers)
+✅ Kit CLI extraction returns valid JSON with plan_content
+✅ Enrichment status detected correctly
 
-## Troubleshooting
+**Issue Creation:**
+✅ GitHub issue created with plan content
+✅ Issue has `erk-plan` label applied
+✅ Issue title matches plan title
 
-@../docs/save-plan-workflow.md#shared-troubleshooting
+**Output:**
+✅ Enrichment status displayed
+✅ JSON output provided with issue URL and number
+✅ Copy-pastable commands displayed (view + implement variants)
+✅ All commands use actual issue number, not placeholders
+✅ Next steps clearly communicated to user
 
 ## Development Notes
 
 **For maintainers:**
 
-This command demonstrates the **agent-based orchestration pattern**:
+This command demonstrates the **raw save pattern**:
 
 1. Command validates prerequisites
-2. Command launches specialized agent with tool restrictions
-3. Agent does the work (structurally safe)
-4. Agent returns JSON
-5. Command handles I/O and user feedback
+2. Command extracts plan from session logs (no agent)
+3. Command detects enrichment status
+4. Command creates GitHub issue
+5. Command displays results
 
-**Benefits:**
+**No agent is required** - this is a pure orchestration command that delegates mechanical work to kit CLI.
 
-- Separation of concerns (orchestration vs. logic)
-- Structural safety (agent can't violate tool restrictions)
-- Reusable agents (plan-extractor can be used elsewhere)
-- Testable components (agent can be tested independently)
-- Shorter commands (orchestration only)
+**Related commands:**
 
-**Shared workflow:** This command shares common steps with `/erk:plan-save-raw` via `docs/save-plan-workflow.md`.
+- `/erk:session-plan-enrich [guidance]` - Enrich plan from session before saving
+- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue
 
-**Agent file:** `.claude/agents/erk/plan-extractor.md`
+**Breaking change note:** This command previously included inline enrichment. That functionality has moved to `/erk:session-plan-enrich`. The old guidance parameter is no longer supported.

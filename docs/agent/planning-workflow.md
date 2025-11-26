@@ -29,17 +29,37 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 
 ## Local Implementation Workflow
 
-### 1. Create a Plan and GitHub Issue
+### 1. Create a Plan
 
-Start by creating an enriched plan from your conversation, which creates a GitHub issue directly:
+Create a plan using Claude's ExitPlanMode tool. This stores the plan in session logs.
+
+### 2. (Optional) Enrich the Plan
+
+If you want to add semantic context and clarifications to your plan:
+
+```bash
+/erk:session-plan-enrich
+```
+
+This enriches the plan with 8 categories of context and interactive clarifications. You can iterate:
+
+```bash
+/erk:session-plan-enrich "Add retry logic"
+```
+
+### 3. Save to GitHub Issue
+
+Save the plan (raw or enriched) to a GitHub issue:
 
 ```bash
 /erk:plan-save
 ```
 
-This creates a GitHub issue with the enhanced plan content and the `erk-plan` label. The issue becomes the source of truth.
+This creates a GitHub issue with the plan content and the `erk-plan` label. The issue becomes the source of truth.
 
-### 2. Implement from Issue
+**Note:** `/erk:plan-save` saves whatever is in session logs - run `/erk:session-plan-enrich` first if you want enrichment.
+
+### 4. Implement from Issue
 
 Use the unified `erk implement` command to create a worktree and start implementation:
 
@@ -54,7 +74,7 @@ This command:
 - Links the worktree to the GitHub issue for progress tracking
 - Automatically switches to the new worktree
 
-### 3. Execute the Plan (if not auto-implemented)
+### 5. Execute the Plan (if not auto-implemented)
 
 If you didn't use `erk implement` (which auto-implements), run the implementation command manually:
 
@@ -126,9 +146,16 @@ gh run watch
 
 ## Commands Reference
 
-### Primary Workflow (Issue-Based)
+### Plan Enrichment (Optional)
 
-- `/erk:plan-save` - Create GitHub issue with enriched plan from conversation
-- `/erk:plan-save-raw` - Create GitHub issue with basic plan (no enrichment)
+- `/erk:session-plan-enrich [guidance]` - Enrich plan from current session with context extraction
+- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue with context extraction
+
+### Plan Saving
+
+- `/erk:plan-save` - Save plan from session logs to GitHub issue (no enrichment - use enrich commands first)
+
+### Implementation (Issue-Based)
+
 - `erk implement <issue>` - Create worktree and implement plan from GitHub issue
 - `/erk:plan-implement` - Execute plan in current worktree (called by `erk implement`)

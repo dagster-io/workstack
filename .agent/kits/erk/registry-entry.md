@@ -4,12 +4,11 @@
 
 **Artifacts**:
 
-- command: commands/erk/plan-save.md, commands/erk/plan-save-raw.md, commands/erk/plan-enrich.md, commands/erk/session-plan-enrich.md, commands/erk/plan-implement.md, commands/erk/merge-conflicts-fix.md, commands/erk/plan-submit.md
+- command: commands/erk/plan-save.md, commands/erk/plan-enrich.md, commands/erk/session-plan-enrich.md, commands/erk/plan-implement.md, commands/erk/merge-conflicts-fix.md, commands/erk/plan-submit.md
 - agent: agents/erk/issue-wt-creator.md, agents/erk/plan-extractor.md
-- doc: docs/erk/EXAMPLES.md, docs/erk/includes/create-github-issue.md, docs/erk/includes/enrichment-process.md, docs/erk/includes/save-plan-workflow.md, docs/erk/includes/session-file-location.md, docs/erk/includes/success-output-format.md, docs/erk/includes/validate-git-repository.md, docs/erk/includes/validate-github-cli.md, docs/erk/includes/validate-plan-structure.md
+- doc: docs/erk/EXAMPLES.md, docs/erk/includes/create-github-issue.md, docs/erk/includes/enrichment-process.md, docs/erk/includes/session-file-location.md, docs/erk/includes/success-output-format.md, docs/erk/includes/validate-git-repository.md, docs/erk/includes/validate-github-cli.md, docs/erk/includes/validate-plan-structure.md
 
 **Usage**:
 
 - Use Task tool with subagent_type="erk"
 - Run `/erk` command
-

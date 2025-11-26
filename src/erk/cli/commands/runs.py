@@ -14,12 +14,13 @@ from erk.core.display_utils import format_workflow_outcome, format_workflow_run_
 
 
 @click.group("runs", invoke_without_command=True)
+@click.option("--show-legacy", is_flag=True, help="Show all runs including legacy runs.")
 @click.pass_context
-def runs_cmd(click_ctx: click.Context) -> None:
+def runs_cmd(click_ctx: click.Context, show_legacy: bool) -> None:
     """View GitHub Actions workflow runs for plan implementations."""
     if click_ctx.invoked_subcommand is None:
         # Default behavior: show list view
-        _list_runs(click_ctx)
+        _list_runs(click_ctx, show_legacy)
 
 
 def _extract_issue_number(display_title: str | None) -> int | None:
@@ -40,7 +41,7 @@ def _extract_issue_number(display_title: str | None) -> int | None:
     return int(first_part)
 
 
-def _list_runs(click_ctx: click.Context) -> None:
+def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     """List workflow runs in a run-centric table view."""
     ctx: ErkContext = click_ctx.obj
 
@@ -54,6 +55,13 @@ def _list_runs(click_ctx: click.Context) -> None:
     if not runs:
         user_output("No workflow runs found")
         return
+
+    # Filter out runs without plans unless --show-legacy flag is set
+    if not show_all:
+        runs = [run for run in runs if _extract_issue_number(run.display_title) is not None]
+        if not runs:
+            user_output("No runs with plans found. Use --show-legacy to see all runs.")
+            return
 
     # 2. Extract issue numbers from display_title (format: "123:abc456")
     issue_numbers: list[int] = []

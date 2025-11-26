@@ -259,7 +259,11 @@ def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
 
 
 def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
-    """Test runs command handles runs without valid issue linkage (old format)."""
+    """Test runs command handles runs without valid issue linkage (old format).
+
+    By default, runs without issue linkage should be filtered out.
+    Use --show-legacy flag to see them.
+    """
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -288,8 +292,8 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
 
     runner = CliRunner()
 
-    # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    # Act - With --show-legacy flag to see legacy runs
+    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -297,6 +301,141 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
     assert "123" in result.output
     # Should show "X" for plan/title/pr/chks columns since legacy format can't be parsed
     # (distinguishes "can't parse" from "no data available" which uses "-")
+    assert "X" in result.output
+
+
+def test_runs_cmd_default_filters_out_runs_without_plans(tmp_path: Path) -> None:
+    """By default, filter out runs without plan linkage (legacy format)."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        # New format - has plan linkage
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",  # Can be parsed
+        ),
+        # Old format - no plan linkage
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-2",
+            head_sha="def456",
+            display_title="Add feature [def456]",  # Cannot be parsed
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Feature one",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act - Default behavior (without --all)
+    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # New format run should appear
+    assert "123" in result.output
+    assert "#142" in result.output
+    # Old format run should NOT appear
+    assert "456" not in result.output
+    assert "Add feature" not in result.output
+
+
+def test_runs_cmd_with_show_legacy_flag_shows_all_runs(tmp_path: Path) -> None:
+    """With --show-legacy flag, show all runs including legacy format."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+
+    now = datetime.now(UTC)
+    workflow_runs = [
+        # New format - has plan linkage
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+            display_title="142:abc456",  # Can be parsed
+        ),
+        # Old format - no plan linkage
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="success",
+            branch="feat-2",
+            head_sha="def456",
+            display_title="Add feature [def456]",  # Cannot be parsed
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    issues = {
+        142: IssueInfo(
+            number=142,
+            title="Feature one",
+            body="",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/142",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    issues_ops = FakeGitHubIssues(issues=issues)
+
+    ctx = create_test_context(git=git_ops, github=github_ops, issues=issues_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act - With --show-legacy flag
+    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    # New format run should appear
+    assert "123" in result.output
+    assert "#142" in result.output
+    # Old format run SHOULD appear with --show-legacy
+    assert "456" in result.output
+    # Legacy run should show "X" for plan/title/pr/chks
     assert "X" in result.output
 
 

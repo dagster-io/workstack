@@ -1,0 +1,5 @@
+{
+  "number": 1281,
+  "url": "https://github.com/dagster-io/erk/issues/1281",
+  "title": "Refactoring Plan: check_cmd.py to Use Ensure Pattern"
+}

@@ -10,6 +10,7 @@ from erk_shared.output.output import user_output
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
+from erk.cli.commands.pr import pr_group
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
 from erk.cli.commands.up import up_cmd
@@ -56,6 +57,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         "goto": goto_wt,
         "consolidate": consolidate_stack,
         "implement": implement,
+        "pr": pr_group,
     }
 
     command = command_map.get(command_name)

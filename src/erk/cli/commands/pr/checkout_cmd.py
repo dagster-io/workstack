@@ -16,8 +16,14 @@ from erk.core.repo_discovery import NoRepoSentinel, RepoContext
 
 @click.command("checkout")
 @click.argument("pr_reference")
+@click.option(
+    "--script",
+    is_flag=True,
+    hidden=True,
+    help="Output activation script path for shell integration.",
+)
 @click.pass_obj
-def pr_checkout(ctx: ErkContext, pr_reference: str) -> None:
+def pr_checkout(ctx: ErkContext, pr_reference: str, script: bool) -> None:
     """Checkout a pull request into a worktree.
 
     PR_REFERENCE can be a plain number (123) or GitHub URL
@@ -35,25 +41,25 @@ def pr_checkout(ctx: ErkContext, pr_reference: str) -> None:
     Ensure.gh_installed()
 
     if isinstance(ctx.repo, NoRepoSentinel):
-        user_output(click.style("Error: ", fg="red") + "Not in a git repository")
+        ctx.feedback.error("Not in a git repository")
         raise SystemExit(1)
     repo: RepoContext = ctx.repo
 
     pr_number = parse_pr_reference(pr_reference)
 
     # Get PR checkout info from GitHub
+    ctx.feedback.info(f"Fetching PR #{pr_number}...")
     pr_info = ctx.github.get_pr_checkout_info(repo.root, pr_number)
     if pr_info is None:
-        user_output(
-            click.style("Error: ", fg="red")
-            + f"Could not find PR #{pr_number}\n\n"
-            + "Check the PR number and ensure you're authenticated with gh CLI."
+        ctx.feedback.error(
+            f"Could not find PR #{pr_number}\n\n"
+            "Check the PR number and ensure you're authenticated with gh CLI."
         )
         raise SystemExit(1)
 
     # Warn for closed/merged PRs
     if pr_info.state != "OPEN":
-        user_output(click.style("Warning: ", fg="yellow") + f"PR #{pr_number} is {pr_info.state}")
+        ctx.feedback.info(f"Warning: PR #{pr_number} is {pr_info.state}")
 
     # Determine branch name strategy
     # For cross-repository PRs (forks), use pr/<number> to avoid conflicts
@@ -66,14 +72,23 @@ def pr_checkout(ctx: ErkContext, pr_reference: str) -> None:
     # Check if branch already exists in a worktree
     existing_worktree = ctx.git.find_worktree_for_branch(repo.root, branch_name)
     if existing_worktree is not None:
-        # Branch already exists in a worktree - emit script to activate it
-        script = render_activation_script(
-            worktree_path=existing_worktree,
-            final_message=f'echo "Switched to existing worktree for PR #{pr_number}"',
-            comment="pr checkout activate-script",
-        )
-        user_output(f"PR #{pr_number} already checked out at {existing_worktree}")
-        click.echo(script)
+        # Branch already exists in a worktree - activate it
+        if script:
+            activation_script = render_activation_script(
+                worktree_path=existing_worktree,
+                final_message=f'echo "Switched to existing worktree for PR #{pr_number}"',
+            )
+            result = ctx.script_writer.write_activation_script(
+                activation_script,
+                command_name="pr-checkout",
+                comment=f"activate PR #{pr_number}",
+            )
+            result.output_for_shell_integration()
+        else:
+            styled_path = click.style(str(existing_worktree), fg="cyan", bold=True)
+            user_output(f"PR #{pr_number} already checked out at {styled_path}")
+            user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
+            user_output(f"Or use: source <(erk pr checkout {pr_reference} --script)")
         return
 
     # For cross-repository PRs, always fetch via refs/pull/<n>/head
@@ -108,11 +123,20 @@ def pr_checkout(ctx: ErkContext, pr_reference: str) -> None:
         create_branch=False,
     )
 
-    # Emit activation script
-    script = render_activation_script(
-        worktree_path=worktree_path,
-        final_message=f'echo "Checked out PR #{pr_number} at $(pwd)"',
-        comment="pr checkout activate-script",
-    )
-    user_output(f"Created worktree for PR #{pr_number} at {worktree_path}")
-    click.echo(script)
+    # Output based on mode
+    if script:
+        activation_script = render_activation_script(
+            worktree_path=worktree_path,
+            final_message=f'echo "Checked out PR #{pr_number} at $(pwd)"',
+        )
+        result = ctx.script_writer.write_activation_script(
+            activation_script,
+            command_name="pr-checkout",
+            comment=f"activate PR #{pr_number}",
+        )
+        result.output_for_shell_integration()
+    else:
+        styled_path = click.style(str(worktree_path), fg="cyan", bold=True)
+        user_output(f"Created worktree for PR #{pr_number} at {styled_path}")
+        user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
+        user_output(f"Or use: source <(erk pr checkout {pr_reference} --script)")

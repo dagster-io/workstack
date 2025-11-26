@@ -263,8 +263,8 @@ def test_pr_checkout_invalid_reference() -> None:
         assert "Invalid PR number or URL" in result.output
 
 
-def test_pr_checkout_emits_activation_script() -> None:
-    """Test that checkout command emits activation script."""
+def test_pr_checkout_script_mode_outputs_script_path() -> None:
+    """Test that --script flag outputs activation script path."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         env.setup_repo_structure()
@@ -283,10 +283,43 @@ def test_pr_checkout_emits_activation_script() -> None:
         )
         ctx = build_workspace_test_context(env, git=git, github=github)
 
-        result = runner.invoke(pr_group, ["checkout", "555"], obj=ctx)
+        result = runner.invoke(pr_group, ["checkout", "555", "--script"], obj=ctx)
 
         assert result.exit_code == 0
-        # Check that activation script is emitted
-        assert "pr checkout activate-script" in result.output
-        assert "cd " in result.output
-        assert ".venv" in result.output
+        # In script mode, output is just the script path
+        script_path_str = result.stdout.strip()
+        assert script_path_str != ""
+        # Script file should exist and contain activation commands
+        script_path = Path(script_path_str)
+        assert script_path.exists()
+        script_content = script_path.read_text()
+        assert "cd " in script_content
+        assert ".venv" in script_content
+
+
+def test_pr_checkout_non_script_mode_shows_manual_instructions() -> None:
+    """Test that non-script mode shows manual instructions."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        env.setup_repo_structure()
+        pr_info = PRCheckoutInfo(
+            number=666,
+            head_ref_name="manual-branch",
+            is_cross_repository=False,
+            state="OPEN",
+        )
+        github = FakeGitHub(pr_checkout_infos={666: pr_info})
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            local_branches={env.cwd: ["main", "manual-branch"]},
+            existing_paths={env.cwd, env.repo.worktrees_dir},
+        )
+        ctx = build_workspace_test_context(env, git=git, github=github)
+
+        result = runner.invoke(pr_group, ["checkout", "666"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree for PR #666" in result.output
+        assert "Shell integration not detected" in result.output
+        assert "source <(erk pr checkout 666 --script)" in result.output

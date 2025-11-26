@@ -5,6 +5,7 @@
 **Last Updated**: 2025-11-26
 
 ## Status Legend
+
 - [ ] Not started
 - [WIP] Work in progress
 - [x] Completed
@@ -16,6 +17,7 @@
 ### Priority 1: High-Value Methods (8+ uses)
 
 #### Task 1.1: Implement Ensure.mutually_exclusive_flags()
+
 - [ ] Write method implementation
 - [ ] Add unit tests (success case, multiple flags set, custom message)
 - [ ] Document in method docstring
@@ -23,6 +25,7 @@
 - **Signature**: `mutually_exclusive_flags(flags: dict[str, bool | Any], error_message: str | None = None) -> None`
 
 #### Task 1.2: Implement Ensure.not_detached_head()
+
 - [ ] Write method implementation with type narrowing
 - [ ] Add unit tests (on branch, detached HEAD, custom operation name)
 - [ ] Document in method docstring
@@ -31,6 +34,7 @@
 - **Returns**: Narrowed type `str` (from `str | None`)
 
 #### Task 1.3: Implement Ensure.clean_working_tree()
+
 - [ ] Write method implementation with allow_force parameter
 - [ ] Add unit tests (clean tree, uncommitted changes, force override)
 - [ ] Document in method docstring
@@ -38,6 +42,7 @@
 - **Signature**: `clean_working_tree(ctx: ErkContext, path: Path, operation_name: str | None = None, allow_force: bool = False) -> None`
 
 #### Task 1.4: Implement Ensure.graphite_enabled()
+
 - [ ] Write method implementation
 - [ ] Add unit tests (enabled, disabled)
 - [ ] Document in method docstring
@@ -48,6 +53,7 @@
 ### Priority 2: Medium-Value Methods (2-4 uses)
 
 #### Task 1.5: Implement Ensure.branch_tracked_by_graphite()
+
 - [ ] Write method implementation with type narrowing
 - [ ] Add unit tests (tracked branch, untracked branch)
 - [ ] Document in method docstring
@@ -56,6 +62,7 @@
 - **Returns**: Stack branches (narrows from `list[str] | None`)
 
 #### Task 1.6: Implement Ensure.in_repo()
+
 - [ ] Write method implementation
 - [ ] Add unit tests (in repo, NoRepoSentinel)
 - [ ] Document in method docstring
@@ -63,6 +70,7 @@
 - **Signature**: `in_repo(ctx: ErkContext) -> None`
 
 #### Task 1.7: Implement Ensure.global_config_exists()
+
 - [ ] Write method implementation with type narrowing
 - [ ] Add unit tests (config exists, config None)
 - [ ] Document in method docstring
@@ -70,6 +78,7 @@
 - **Signature**: `global_config_exists(ctx: ErkContext) -> GlobalConfig`
 
 #### Task 1.8: Implement Ensure.not_trunk_branch()
+
 - [ ] Write method implementation
 - [ ] Add unit tests (trunk branch, non-trunk branch)
 - [ ] Document in method docstring
@@ -83,7 +92,8 @@
 ### High Priority (20+ patterns each)
 
 #### Task 2.1: Convert wt/create_cmd.py (30+ patterns)
-- [ ] Lines 556-561: Replace manual check with `Ensure.mutually_exclusive_flags()` for --from-* flags
+
+- [ ] Lines 556-561: Replace manual check with `Ensure.mutually_exclusive_flags()` for --from-\* flags
 - [ ] Lines 564-566: Replace manual check with `Ensure.mutually_exclusive_flags()` for --json/--script
 - [ ] Lines 574-582: Replace manual check with `Ensure.mutually_exclusive_flags()` for --copy-plan
 - [ ] Lines 101-108: Replace manual check with `Ensure.not_trunk_branch()`
@@ -94,6 +104,7 @@
 - [ ] Verify no regressions
 
 #### Task 2.2: Convert stack/consolidate_cmd.py (15+ patterns)
+
 - [ ] Lines 153-159: Replace manual check with `Ensure.mutually_exclusive_flags({"--down": down, "BRANCH": branch is not None})`
 - [ ] Lines 165-168: Replace None check with `Ensure.not_detached_head(ctx, current_branch, "consolidate")`
 - [ ] Lines 176-181: Replace None check with `stack_branches = Ensure.branch_tracked_by_graphite(ctx, repo.root, current_branch)`
@@ -104,6 +115,7 @@
 - [ ] Verify no regressions
 
 #### Task 2.3: Convert implement.py (25+ patterns)
+
 - [ ] Lines 373-375: Replace .exists() check with `Ensure.path_exists(ctx, plan_file, ...)`
 - [ ] Lines 632: Use `Ensure.not_none()` for wt_path
 - [ ] Lines 708: Use `Ensure.not_none()` for target_info.issue_number
@@ -115,6 +127,7 @@
 ### Medium Priority (10-20 patterns each)
 
 #### Task 2.4: Convert navigation_helpers.py
+
 - [ ] Lines 14-28: Delete `ensure_graphite_enabled()` function after converting callers
 - [ ] Lines 31-42: Delete `check_clean_working_tree()` function after converting callers
 - [ ] Lines 45-68: Delete `verify_pr_merged()` function OR convert to `Ensure.pr_merged()` if implementing
@@ -125,6 +138,7 @@
 - [ ] Verify no regressions
 
 #### Task 2.5: Convert stack/move_cmd.py
+
 - [ ] Lines 59-61: Replace with `Ensure.mutually_exclusive_flags()`
 - [ ] Lines 115: Replace with `Ensure.not_detached_head()`
 - [ ] Lines 119-124: Replace with `Ensure.clean_working_tree(ctx, source_wt, "move", allow_force=force)`
@@ -134,6 +148,7 @@
 - [ ] Verify no regressions
 
 #### Task 2.6: Convert stack/split_old/command.py
+
 - [ ] Lines 32-37: Replace with `Ensure.mutually_exclusive_flags({"--up": up, "--down": down})`
 - [ ] Lines 64-67: Replace with `Ensure.clean_working_tree(ctx, current_worktree, "split")`
 - [ ] Run tests: `uv run pytest tests/commands/stack/test_split.py`
@@ -142,18 +157,21 @@
 ### Lower Priority (5-10 patterns each)
 
 #### Task 2.7: Convert wt/delete_cmd.py
+
 - [ ] Lines 132-137: Replace with `Ensure.graphite_enabled(ctx)`
 - [ ] Lines 143-147: Replace with `Ensure.not_detached_head()`
 - [ ] Run tests: `uv run pytest tests/commands/workspace/test_delete.py`
 - [ ] Verify no regressions
 
 #### Task 2.8: Convert commands/config.py
+
 - [ ] Lines 104-107: Replace with `Ensure.global_config_exists(ctx)`
 - [ ] Lines 157-160: Replace with `Ensure.global_config_exists(ctx)`
 - [ ] Run tests: `uv run pytest tests/commands/test_config.py`
 - [ ] Verify no regressions
 
 #### Task 2.9: Convert commands/init.py
+
 - [ ] Lines 171-175: Replace with `Ensure.global_config_exists(ctx)`
 - [ ] Lines 228-232: Replace with `Ensure.global_config_exists(ctx)`
 - [ ] Lines 248-252: Replace with `Ensure.global_config_exists(ctx)`
@@ -162,16 +180,19 @@
 - [ ] Verify no regressions
 
 #### Task 2.10: Convert commands/wt/current_cmd.py
+
 - [ ] Lines 28-29: Add error message and replace with `Ensure.not_none(wt_info, "Not in a worktree")`
 - [ ] Run tests: `uv run pytest tests/commands/workspace/test_current.py`
 - [ ] Verify no regressions
 
 #### Task 2.11: Convert commands/pr/checkout_cmd.py
+
 - [ ] Line 43: Replace NoRepoSentinel check with `Ensure.in_repo(ctx)`
 - [ ] Run tests: `uv run pytest tests/commands/pr/`
 - [ ] Verify no regressions
 
 #### Task 2.12: Convert cli/core.py
+
 - [ ] Lines 18-19: Replace with `Ensure.global_config_exists(ctx)`
 - [ ] Run tests: `uv run pytest tests/unit/cli/`
 - [ ] Verify no regressions
@@ -181,18 +202,21 @@
 ## Phase 3: Final Cleanup
 
 #### Task 3.1: Audit for remaining patterns
+
 - [ ] Search for `raise SystemExit(1)` across CLI files
 - [ ] Search for manual None checks followed by user_output
 - [ ] Search for manual path existence checks
 - [ ] Create follow-up tasks for any missed patterns
 
 #### Task 3.2: Consistency pass
+
 - [ ] Verify all error messages use red "Error: " prefix
 - [ ] Verify all Ensure method docstrings are complete
 - [ ] Verify all type narrowing methods work with pyright
 - [ ] Update any developer documentation
 
 #### Task 3.3: Final validation
+
 - [ ] Run full test suite: `uv run pytest`
 - [ ] Run type checker: `uv run pyright`
 - [ ] Verify no regressions in any tests
@@ -203,7 +227,9 @@
 ## Implementation Notes
 
 ### Test Pattern to Follow
+
 From `tests/unit/cli/test_ensure.py`:
+
 ```python
 def test_exits_when_condition_false(self) -> None:
     """Ensure.method raises SystemExit when condition fails."""
@@ -222,13 +248,16 @@ def test_error_message_output(self, capsys: pytest.CaptureFixture[str]) -> None:
 ```
 
 ### Type Narrowing Example
+
 Methods that return values should narrow types:
+
 ```python
 # Before: branch: str | None = ctx.git.get_current_branch(ctx.cwd)
 # After:  branch: str = Ensure.not_detached_head(ctx, ctx.git.get_current_branch(ctx.cwd), "operation")
 ```
 
 ### Mutually Exclusive Flags Example
+
 ```python
 # Before:
 if flag_count > 1:
@@ -247,12 +276,12 @@ Ensure.mutually_exclusive_flags({
 
 ## Progress Tracking
 
-| Phase | Tasks | Completed | Remaining |
-|-------|-------|-----------|-----------|
-| Phase 1: New Methods | 8 | 0 | 8 |
-| Phase 2: File Conversions | 12 | 0 | 12 |
-| Phase 3: Final Cleanup | 3 | 0 | 3 |
-| **TOTAL** | **23** | **0** | **23** |
+| Phase                     | Tasks  | Completed | Remaining |
+| ------------------------- | ------ | --------- | --------- |
+| Phase 1: New Methods      | 8      | 0         | 8         |
+| Phase 2: File Conversions | 12     | 0         | 12        |
+| Phase 3: Final Cleanup    | 3      | 0         | 3         |
+| **TOTAL**                 | **23** | **0**     | **23**    |
 
 **Last Updated**: 2025-11-26
 **Current Focus**: Phase 1 - New Ensure Methods

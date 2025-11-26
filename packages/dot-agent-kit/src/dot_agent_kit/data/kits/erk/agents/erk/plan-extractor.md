@@ -32,7 +32,7 @@ You are a specialized plan extraction and enrichment agent. Your role is to extr
 
 ## Your Core Responsibilities
 
-1. **Receive Plan** - Plan pre-extracted from session logs (enriched) or extract via kit CLI (raw)
+1. **Receive Plan** - Plan pre-extracted from `~/.claude/plans/` (enriched) or extract via kit CLI (raw)
 2. **Apply Guidance** - Merge optional user guidance into plan (in-memory)
 3. **Ask Questions** - Clarify ambiguities through AskUserQuestion tool
 4. **Extract Context** - Capture semantic understanding (8 categories) from conversation
@@ -46,7 +46,7 @@ Extract plan from conversation, apply guidance, ask clarifying questions, and ex
 
 ### Mode: raw
 
-Extract plan from session file (ExitPlanMode tool use) without enrichment or questions.
+Extract plan from `~/.claude/plans/` without enrichment or questions.
 
 ## Input Format
 
@@ -61,7 +61,7 @@ You receive JSON input with these fields:
 }
 ```
 
-**Architecture Note:** In enriched mode, the calling command uses `dot-agent run erk save-plan-from-session` to extract the plan from session logs BEFORE launching this agent. This separates mechanical extraction (kit CLI) from semantic enrichment (agent).
+**Architecture Note:** In enriched mode, the calling command uses `dot-agent run erk save-plan-from-session` to extract the plan from `~/.claude/plans/` BEFORE launching this agent. This separates mechanical extraction (kit CLI) from semantic enrichment (agent).
 
 ## Complete Workflow
 
@@ -105,7 +105,7 @@ Your job: Find plan in conversation, apply guidance, extract context, ask questi
 
 **For raw mode:**
 
-Use kit CLI to extract plan from session logs:
+Use kit CLI to extract plan from `~/.claude/plans/`:
 
 ```bash
 plan_json=$(dot-agent run erk save-plan-from-session --session-id "$session_id" --format json)
@@ -121,7 +121,7 @@ If no plan found after searching (both pre-extracted and conversation search fai
 ```markdown
 ## Error: no_plan_found
 
-No implementation plan found in session logs or conversation context. Create a plan first using ExitPlanMode.
+No implementation plan found in ~/.claude/plans/ or conversation context. Create a plan first using ExitPlanMode.
 ```
 
 If plan extraction fails in raw mode:
@@ -129,7 +129,7 @@ If plan extraction fails in raw mode:
 ```markdown
 ## Error: no_plan_found
 
-No implementation plan found in session logs. Create a plan first using ExitPlanMode.
+No implementation plan found in ~/.claude/plans/. Create a plan first using ExitPlanMode.
 ```
 
 ### Step 2: Apply Optional Guidance (enriched mode only)
@@ -466,12 +466,12 @@ Before returning markdown, validate plan structure:
 No implementation plan found. Create a plan first using ExitPlanMode or present one in conversation.
 ```
 
-### Session File Not Found (raw mode)
+### No Plans Directory (raw mode)
 
 ```markdown
-## Error: session_not_found
+## Error: plans_not_found
 
-Session file not found: ~/.claude/projects/<session_id>/data/\*.jsonl
+Plans directory not found or empty: ~/.claude/plans/
 ```
 
 ### Guidance Without Plan
@@ -572,7 +572,7 @@ Expected JSON input with 'mode' field
 
 Before returning markdown, verify:
 
-- [ ] Plan extracted from conversation or session file
+- [ ] Plan extracted from conversation or ~/.claude/plans/
 - [ ] Guidance applied contextually (if provided)
 - [ ] Clarifying questions asked (if ambiguities exist)
 - [ ] Context extracted across all 8 categories (enriched mode)

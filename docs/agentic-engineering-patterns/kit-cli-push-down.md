@@ -210,7 +210,7 @@ When creating a kit CLI push down command:
 - **Structured Output**: Dataclasses ensure consistent JSON schemas
 - **Error Boundaries**: Kit CLI returns errors as data, not exceptions
 
-## Example: Plan Extraction from Session Logs
+## Example: Plan Extraction from Plans Directory
 
 ### Before (Agent Searches Conversation)
 
@@ -231,16 +231,15 @@ Search conversation context for implementation plan. Plans typically appear afte
 
 **Benefits**:
 
-- ExitPlanMode markers provide unambiguous identification
-- Mechanical JSON parsing done by kit CLI
+- Plans stored in `~/.claude/plans/` as `.md` files
+- Simple file system read by kit CLI
 - Agent focuses on semantic enrichment only
 - Structured JSON errors with clear messages
-- Automatic session ID discovery from environment
 
 **Command orchestration** (`.claude/commands/erk/save-plan.md`):
 
 ```bash
-# Extract plan from session logs using kit CLI
+# Extract plan from ~/.claude/plans/ using kit CLI
 plan_result=$(dot-agent run erk save-plan-from-session --extract-only --format json)
 
 # Parse result
@@ -249,7 +248,7 @@ if echo "$plan_result" | jq -e '.success' > /dev/null; then
     plan_title=$(echo "$plan_result" | jq -r '.title')
 else
     error_msg=$(echo "$plan_result" | jq -r '.error')
-    echo "❌ Error: Failed to extract plan from session logs"
+    echo "❌ Error: Failed to extract plan"
     echo "Details: $error_msg"
     exit 1
 fi
@@ -274,16 +273,12 @@ fi
 @click.command()
 @click.option("--extract-only", is_flag=True)
 def save_plan_from_session(session_id: str | None, extract_only: bool) -> None:
-    """Extract plan from Claude session logs."""
-    # Auto-discover session ID from SESSION_CONTEXT environment
-    if not session_id:
-        session_id = get_session_context()
-
-    # Extract plan from session files (searches for ExitPlanMode markers)
+    """Extract plan from ~/.claude/plans/ directory."""
+    # Get most recently modified plan from ~/.claude/plans/
     plan_text = get_latest_plan(str(Path.cwd()), session_id)
 
     if not plan_text:
-        result = {"success": False, "error": "No plan found in Claude session files"}
+        result = {"success": False, "error": "No plan found in ~/.claude/plans/"}
         click.echo(json.dumps(result))
         raise SystemExit(1)
 
@@ -301,7 +296,7 @@ def save_plan_from_session(session_id: str | None, extract_only: bool) -> None:
 
 **Separation of concerns**:
 
-- **Kit CLI**: Mechanical operations (JSON parsing, file I/O, ExitPlanMode extraction)
+- **Kit CLI**: Mechanical operations (file system read, title extraction)
 - **Agent**: Semantic operations (guidance application, context extraction, questions)
 
 ## References

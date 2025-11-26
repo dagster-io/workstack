@@ -57,26 +57,14 @@ invocation = "dot-agent kit-command dignified-python version-aware-reminder-hook
 description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30
 
-[kits.gt]
-kit_id = "gt"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/agents/gt/gt-branch-submitter.md",
-    ".claude/agents/gt/gt-update-pr-submitter.md",
-    ".claude/commands/gt/pr-submit.md",
-    ".claude/commands/gt/pr-update.md",
-    ".claude/skills/gt-graphite/SKILL.md",
-    ".claude/skills/gt-graphite/references/gt-reference.md",
-]
-
 [kits.erk]
 kit_id = "erk"
 source_type = "bundled"
 version = "0.3.1"
 artifacts = [
     ".claude/commands/erk/plan-save.md",
-    ".claude/commands/erk/plan-save-raw.md",
+    ".claude/commands/erk/plan-enrich.md",
+    ".claude/commands/erk/session-plan-enrich.md",
     ".claude/commands/erk/plan-implement.md",
     ".claude/commands/erk/merge-conflicts-fix.md",
     ".claude/commands/erk/plan-submit.md",
@@ -98,3 +86,16 @@ matcher = "*"
 invocation = "dot-agent kit-command erk session-id-injector-hook"
 description = "Injects session ID into context when /erk:plan-save is invoked"
 timeout = 30
+
+[kits.gt]
+kit_id = "gt"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/agents/gt/gt-branch-submitter.md",
+    ".claude/agents/gt/gt-update-pr-submitter.md",
+    ".claude/commands/gt/pr-submit.md",
+    ".claude/commands/gt/pr-update.md",
+    ".claude/skills/gt-graphite/SKILL.md",
+    ".claude/skills/gt-graphite/references/gt-reference.md",
+]

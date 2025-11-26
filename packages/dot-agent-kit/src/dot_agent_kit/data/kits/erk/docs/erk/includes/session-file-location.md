@@ -1,14 +1,13 @@
-# Session File Location
+# Plan Storage Location
 
-**Session file location:**
+**Plan file location:**
 
-- Base: `~/.claude/projects/`
-- Project directory: Working directory path with `/` replaced by `-` and prepended with `-`
-- Example: `/Users/user/code/myproject` → `~/.claude/projects/-Users-user-code-myproject/`
+- Directory: `~/.claude/plans/`
+- Format: `{slug}.md` files
+- Example: `~/.claude/plans/add-user-authentication.md`
 
 **Plan extraction:**
 
-- Parses JSONL files (one JSON object per line)
-- Looks for `type: "tool_use"` with `name: "ExitPlanMode"`
-- Extracts `input.plan` field
-- Sorts by timestamp to find latest
+- Reads `.md` files from `~/.claude/plans/`
+- Returns the most recently modified plan file
+- No parsing required - plans are stored as plain markdown

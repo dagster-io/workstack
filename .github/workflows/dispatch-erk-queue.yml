@@ -189,6 +189,11 @@ jobs:
             exit 1
           fi
 
+          # Fetch trunk branch locally (required for gt track's merge-base)
+          echo "Fetching trunk branch: $TRUNK_BRANCH"
+          git fetch origin "$TRUNK_BRANCH:$TRUNK_BRANCH"
+          echo "✅ Trunk branch fetched"
+
           # Initialize Graphite metadata for parent branch tracking
           # This allows gt:pr-submit to determine the parent branch
           gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
@@ -277,7 +282,9 @@ jobs:
             fi
 
             # Fetch trunk branch locally (required for gt track's merge-base)
+            echo "Fetching trunk branch: $TRUNK_BRANCH"
             git fetch origin "$TRUNK_BRANCH:$TRUNK_BRANCH"
+            echo "✅ Trunk branch fetched"
 
             # Initialize Graphite metadata
             gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"
@@ -521,6 +528,11 @@ jobs:
             echo "❌ Could not detect trunk branch (main or master)"
             exit 1
           fi
+
+          # Fetch trunk branch locally (required for gt track's merge-base)
+          echo "Fetching trunk branch: $TRUNK_BRANCH"
+          git fetch origin "$TRUNK_BRANCH:$TRUNK_BRANCH"
+          echo "✅ Trunk branch fetched"
 
           # Initialize Graphite metadata for parent branch tracking
           gt track --branch "$BRANCH_NAME" --parent "$TRUNK_BRANCH"

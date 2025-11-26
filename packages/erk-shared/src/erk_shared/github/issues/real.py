@@ -139,6 +139,11 @@ class RealGitHubIssues(GitHubIssues):
     def get_issue_comments(self, repo_root: Path, number: int) -> list[str]:
         """Fetch all comment bodies for an issue using gh CLI.
 
+        Uses JSON array output format to preserve multi-line comment bodies.
+        The jq expression "[.[].body]" wraps results in a JSON array, which
+        is then parsed with json.loads() to correctly handle newlines within
+        comment bodies (e.g., markdown content).
+
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
         on failures (not installed, not authenticated, issue not found).
         """
@@ -147,14 +152,14 @@ class RealGitHubIssues(GitHubIssues):
             "api",
             f"repos/{{owner}}/{{repo}}/issues/{number}/comments",
             "--jq",
-            ".[].body",
+            "[.[].body]",  # JSON array format preserves multi-line bodies
         ]
         stdout = execute_gh_command(cmd, repo_root)
 
         if not stdout.strip():
             return []
 
-        return stdout.strip().split("\n")
+        return json.loads(stdout)
 
     def get_multiple_issue_comments(
         self, repo_root: Path, issue_numbers: list[int]

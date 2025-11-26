@@ -65,6 +65,9 @@ jobs:
           # Install dot-agent from local package with erk in its environment
           uv tool install --from ./packages/dot-agent-kit --with . dot-agent-kit
 
+          # Install Graphite CLI (needed for gt track)
+          npm install -g @withgraphite/graphite-cli
+
       - name: Configure git
         env:
           SUBMITTED_BY: ${{ inputs.submitted_by }}

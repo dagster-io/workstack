@@ -481,3 +481,17 @@ jobs:
           # Mark PR as ready for review to trigger full CI
           gh pr ready "$BRANCH_NAME"
           echo "✅ PR marked ready for review"
+
+      - name: Trigger CI workflows
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
+        run: |
+          echo "Triggering CI workflows for branch $BRANCH_NAME..."
+
+          # Push empty commit to trigger CI via synchronize event
+          # This ensures workflows are properly associated with the PR
+          git commit --allow-empty -m "Trigger CI workflows"
+          git push origin "$BRANCH_NAME"
+
+          echo "✅ CI workflows triggered via synchronize event"

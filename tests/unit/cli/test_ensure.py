@@ -62,3 +62,53 @@ class TestEnsureNotNone:
         """Ensure.not_none returns False since False is not None."""
         result = Ensure.not_none(False, "Value is None")
         assert result is False
+
+
+class TestEnsureGtAuthenticated:
+    """Tests for Ensure.gt_authenticated method."""
+
+    def test_passes_when_gt_installed_and_authenticated(self) -> None:
+        """Ensure.gt_authenticated passes when gt is installed and authenticated."""
+        from unittest.mock import MagicMock, patch
+
+        # Mock shutil.which to return a path (gt is installed)
+        with patch("shutil.which", return_value="/usr/local/bin/gt"):
+            # Mock subprocess.run to return success (gt is authenticated)
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            with patch("subprocess.run", return_value=mock_result):
+                # Should not raise
+                Ensure.gt_authenticated()
+
+    def test_exits_when_gt_not_installed(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Ensure.gt_authenticated raises SystemExit when gt is not installed."""
+        from unittest.mock import patch
+
+        with patch("shutil.which", return_value=None):
+            with pytest.raises(SystemExit) as exc_info:
+                Ensure.gt_authenticated()
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err
+        assert "Graphite CLI (gt) is not installed" in captured.err
+        assert "graphite.dev/docs/install" in captured.err
+
+    def test_exits_when_gt_not_authenticated(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Ensure.gt_authenticated raises SystemExit when gt is not authenticated."""
+        from unittest.mock import MagicMock, patch
+
+        with patch("shutil.which", return_value="/usr/local/bin/gt"):
+            # Mock subprocess.run to return failure (gt is not authenticated)
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            with patch("subprocess.run", return_value=mock_result):
+                with pytest.raises(SystemExit) as exc_info:
+                    Ensure.gt_authenticated()
+                assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err
+        assert "Graphite CLI (gt) is not authenticated" in captured.err
+        assert "gt auth --token" in captured.err
+        assert "app.graphite.dev/activate" in captured.err

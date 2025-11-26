@@ -73,6 +73,14 @@ class GitHubPlanStore(PlanStore):
         if plan_body is None:
             plan_body = issue_info.body
 
+        # Validate plan has meaningful content
+        if not plan_body or not plan_body.strip():
+            msg = (
+                f"Plan content is empty for issue {plan_identifier}. "
+                "Ensure the issue body or first comment contains plan content."
+            )
+            raise RuntimeError(msg)
+
         return self._convert_to_plan(issue_info, plan_body)
 
     def list_plans(self, repo_root: Path, query: PlanQuery) -> list[Plan]:

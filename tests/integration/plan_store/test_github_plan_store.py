@@ -46,6 +46,7 @@ def test_get_plan_closed_state() -> None:
     issue = create_test_issue(
         number=100,
         title="Closed Issue",
+        body="Plan content for closed issue",
         state="CLOSED",
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -57,8 +58,12 @@ def test_get_plan_closed_state() -> None:
     assert result.state == PlanState.CLOSED
 
 
-def test_get_plan_empty_body() -> None:
-    """Test handling of empty body field."""
+def test_get_plan_empty_body_raises() -> None:
+    """Test that empty body raises clear error.
+
+    Changed from original behavior: empty plan content now raises
+    RuntimeError to prevent silent failures when plan extraction fails.
+    """
     issue = create_test_issue(
         number=50,
         title="Issue without body",
@@ -66,9 +71,8 @@ def test_get_plan_empty_body() -> None:
     fake_github = FakeGitHubIssues(issues={50: issue})
     store = GitHubPlanStore(fake_github)
 
-    result = store.get_plan(Path("/fake/repo"), "50")
-
-    assert result.body == ""
+    with pytest.raises(RuntimeError, match="Plan content is empty"):
+        store.get_plan(Path("/fake/repo"), "50")
 
 
 def test_get_plan_not_found() -> None:
@@ -231,6 +235,7 @@ def test_timestamp_parsing_with_z_suffix() -> None:
     issue = create_test_issue(
         number=1,
         title="Test",
+        body="Plan content for timestamp test",
         created_at=datetime(2024, 1, 15, 10, 30, 45, tzinfo=UTC),
         updated_at=datetime(2024, 1, 16, 14, 20, 30, tzinfo=UTC),
     )
@@ -249,6 +254,7 @@ def test_label_extraction() -> None:
     issue = create_test_issue(
         number=1,
         title="Test",
+        body="Plan content for label test",
         labels=["erk-plan", "erk-queue", "enhancement"],
     )
     fake_github = FakeGitHubIssues(issues={1: issue})
@@ -265,6 +271,7 @@ def test_assignee_extraction() -> None:
     issue = create_test_issue(
         number=1,
         title="Test",
+        body="Plan content for assignee test",
         assignees=["alice", "bob", "charlie"],
     )
     fake_github = FakeGitHubIssues(issues={1: issue})
@@ -281,6 +288,7 @@ def test_metadata_preserves_github_number() -> None:
     issue = create_test_issue(
         number=42,
         title="Test",
+        body="Plan content for metadata test",
     )
     fake_github = FakeGitHubIssues(issues={42: issue})
     store = GitHubPlanStore(fake_github)
@@ -403,3 +411,229 @@ def test_close_plan_not_found() -> None:
 
     with pytest.raises(RuntimeError, match="Issue #999 not found"):
         store.close_plan(Path("/fake/repo"), "999")
+
+
+# ============================================================================
+# Schema v2 tests (plan in comment, not issue body)
+# ============================================================================
+
+
+def test_get_plan_schema_v2_extracts_from_first_comment() -> None:
+    """Test schema v2: plan content is extracted from first comment.
+
+    Schema version 2 stores only metadata in issue body and the actual
+    plan content in the first comment wrapped with markers.
+    """
+    metadata_body = """<!-- erk:metadata-block:plan-header -->
+<details><summary>plan-header</summary>
+```yaml
+schema_version: '2'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    plan_comment = """<!-- erk:plan-content -->
+# Plan: Test Implementation
+
+## Step 1
+Implementation details here.
+
+## Step 2
+More details.
+<!-- /erk:plan-content -->"""
+
+    issue = create_test_issue(
+        number=42,
+        title="Plan: Test Implementation",
+        body=metadata_body,
+    )
+    fake_github = FakeGitHubIssues(
+        issues={42: issue},
+        comments={42: [plan_comment]},  # First comment contains plan
+    )
+    store = GitHubPlanStore(fake_github)
+
+    result = store.get_plan(Path("/fake/repo"), "42")
+
+    # Should extract plan from comment, NOT return issue body metadata
+    assert "# Plan: Test Implementation" in result.body
+    assert "## Step 1" in result.body
+    assert "## Step 2" in result.body
+    # Should NOT contain metadata block markers in body
+    assert "erk:metadata-block:plan-header" not in result.body
+
+
+def test_get_plan_schema_v2_multiline_comment_preserved() -> None:
+    """Test that multi-line plan content in comment is fully preserved.
+
+    This is the critical bug fix test. The bug was that multi-line comment
+    bodies were being split into separate "comments" by split("\\n"),
+    causing the regex to fail to find both start and end markers.
+    """
+    # Simulate a 299-line plan like Issue #1221
+    plan_lines = [
+        "<!-- erk:plan-content -->",
+        "# Plan: Fix GitHub Actions Plan Extraction Bug",
+        "",
+        "## Root Cause",
+        "The bug is in get_issue_comments() method.",
+        "",
+    ]
+    # Add more lines to simulate large plan
+    for i in range(1, 50):
+        plan_lines.append(f"## Phase {i}")
+        plan_lines.append(f"Implementation step {i} details.")
+        plan_lines.append("")
+    plan_lines.append("<!-- /erk:plan-content -->")
+
+    plan_comment = "\n".join(plan_lines)
+
+    issue = create_test_issue(
+        number=1221,
+        title="Plan: Fix GitHub Actions",
+        body="metadata only",
+    )
+    fake_github = FakeGitHubIssues(
+        issues={1221: issue},
+        comments={1221: [plan_comment]},
+    )
+    store = GitHubPlanStore(fake_github)
+
+    result = store.get_plan(Path("/fake/repo"), "1221")
+
+    # Plan should be fully extracted with all phases
+    assert "# Plan: Fix GitHub Actions Plan Extraction Bug" in result.body
+    assert "## Root Cause" in result.body
+    assert "## Phase 1" in result.body
+    assert "## Phase 49" in result.body
+    # Should NOT be the fallback metadata
+    assert result.body != "metadata only"
+
+
+def test_get_plan_schema_v2_fallback_to_body_without_comment() -> None:
+    """Test fallback to issue body when no comments have plan markers.
+
+    This maintains backward compatibility with schema v1 issues where
+    plan content was in the issue body directly.
+    """
+    plan_body = """# Plan: Old Style Plan
+
+## Step 1
+This is an old-style plan in the issue body."""
+
+    issue = create_test_issue(
+        number=100,
+        title="Plan: Old Style",
+        body=plan_body,
+    )
+    # No comments, or comments without plan markers
+    fake_github = FakeGitHubIssues(
+        issues={100: issue},
+        comments={100: ["A regular comment without markers"]},
+    )
+    store = GitHubPlanStore(fake_github)
+
+    result = store.get_plan(Path("/fake/repo"), "100")
+
+    # Should fallback to issue body
+    assert result.body == plan_body
+
+
+def test_get_plan_schema_v2_fallback_when_no_comments() -> None:
+    """Test fallback to issue body when issue has no comments."""
+    plan_body = """# Plan: No Comments
+
+This plan has no comments at all."""
+
+    issue = create_test_issue(
+        number=200,
+        title="Plan: No Comments",
+        body=plan_body,
+    )
+    fake_github = FakeGitHubIssues(
+        issues={200: issue},
+        comments={},  # No comments
+    )
+    store = GitHubPlanStore(fake_github)
+
+    result = store.get_plan(Path("/fake/repo"), "200")
+
+    # Should fallback to issue body
+    assert result.body == plan_body
+
+
+# ============================================================================
+# Empty plan validation tests
+# ============================================================================
+
+
+def test_get_plan_empty_body_raises_error() -> None:
+    """Test that empty plan content raises clear error.
+
+    When plan extraction fails and fallback to issue body also results
+    in empty content, we should raise a clear error rather than silently
+    returning an empty plan.
+    """
+    issue = create_test_issue(
+        number=300,
+        title="Plan: Empty Content",
+        body="",  # Empty body
+    )
+    fake_github = FakeGitHubIssues(
+        issues={300: issue},
+        comments={},  # No comments
+    )
+    store = GitHubPlanStore(fake_github)
+
+    with pytest.raises(RuntimeError, match="Plan content is empty"):
+        store.get_plan(Path("/fake/repo"), "300")
+
+
+def test_get_plan_whitespace_only_body_raises_error() -> None:
+    """Test that whitespace-only plan content raises clear error."""
+    issue = create_test_issue(
+        number=301,
+        title="Plan: Whitespace Only",
+        body="   \n\n  \t  ",  # Only whitespace
+    )
+    fake_github = FakeGitHubIssues(
+        issues={301: issue},
+        comments={},
+    )
+    store = GitHubPlanStore(fake_github)
+
+    with pytest.raises(RuntimeError, match="Plan content is empty"):
+        store.get_plan(Path("/fake/repo"), "301")
+
+
+def test_get_plan_metadata_only_body_raises_error() -> None:
+    """Test that metadata-only body (schema v2 without plan comment) raises error.
+
+    This is the specific case from Issue #1221 where the extraction bug
+    caused fallback to issue body which only contained metadata.
+    """
+    metadata_body = """<!-- erk:metadata-block:plan-header -->
+<details><summary>plan-header</summary>
+```yaml
+schema_version: '2'
+```
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    issue = create_test_issue(
+        number=302,
+        title="Plan: Metadata Only",
+        body=metadata_body,
+    )
+    # Comment exists but without plan markers, so extraction returns None
+    # and we fall back to metadata-only body
+    fake_github = FakeGitHubIssues(
+        issues={302: issue},
+        comments={302: ["A regular comment without plan markers"]},
+    )
+    store = GitHubPlanStore(fake_github)
+
+    # Should NOT raise error - the metadata body is not empty
+    # (It's valid to have plan content in the issue body for schema v1)
+    result = store.get_plan(Path("/fake/repo"), "302")
+    assert result.body == metadata_body

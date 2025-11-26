@@ -137,7 +137,7 @@ def test_ls_command_plan_filters_work() -> None:
 
 
 def test_top_level_get_command_works() -> None:
-    """Test that top-level 'erk get' command works."""
+    """Test that 'erk plan get' command works."""
     # Arrange
     issue1 = Plan(
         plan_identifier="123",
@@ -157,8 +157,8 @@ def test_top_level_get_command_works() -> None:
         store = FakePlanStore(plans={"123": issue1})
         ctx = build_workspace_test_context(env, plan_store=store)
 
-        # Act - Use top-level get command
-        result = runner.invoke(cli, ["get", "123"], obj=ctx)
+        # Act - Use plan get command
+        result = runner.invoke(cli, ["plan", "get", "123"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -168,7 +168,7 @@ def test_top_level_get_command_works() -> None:
 
 
 def test_top_level_close_command_works() -> None:
-    """Test that top-level 'erk close' command works."""
+    """Test that 'erk plan close' command works."""
     # Arrange
     issue1 = Plan(
         plan_identifier="456",
@@ -188,8 +188,8 @@ def test_top_level_close_command_works() -> None:
         store = FakePlanStore(plans={"456": issue1})
         ctx = build_workspace_test_context(env, plan_store=store)
 
-        # Act - Use top-level close command
-        result = runner.invoke(cli, ["close", "456"], obj=ctx)
+        # Act - Use plan close command
+        result = runner.invoke(cli, ["plan", "close", "456"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -197,7 +197,7 @@ def test_top_level_close_command_works() -> None:
 
 
 def test_top_level_retry_command_works() -> None:
-    """Test that top-level 'erk retry' command works."""
+    """Test that 'erk plan retry' command works."""
     # Arrange
     issue1 = Plan(
         plan_identifier="789",
@@ -217,8 +217,8 @@ def test_top_level_retry_command_works() -> None:
         store = FakePlanStore(plans={"789": issue1})
         ctx = build_workspace_test_context(env, plan_store=store)
 
-        # Act - Use top-level retry command
-        result = runner.invoke(cli, ["retry", "789"], obj=ctx)
+        # Act - Use plan retry command
+        result = runner.invoke(cli, ["plan", "retry", "789"], obj=ctx)
 
         # Assert - Verify command executed (exit code 0 or specific behavior)
         # The retry command may have different success criteria

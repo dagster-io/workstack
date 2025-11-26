@@ -36,7 +36,7 @@ def test_retry_success_first_time() -> None:
         ctx = build_workspace_test_context(env, issues=github_issues)
 
         # Act
-        result = runner.invoke(cli, ["retry", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "retry", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -101,7 +101,7 @@ def test_retry_success_subsequent() -> None:
         ctx = build_workspace_test_context(env, issues=github_issues)
 
         # Act
-        result = runner.invoke(cli, ["retry", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "retry", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -141,7 +141,7 @@ def test_retry_error_closed_issue() -> None:
         ctx = build_workspace_test_context(env, issues=github_issues)
 
         # Act
-        result = runner.invoke(cli, ["retry", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "retry", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1
@@ -173,7 +173,7 @@ def test_retry_error_missing_plan_label() -> None:
         ctx = build_workspace_test_context(env, issues=github_issues)
 
         # Act
-        result = runner.invoke(cli, ["retry", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "retry", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1
@@ -193,7 +193,7 @@ def test_retry_error_issue_not_found() -> None:
         ctx = build_workspace_test_context(env, issues=github_issues)
 
         # Act
-        result = runner.invoke(cli, ["retry", "999"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "retry", "999"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1
@@ -224,7 +224,7 @@ def test_retry_with_github_url() -> None:
         # Act: Use GitHub URL instead of number
         result = runner.invoke(
             cli,
-            ["retry", "https://github.com/owner/repo/issues/42"],
+            ["plan", "retry", "https://github.com/owner/repo/issues/42"],
             obj=ctx,
         )
 
@@ -246,7 +246,7 @@ def test_retry_with_invalid_url() -> None:
         # Act: Use invalid URL
         result = runner.invoke(
             cli,
-            ["retry", "https://example.com/invalid"],
+            ["plan", "retry", "https://example.com/invalid"],
             obj=ctx,
         )
 

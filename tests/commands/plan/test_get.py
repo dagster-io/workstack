@@ -33,7 +33,7 @@ def test_get_plan_displays_issue() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["get", "42"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "get", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -55,7 +55,7 @@ def test_get_plan_not_found() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["get", "999"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "get", "999"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1
@@ -85,7 +85,7 @@ def test_get_plan_minimal_fields() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["get", "1"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "get", "1"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -115,7 +115,7 @@ def test_get_plan_string_identifier() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(cli, ["get", "PROJ-123"], obj=ctx)
+        result = runner.invoke(cli, ["plan", "get", "PROJ-123"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0

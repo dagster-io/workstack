@@ -8,12 +8,9 @@ from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.ls import ls_cmd
-from erk.cli.commands.plan.close_cmd import close_plan
+from erk.cli.commands.plan import plan_group
 from erk.cli.commands.plan.create_cmd import create_plan
-from erk.cli.commands.plan.get import get_plan
 from erk.cli.commands.plan.list_cmd import list_plans
-from erk.cli.commands.plan.log_cmd import plan_log
-from erk.cli.commands.plan.retry_cmd import retry_plan
 from erk.cli.commands.pr import pr_group
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from erk.cli.commands.runs import runs_cmd
@@ -43,19 +40,16 @@ def cli(ctx: click.Context) -> None:
 cli.add_command(admin_group)
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias
-cli.add_command(close_plan, name="close")  # Plan command
 cli.add_command(completion_group)
 cli.add_command(config_group)
 cli.add_command(create_plan, name="create")  # Plan command
 cli.add_command(down_cmd)
-cli.add_command(get_plan, name="get")  # Plan command
 cli.add_command(implement)
 cli.add_command(init_cmd)
-cli.add_command(list_plans, name="list")  # Plan command
-cli.add_command(plan_log, name="log")  # Plan command
+cli.add_command(list_plans, name="list")  # Plan command (top-level)
 cli.add_command(ls_cmd)  # List plans
+cli.add_command(plan_group)
 cli.add_command(pr_group)
-cli.add_command(retry_plan, name="retry")  # Plan command
 cli.add_command(runs_cmd)
 cli.add_command(stack_group)
 cli.add_command(status_cmd)

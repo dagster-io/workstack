@@ -54,18 +54,16 @@ def create_plan(
     if file is not None:
         # Use file input
         Ensure.path_exists(ctx, file, f"File not found: {file}")
-        try:
-            content = file.read_text(encoding="utf-8")
-        except OSError as e:
-            user_output(click.style("Error: ", fg="red") + f"Failed to read file: {e}")
-            raise SystemExit(1) from e
+        content = Ensure.file_operation(
+            lambda: file.read_text(encoding="utf-8"),
+            "Failed to read file"
+        )
     elif not sys.stdin.isatty():
         # Use stdin input (piped data)
-        try:
-            content = sys.stdin.read()
-        except OSError as e:
-            user_output(click.style("Error: ", fg="red") + f"Failed to read stdin: {e}")
-            raise SystemExit(1) from e
+        content = Ensure.file_operation(
+            lambda: sys.stdin.read(),
+            "Failed to read stdin"
+        )
     else:
         # No input provided
         Ensure.invariant(False, "No input provided. Use --file or pipe content to stdin.")
@@ -86,16 +84,15 @@ def create_plan(
     worktree_name = sanitize_worktree_name(title)
 
     # Ensure erk-plan label exists
-    try:
-        ctx.issues.ensure_label_exists(
+    Ensure.integration_call(
+        lambda: ctx.issues.ensure_label_exists(
             repo_root,
             label="erk-plan",
             description="Implementation plan tracked by erk",
             color="0E8A16",  # Green
-        )
-    except RuntimeError as e:
-        user_output(click.style("Error: ", fg="red") + f"Failed to ensure label exists: {e}")
-        raise SystemExit(1) from e
+        ),
+        "Failed to ensure label exists"
+    )
 
     # Build labels list: erk-plan + additional labels
     labels = ["erk-plan"] + list(label)
@@ -116,16 +113,15 @@ def create_plan(
     )
 
     # Create the issue
-    try:
-        result = ctx.issues.create_issue(
+    result = Ensure.integration_call(
+        lambda: ctx.issues.create_issue(
             repo_root=repo_root,
             title=title,
             body=issue_body,
             labels=labels,
-        )
-    except RuntimeError as e:
-        user_output(click.style("Error: ", fg="red") + f"Failed to create issue: {e}")
-        raise SystemExit(1) from e
+        ),
+        "Failed to create issue"
+    )
 
     # Add plan content as first comment (Schema V2 format)
     try:

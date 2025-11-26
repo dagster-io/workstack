@@ -11,11 +11,12 @@ Domain-Specific Methods:
 - File/path validations (readable, writable, not hidden)
 - String/collection validations (non-empty, non-null)
 - External tool validations (gh CLI installed)
+- Exception boundaries (integration calls, file I/O)
 """
 
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import click
 from erk_shared.output.output import user_output
@@ -359,3 +360,100 @@ class Ensure:
                 + "Then authenticate with: gh auth login"
             )
             raise SystemExit(1)
+
+    @staticmethod
+    def succeeds[T](
+        operation: Callable[[], T],
+        error_message: str,
+        *,
+        exception_type: type[Exception] = RuntimeError,
+    ) -> T:
+        """Execute operation and ensure it succeeds, otherwise output styled error and exit.
+
+        This method provides a generic exception boundary for operations that cannot be
+        validated beforehand (network calls, subprocess execution, integration layer calls).
+
+        Args:
+            operation: Callable that performs the operation
+            error_message: Error message to display if operation fails.
+                          "Error: " prefix will be added automatically in red.
+                          The original exception message will be appended.
+            exception_type: Type of exception to catch (default: RuntimeError)
+
+        Returns:
+            The result of the operation if successful (with type T preserved)
+
+        Raises:
+            SystemExit: If operation raises the specified exception type
+
+        Example:
+            >>> result = Ensure.succeeds(
+            >>>     lambda: some_operation(),
+            >>>     "Operation failed",
+            >>>     exception_type=OSError
+            >>> )
+        """
+        try:
+            return operation()
+        except exception_type as e:
+            user_output(click.style("Error: ", fg="red") + f"{error_message}: {e}")
+            raise SystemExit(1) from e
+
+    @staticmethod
+    def integration_call[T](
+        operation: Callable[[], T],
+        error_message: str,
+    ) -> T:
+        """Execute integration layer operation, converting RuntimeError to user-friendly exit.
+
+        This is a specialized version of succeeds() for integration layer calls that
+        raise RuntimeError. Integration layer uses RuntimeError to signal business logic
+        failures (e.g., GitHub API errors, git command failures).
+
+        Args:
+            operation: Callable that performs the integration operation
+            error_message: Error message prefix. The exception's message will be appended.
+                          "Error: " prefix will be added automatically in red.
+
+        Returns:
+            The result of the operation if successful (with type T preserved)
+
+        Raises:
+            SystemExit: If operation raises RuntimeError
+
+        Example:
+            >>> issue = Ensure.integration_call(
+            >>>     lambda: ctx.issues.get_issue(repo_root, issue_number),
+            >>>     "Failed to fetch issue"
+            >>> )
+        """
+        return Ensure.succeeds(operation, error_message, exception_type=RuntimeError)
+
+    @staticmethod
+    def file_operation[T](
+        operation: Callable[[], T],
+        error_message: str,
+    ) -> T:
+        """Execute file I/O operation, converting OSError to user-friendly exit.
+
+        This is a specialized version of succeeds() for file operations that
+        raise OSError (read, write, filesystem operations).
+
+        Args:
+            operation: Callable that performs the file operation
+            error_message: Error message prefix. The exception's message will be appended.
+                          "Error: " prefix will be added automatically in red.
+
+        Returns:
+            The result of the operation if successful (with type T preserved)
+
+        Raises:
+            SystemExit: If operation raises OSError
+
+        Example:
+            >>> content = Ensure.file_operation(
+            >>>     lambda: file.read_text(encoding="utf-8"),
+            >>>     "Failed to read file"
+            >>> )
+        """
+        return Ensure.succeeds(operation, error_message, exception_type=OSError)

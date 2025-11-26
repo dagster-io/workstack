@@ -62,3 +62,108 @@ class TestEnsureNotNone:
         """Ensure.not_none returns False since False is not None."""
         result = Ensure.not_none(False, "Value is None")
         assert result is False
+
+
+class TestEnsureSucceeds:
+    """Tests for Ensure.succeeds method."""
+
+    def test_returns_value_on_success(self) -> None:
+        """Ensure.succeeds returns operation result when no exception."""
+        result = Ensure.succeeds(lambda: "success", "Should not fail")
+        assert result == "success"
+
+    def test_preserves_return_type(self) -> None:
+        """Ensure.succeeds preserves operation return type."""
+        result: int = Ensure.succeeds(lambda: 42, "Should not fail")
+        assert result == 42
+
+    def test_exits_on_exception(self) -> None:
+        """Ensure.succeeds raises SystemExit when operation raises exception."""
+        def failing_operation() -> str:
+            raise RuntimeError("Network error")
+
+        with pytest.raises(SystemExit) as exc_info:
+            Ensure.succeeds(failing_operation, "Failed to connect")
+        assert exc_info.value.code == 1
+
+    def test_custom_exception_type(self) -> None:
+        """Ensure.succeeds catches specified exception type."""
+        def failing_operation() -> str:
+            raise OSError("File not found")
+
+        with pytest.raises(SystemExit):
+            Ensure.succeeds(failing_operation, "I/O failed", exception_type=OSError)
+
+    def test_does_not_catch_other_exceptions(self) -> None:
+        """Ensure.succeeds does not catch exceptions of different type."""
+        def failing_operation() -> str:
+            raise ValueError("Wrong type")
+
+        # ValueError should propagate, not be caught
+        with pytest.raises(ValueError):
+            Ensure.succeeds(failing_operation, "Failed", exception_type=RuntimeError)
+
+    def test_error_message_format(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Ensure.succeeds outputs error with red Error prefix."""
+        def failing_operation() -> str:
+            raise RuntimeError("API timeout")
+
+        with pytest.raises(SystemExit):
+            Ensure.succeeds(failing_operation, "API call failed")
+
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err
+        assert "API call failed" in captured.err
+        assert "API timeout" in captured.err
+
+    def test_preserves_exception_chain(self) -> None:
+        """Ensure.succeeds maintains exception chain with from e."""
+        def failing_operation() -> str:
+            raise RuntimeError("Original error")
+
+        with pytest.raises(SystemExit) as exc_info:
+            Ensure.succeeds(failing_operation, "Operation failed")
+
+        # Verify exception chaining
+        assert exc_info.value.__cause__.__class__.__name__ == "RuntimeError"
+        assert str(exc_info.value.__cause__) == "Original error"
+
+
+class TestEnsureIntegrationCall:
+    """Tests for Ensure.integration_call convenience method."""
+
+    def test_returns_value_on_success(self) -> None:
+        """Ensure.integration_call returns result on success."""
+        result = Ensure.integration_call(
+            lambda: {"key": "value"},
+            "Should not fail"
+        )
+        assert result == {"key": "value"}
+
+    def test_catches_runtime_error(self) -> None:
+        """Ensure.integration_call catches RuntimeError from integration layer."""
+        def failing_operation() -> str:
+            raise RuntimeError("API error")
+
+        with pytest.raises(SystemExit):
+            Ensure.integration_call(failing_operation, "Integration failed")
+
+
+class TestEnsureFileOperation:
+    """Tests for Ensure.file_operation convenience method."""
+
+    def test_returns_value_on_success(self) -> None:
+        """Ensure.file_operation returns result on success."""
+        result = Ensure.file_operation(
+            lambda: "file content",
+            "Should not fail"
+        )
+        assert result == "file content"
+
+    def test_catches_os_error(self) -> None:
+        """Ensure.file_operation catches OSError from file operations."""
+        def failing_operation() -> str:
+            raise OSError("Permission denied")
+
+        with pytest.raises(SystemExit):
+            Ensure.file_operation(failing_operation, "File read failed")

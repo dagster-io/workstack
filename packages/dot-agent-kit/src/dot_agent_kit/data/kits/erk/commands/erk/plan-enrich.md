@@ -76,33 +76,7 @@ You are executing the `/erk:plan-enrich` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
-Check that prerequisites are met:
-
-```bash
-# Verify we're in a git repository
-git rev-parse --is-inside-work-tree
-
-# Verify GitHub CLI is authenticated
-gh auth status
-```
-
-**Error handling:**
-
-If `git rev-parse` fails:
-
-```
-❌ Error: Not in a git repository
-
-This command must be run from within a git repository.
-```
-
-If `gh auth status` fails:
-
-```
-❌ Error: GitHub CLI not authenticated
-
-Run: gh auth login
-```
+@../../docs/erk/includes/planning/validate-prerequisites.md
 
 ### Step 2: Validate Issue Number Argument
 
@@ -196,14 +170,7 @@ Use the Task tool to launch the specialized agent with the fetched plan content:
 3. Extracts semantic understanding (8 categories) from plan content
 4. Returns enriched markdown output
 
-**Agent tool restrictions (enforced in YAML):**
-
-- ✅ Read - Can read files
-- ✅ Bash - Can run git/kit CLI (read-only)
-- ✅ AskUserQuestion - Can clarify ambiguities
-- ❌ Edit - NO access to file editing
-- ❌ Write - NO access to file writing
-- ❌ Task - NO access to subagents
+@../../docs/erk/includes/planning/plan-extractor-agent-restrictions.md
 
 ### Step 5: Present Enriched Plan via ExitPlanMode
 

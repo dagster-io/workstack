@@ -85,74 +85,11 @@ You are executing the `/erk:session-plan-enrich` command. Follow these steps car
 
 ### Step 1: Validate Prerequisites
 
-Check that prerequisites are met:
-
-```bash
-# Verify we're in a git repository
-git rev-parse --is-inside-work-tree
-
-# Verify GitHub CLI is authenticated
-gh auth status
-```
-
-**Error handling:**
-
-If `git rev-parse` fails:
-
-```
-❌ Error: Not in a git repository
-
-This command must be run from within a git repository.
-```
-
-If `gh auth status` fails:
-
-```
-❌ Error: GitHub CLI not authenticated
-
-Run: gh auth login
-```
+@../../docs/erk/includes/planning/validate-prerequisites.md
 
 ### Step 2: Extract Plan from Session Logs
 
-Use kit CLI to extract the plan from session logs:
-
-```bash
-# Extract plan using kit CLI
-plan_result=$(dot-agent run erk save-plan-from-session --extract-only --format json 2>&1)
-```
-
-**Parse the result:**
-
-```bash
-# Check if extraction succeeded
-if echo "$plan_result" | jq -e '.success' > /dev/null 2>&1; then
-    # SUCCESS: Extract plan content and title
-    plan_content=$(echo "$plan_result" | jq -r '.plan_content')
-    plan_title=$(echo "$plan_result" | jq -r '.title')
-else
-    # FAILURE: Report error
-    error_msg=$(echo "$plan_result" | jq -r '.error // "Unknown error"')
-    echo "❌ Error: Failed to extract plan from session logs"
-    echo "Details: $error_msg"
-fi
-```
-
-**Error handling:**
-
-If no plan found:
-
-```
-❌ Error: No plan found in session logs
-
-This command requires a plan created with ExitPlanMode. To fix:
-
-1. Create a plan (enter Plan mode if needed)
-2. Exit Plan mode using the ExitPlanMode tool
-3. Run this command again
-
-The plan will be extracted from session logs automatically.
-```
+@../../docs/erk/includes/planning/extract-plan-from-session.md
 
 ### Step 3: Launch Plan-Extractor Agent (Enriched Mode)
 
@@ -175,14 +112,7 @@ Use the Task tool to launch the specialized agent with the extracted plan:
 4. Extracts semantic understanding (8 categories) from conversation
 5. Returns enriched markdown output
 
-**Agent tool restrictions (enforced in YAML):**
-
-- ✅ Read - Can read conversation and files
-- ✅ Bash - Can run git/kit CLI (read-only)
-- ✅ AskUserQuestion - Can clarify ambiguities
-- ❌ Edit - NO access to file editing
-- ❌ Write - NO access to file writing
-- ❌ Task - NO access to subagents
+@../../docs/erk/includes/planning/plan-extractor-agent-restrictions.md
 
 ### Step 4: Present Enriched Plan via ExitPlanMode
 

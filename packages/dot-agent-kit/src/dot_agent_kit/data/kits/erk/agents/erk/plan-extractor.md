@@ -435,7 +435,7 @@ Combine plan content, applied guidance, clarifications, and context into structu
 
 For complete enrichment guidance, reference:
 
-@packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/enrichment-process.md
+@packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/includes/enrichment-process.md
 
 This document contains the full enrichment workflow including:
 

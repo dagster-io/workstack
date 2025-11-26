@@ -57,28 +57,6 @@ invocation = "dot-agent kit-command dignified-python version-aware-reminder-hook
 description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30
 
-[kits.erk]
-kit_id = "erk"
-source_type = "bundled"
-version = "0.3.1"
-artifacts = [
-    ".claude/commands/erk/plan-save.md",
-    ".claude/commands/erk/plan-save-raw.md",
-    ".claude/commands/erk/plan-implement.md",
-    ".claude/commands/erk/merge-conflicts-fix.md",
-    ".claude/commands/erk/plan-submit.md",
-    ".claude/agents/erk/issue-wt-creator.md",
-    ".claude/docs/erk/EXAMPLES.md",
-]
-
-[[kits.erk.hooks]]
-id = "session-id-injector-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*"
-invocation = "dot-agent kit-command erk session-id-injector-hook"
-description = "Injects session ID into context when /erk:plan-save is invoked"
-timeout = 30
-
 [kits.gt]
 kit_id = "gt"
 source_type = "bundled"
@@ -91,3 +69,32 @@ artifacts = [
     ".claude/skills/gt-graphite/SKILL.md",
     ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
+
+[kits.erk]
+kit_id = "erk"
+source_type = "bundled"
+version = "0.3.1"
+artifacts = [
+    ".claude/commands/erk/plan-save.md",
+    ".claude/commands/erk/plan-save-raw.md",
+    ".claude/commands/erk/plan-implement.md",
+    ".claude/commands/erk/merge-conflicts-fix.md",
+    ".claude/commands/erk/plan-submit.md",
+    ".claude/agents/erk/issue-wt-creator.md",
+    ".claude/docs/erk/EXAMPLES.md",
+    ".claude/docs/erk/includes/create-github-issue.md",
+    ".claude/docs/erk/includes/enrichment-process.md",
+    ".claude/docs/erk/includes/session-file-location.md",
+    ".claude/docs/erk/includes/success-output-format.md",
+    ".claude/docs/erk/includes/validate-git-repository.md",
+    ".claude/docs/erk/includes/validate-github-cli.md",
+    ".claude/docs/erk/includes/validate-plan-structure.md",
+]
+
+[[kits.erk.hooks]]
+id = "session-id-injector-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*"
+invocation = "dot-agent kit-command erk session-id-injector-hook"
+description = "Injects session ID into context when /erk:plan-save is invoked"
+timeout = 30

@@ -19,6 +19,7 @@ from erk_shared.output.output import user_output
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.ensure import Ensure
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
@@ -606,10 +607,10 @@ def create_wt(
     # Handle --from-current-branch flag
     if from_current_branch:
         # Get the current branch
-        current_branch = ctx.git.get_current_branch(ctx.cwd)
-        if current_branch is None:
-            user_output("Error: HEAD is detached (not on a branch)")
-            raise SystemExit(1)
+        current_branch = Ensure.not_none(
+            ctx.git.get_current_branch(ctx.cwd),
+            "HEAD is detached (not on a branch)"
+        )
 
         # Set branch to current branch and derive name if not provided
         if branch:
@@ -759,10 +760,10 @@ def create_wt(
     # Handle from-current-branch logic: switch current worktree first
     to_branch = None
     if from_current_branch:
-        current_branch = ctx.git.get_current_branch(ctx.cwd)
-        if current_branch is None:
-            user_output("Error: Unable to determine current branch")
-            raise SystemExit(1)
+        current_branch = Ensure.not_none(
+            ctx.git.get_current_branch(ctx.cwd),
+            "Unable to determine current branch"
+        )
 
         # Determine preferred branch to checkout (prioritize Graphite parent)
         parent_branch = (

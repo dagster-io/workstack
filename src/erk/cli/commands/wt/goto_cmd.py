@@ -5,6 +5,7 @@ from erk_shared.output.output import user_output
 
 from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.commands.navigation_helpers import activate_root_repo, activate_worktree
+from erk.cli.ensure import Ensure
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 
@@ -78,9 +79,10 @@ def goto_wt(ctx: ErkContext, worktree_name: str, script: bool) -> None:
             target_worktree = wt
             break
 
-    if target_worktree is None:
-        user_output(f"Error: Worktree '{worktree_name}' not found in git worktree list")
-        raise SystemExit(1)
+    target_worktree = Ensure.not_none(
+        target_worktree,
+        f"Worktree '{worktree_name}' not found in git worktree list"
+    )
 
     # Show worktree and branch info (only in non-script mode)
     if not script:

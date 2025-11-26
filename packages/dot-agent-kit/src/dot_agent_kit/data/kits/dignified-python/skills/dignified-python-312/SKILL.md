@@ -7,12 +7,7 @@ description: This skill should be used when editing Python code in the erk codeb
 
 ## Core Knowledge (ALWAYS Loaded)
 
-@.claude/docs/dignified-python/core-essentials.md
-@.claude/docs/dignified-python/routing-patterns.md
-@.claude/docs/dignified-python/exception-handling.md
-@.claude/docs/dignified-python/path-operations.md
-@.claude/docs/dignified-python/imports.md
-@.claude/docs/dignified-python/dependency-injection.md
+@.claude/docs/dignified-python/dignified-python-core.md
 @.claude/docs/dignified-python/version-specific/312/type-annotations.md
 
 ## Version-Specific Checklist
@@ -29,7 +24,7 @@ Use the routing index in @routing-patterns.md to determine which additional file
 ## Comprehensive Reference (If Needed)
 
 If unsure which specific file to load, or need full overview:
-.claude/docs/dignified-python/core-standards-universal.md
+.claude/docs/dignified-python/dignified-python-core.md
 
 **For code reviews:** See `.claude/docs/code-review/` for code smell patterns and refactoring guidance (not auto-loaded).
 

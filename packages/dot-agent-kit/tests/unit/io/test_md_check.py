@@ -365,3 +365,40 @@ def test_check_reports_file_and_fragment_errors(tmp_path: Path) -> None:
     # Both errors should be reported
     assert "File not found" in result.output
     assert "Fragment not found" in result.output
+
+
+def test_check_excludes_kit_source_directories(tmp_path: Path) -> None:
+    """Test that kit source directories are excluded from link validation."""
+    # Create a git repo
+    (tmp_path / ".git").mkdir()
+
+    # Create kit source directory structure (should be excluded)
+    kit_src_dir = tmp_path / "packages" / "my-kit" / "src" / "my_kit" / "data" / "kits" / "skill1"
+    kit_src_dir.mkdir(parents=True)
+
+    # Create .claude directory in kit source (simulating installed kit structure)
+    kit_claude_dir = kit_src_dir / ".claude" / "skills"
+    kit_claude_dir.mkdir(parents=True)
+
+    # This file has a broken reference, but should NOT be checked since it's in kit source
+    (kit_claude_dir / "test.md").write_text("@.claude/docs/nonexistent.md", encoding="utf-8")
+
+    # Create valid AGENTS.md + CLAUDE.md pair
+    (tmp_path / "AGENTS.md").write_text("# Standards", encoding="utf-8")
+    (tmp_path / "CLAUDE.md").write_text("@AGENTS.md", encoding="utf-8")
+
+    # Mock git rev-parse to return tmp_path
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["git", "rev-parse", "--show-toplevel"],
+            returncode=0,
+            stdout=str(tmp_path),
+            stderr="",
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["md", "check", "--check-links"])
+
+    # Should pass because the kit source file is excluded
+    assert result.exit_code == 0
+    assert "✓ AGENTS.md standard: PASSED" in result.output

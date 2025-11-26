@@ -17,6 +17,28 @@ from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io.link_validation import BrokenLink, validate_links_in_file
 
 
+def _is_kit_source_file(file_path: Path) -> bool:
+    """Check if a file is in a kit source directory.
+
+    Kit source files are in packages/*/src/*/data/kits/ and have @ references
+    relative to their installed location (.claude/), not their source location.
+    These should be excluded from validation.
+
+    Args:
+        file_path: Path to check
+
+    Returns:
+        True if the file is in a kit source directory
+    """
+    parts = file_path.parts
+    # Look for pattern: packages/*/src/*/data/kits/
+    for i, part in enumerate(parts):
+        if part == "packages" and i + 5 < len(parts):
+            if parts[i + 2] == "src" and parts[i + 4] == "data" and parts[i + 5] == "kits":
+                return True
+    return False
+
+
 def _discover_markdown_files(repo_root: Path) -> list[Path]:
     """Discover all markdown files to check for @ references.
 
@@ -24,6 +46,10 @@ def _discover_markdown_files(repo_root: Path) -> list[Path]:
     - All CLAUDE.md files in the repository
     - All .md files in .claude/ directories
     - All .md files in .agent/ directories
+
+    Excludes:
+    - Kit source files (packages/*/src/*/data/kits/) since they have
+      @ references relative to their installed location, not source location
 
     Args:
         repo_root: Repository root path
@@ -35,19 +61,22 @@ def _discover_markdown_files(repo_root: Path) -> list[Path]:
 
     # All CLAUDE.md files
     for claude_file in repo_root.rglob("CLAUDE.md"):
-        files.add(claude_file)
+        if not _is_kit_source_file(claude_file):
+            files.add(claude_file)
 
     # All .md files in .claude/ directories
     for claude_dir in repo_root.rglob(".claude"):
         if claude_dir.is_dir():
             for md_file in claude_dir.rglob("*.md"):
-                files.add(md_file)
+                if not _is_kit_source_file(md_file):
+                    files.add(md_file)
 
     # All .md files in .agent/ directories
     for agent_dir in repo_root.rglob(".agent"):
         if agent_dir.is_dir():
             for md_file in agent_dir.rglob("*.md"):
-                files.add(md_file)
+                if not _is_kit_source_file(md_file):
+                    files.add(md_file)
 
     return sorted(files)
 

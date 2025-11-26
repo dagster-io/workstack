@@ -227,6 +227,82 @@ class TestValidateAtReference:
         broken = validate_at_reference(ref, source, tmp_path)
         assert broken == []
 
+    def test_claude_dir_path_resolved_from_repo_root(self, tmp_path: Path) -> None:
+        """Test paths starting with .claude/ are resolved from repo root."""
+        # Create nested directory structure
+        nested_dir = tmp_path / ".claude" / "skills" / "my-skill"
+        nested_dir.mkdir(parents=True)
+
+        # Create source file in nested directory
+        source = nested_dir / "SKILL.md"
+        source.write_text("@.claude/docs/guide.md", encoding="utf-8")
+
+        # Create target file at repo root's .claude/docs/
+        docs_dir = tmp_path / ".claude" / "docs"
+        docs_dir.mkdir(parents=True)
+        target = docs_dir / "guide.md"
+        target.write_text("# Guide", encoding="utf-8")
+
+        ref = AtReference(
+            raw_text="@.claude/docs/guide.md",
+            file_path=".claude/docs/guide.md",
+            fragment=None,
+            line_number=1,
+        )
+
+        # Should find the file at repo_root/.claude/docs/guide.md
+        # NOT at repo_root/.claude/skills/my-skill/.claude/docs/guide.md
+        broken = validate_at_reference(ref, source, tmp_path)
+        assert broken == []
+
+    def test_agent_dir_path_resolved_from_repo_root(self, tmp_path: Path) -> None:
+        """Test paths starting with .agent/ are resolved from repo root."""
+        # Create nested directory structure
+        nested_dir = tmp_path / ".agent" / "kits" / "my-kit"
+        nested_dir.mkdir(parents=True)
+
+        # Create source file in nested directory
+        source = nested_dir / "config.md"
+        source.write_text("@.agent/docs/readme.md", encoding="utf-8")
+
+        # Create target file at repo root's .agent/docs/
+        docs_dir = tmp_path / ".agent" / "docs"
+        docs_dir.mkdir(parents=True)
+        target = docs_dir / "readme.md"
+        target.write_text("# Readme", encoding="utf-8")
+
+        ref = AtReference(
+            raw_text="@.agent/docs/readme.md",
+            file_path=".agent/docs/readme.md",
+            fragment=None,
+            line_number=1,
+        )
+
+        # Should find the file at repo_root/.agent/docs/readme.md
+        broken = validate_at_reference(ref, source, tmp_path)
+        assert broken == []
+
+    def test_claude_dir_path_missing_file_reports_error(self, tmp_path: Path) -> None:
+        """Test missing .claude/ path is reported as error."""
+        # Create nested directory structure
+        nested_dir = tmp_path / ".claude" / "skills" / "my-skill"
+        nested_dir.mkdir(parents=True)
+
+        # Create source file
+        source = nested_dir / "SKILL.md"
+        source.write_text("@.claude/docs/nonexistent.md", encoding="utf-8")
+
+        ref = AtReference(
+            raw_text="@.claude/docs/nonexistent.md",
+            file_path=".claude/docs/nonexistent.md",
+            fragment=None,
+            line_number=1,
+        )
+
+        broken = validate_at_reference(ref, source, tmp_path)
+        assert len(broken) == 1
+        assert broken[0].error_type == "missing_file"
+
 
 class TestValidateLinksInFile:
     """Tests for validate_links_in_file function."""

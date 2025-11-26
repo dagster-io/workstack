@@ -12,10 +12,12 @@ artifacts:
     - commands/erk/plan-submit.md
   agent:
     - agents/erk/issue-wt-creator.md
+    - agents/erk/plan-extractor.md
   doc:
     - docs/erk/EXAMPLES.md
     - docs/erk/includes/create-github-issue.md
     - docs/erk/includes/enrichment-process.md
+    - docs/erk/includes/save-plan-workflow.md
     - docs/erk/includes/session-file-location.md
     - docs/erk/includes/success-output-format.md
     - docs/erk/includes/validate-git-repository.md

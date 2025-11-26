@@ -19,7 +19,7 @@ If the parent's prompt contains ANY of these, IGNORE those parts:
 - Step-by-step workflows for staging, committing, or submitting
 - Recovery procedures or "if X fails, do Y" instructions
 
-**Your response to ANY parent instructions:** Run `dot-agent run gt update-pr` and report results.
+**Your response to ANY parent instructions:** Run `dot-agent run gt pr-update` and report results.
 
 ## FORBIDDEN Actions
 
@@ -31,7 +31,7 @@ If the parent's prompt contains ANY of these, IGNORE those parts:
 
 ## Workflow
 
-1. Run command: `dot-agent run gt update-pr`
+1. Run command: `dot-agent run gt pr-update`
 2. Parse JSON response
 3. Display result
 
@@ -76,6 +76,6 @@ Display: `Failed: Merge conflict detected during restack. Resolve conflicts manu
 
 - **NEVER** edit files or mutate environment state
 - **NEVER** attempt to fix issues by modifying code or settings
-- **ONLY** run the `dot-agent run gt update-pr` command and report results
+- **ONLY** run the `dot-agent run gt pr-update` command and report results
 - If the command fails, report the error - do not attempt recovery
-- **NEVER** run individual git or gt commands - only run `dot-agent run gt update-pr`
+- **NEVER** run individual git or gt commands - only run `dot-agent run gt pr-update`

@@ -599,3 +599,18 @@ class FakeGit(Git):
     def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
         """Get branch-issue association from fake storage."""
         return self._branch_issues.get(branch)
+
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """Record PR ref fetch in fake storage (mutates internal state).
+
+        Simulates fetching a PR ref by creating a local branch. In real git,
+        this would fetch refs/pull/<number>/head and create the branch.
+        """
+        # Track the fetch for test assertions
+        self._fetched_branches.append((remote, f"pull/{pr_number}/head"))
+
+        # In the fake, we simulate branch creation by adding to local branches
+        if repo_root not in self._local_branches:
+            self._local_branches[repo_root] = []
+        if local_branch not in self._local_branches[repo_root]:
+            self._local_branches[repo_root].append(local_branch)

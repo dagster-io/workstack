@@ -585,3 +585,14 @@ class RealGit(Git):
         except ValueError:
             # Config value exists but is not a valid integer
             return None
+
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """Fetch a PR ref into a local branch.
+
+        Uses GitHub's special refs/pull/<number>/head reference.
+        """
+        run_subprocess_with_context(
+            ["git", "fetch", remote, f"pull/{pr_number}/head:{local_branch}"],
+            operation_context=f"fetch PR #{pr_number} into branch '{local_branch}'",
+            cwd=repo_root,
+        )

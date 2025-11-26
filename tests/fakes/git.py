@@ -599,3 +599,8 @@ class FakeGit(Git):
     def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
         """Get branch-issue association from fake storage."""
         return self._branch_issues.get(branch)
+
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """Fetch a PR ref into a local branch (tracks mutation)."""
+        # Track similar to fetch_branch but with PR ref format
+        self._fetched_branches.append((remote, f"pull/{pr_number}/head"))

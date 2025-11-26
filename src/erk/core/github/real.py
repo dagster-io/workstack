@@ -15,7 +15,13 @@ from erk_shared.github.parsing import (
     parse_github_pr_list,
     parse_github_pr_status,
 )
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 from erk_shared.integrations.time.abc import Time
 from erk_shared.output.output import user_output
 from erk_shared.subprocess_utils import run_subprocess_with_context
@@ -1132,3 +1138,33 @@ query {{
 
         # Timeout reached without finding matching run
         return None
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR details needed for checkout via gh CLI.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = [
+                "gh",
+                "pr",
+                "view",
+                str(pr_number),
+                "--json",
+                "number,headRefName,isCrossRepository,state",
+            ]
+            stdout = execute_gh_command(cmd, repo_root)
+            data = json.loads(stdout)
+
+            return PRCheckoutInfo(
+                number=data["number"],
+                head_ref_name=data["headRefName"],
+                is_cross_repository=data["isCrossRepository"],
+                state=data["state"],
+            )
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
+            # gh not installed, not authenticated, PR not found, or JSON parsing failed
+            return None

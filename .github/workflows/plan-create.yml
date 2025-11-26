@@ -1,0 +1,138 @@
+name: Create Plan
+run-name: "plan:${{ inputs.distinct_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Planning prompt"
+        required: true
+        type: string
+      submitted_by:
+        description: "GitHub username"
+        required: true
+        type: string
+      issue_number:
+        description: "Issue number to update with plan"
+        required: true
+        type: string
+      distinct_id:
+        description: "Unique run identifier"
+        required: true
+        type: string
+
+concurrency:
+  group: plan-create-${{ inputs.distinct_id }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          # Install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          # Install erk
+          cd $GITHUB_WORKSPACE
+          uv tool install --from . erk
+
+          # Install Claude Code
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Post workflow started comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          WORKFLOW_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh issue comment "$ISSUE_NUMBER" --body "⚙️ **Planning workflow started**
+
+          Planning is in progress. The plan will be added to this issue when complete.
+
+          [View workflow run]($WORKFLOW_RUN_URL)"
+
+      - name: Generate Plan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: ${{ inputs.prompt }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          source $HOME/.cargo/env
+
+          # Write prompt to file to avoid escaping issues
+          # Use a unique delimiter unlikely to appear in prompts
+          cat > /tmp/planning-prompt.txt <<'__ERK_PROMPT_DELIMITER__'
+          ${{ inputs.prompt }}
+          __ERK_PROMPT_DELIMITER__
+
+          # Get current timestamp and commit
+          PLANNED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "You are creating an implementation plan for a feature request.
+
+          ## Request
+          $(cat /tmp/planning-prompt.txt)
+
+          ## Instructions
+          1. Explore the codebase to understand relevant patterns and architecture
+          2. Create a detailed implementation plan in markdown
+          3. Write the plan to a temp file: /tmp/plan.md
+          4. The plan should include a metadata section at the end:
+             ---
+             ## Planning Context
+             **Original prompt:** $(cat /tmp/planning-prompt.txt)
+             **Planned by:** $SUBMITTED_BY
+             **Workflow run:** $WORKFLOW_RUN_URL
+             **Planned at:** $PLANNED_AT
+             **Planned from:** master @ $COMMIT_SHA
+          5. Update issue #$ISSUE_NUMBER with the plan by adding a comment:
+             gh issue comment $ISSUE_NUMBER --body-file /tmp/plan.md
+
+          Focus on creating a complete, actionable plan. The issue already exists - just add your plan as a comment."
+
+      - name: Post completion comment
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "✅ **Planning complete**
+
+          The implementation plan has been added to this issue above.
+
+          **Next steps:**
+          - Review the plan
+          - Run \`erk implement $ISSUE_NUMBER\` to start implementation"
+
+      - name: Post failure comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          WORKFLOW_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh issue comment "$ISSUE_NUMBER" --body "❌ **Planning failed**
+
+          The planning workflow encountered an error.
+
+          [View workflow logs]($WORKFLOW_RUN_URL)"

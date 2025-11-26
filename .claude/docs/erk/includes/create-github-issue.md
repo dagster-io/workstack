@@ -1,0 +1,1 @@
+../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/includes/create-github-issue.md

@@ -1,1 +1,1 @@
-../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/validate-git-repository.md
+../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/includes/validate-git-repository.md

@@ -6,7 +6,7 @@ The kit documentation registry provides a lightweight indexing system for instal
 
 ## Architecture
 
-- **Registry file**: `.claude/docs/kit-registry.md` - Aggregates kit entries via @-includes
+- **Registry file**: `.agent/kits/kit-registry.md` - Aggregates kit entries via @-includes
 - **Kit entries**: `.agent/kits/<kit-id>/registry-entry.md` - One per installed kit
 - **Integration**: Automatic updates during `kit install`, `kit remove`, `kit update`
 
@@ -21,7 +21,7 @@ The system requires a single addition to AGENTS.md (already done):
 
 For a complete index of installed kit documentation (agents, commands, skills, and reference docs), see:
 
-@.claude/docs/kit-registry.md
+@.agent/kits/kit-registry.md
 
 This registry is automatically updated when kits are installed, updated, or removed.
 ```
@@ -40,7 +40,7 @@ The registry is automatically maintained by kit commands:
 
 The registry uses a two-level structure to minimize context window usage:
 
-1. **Main registry** (`.claude/docs/kit-registry.md`): Contains only @-includes for each kit
+1. **Main registry** (`.agent/kits/kit-registry.md`): Contains only @-includes for each kit
 2. **Kit entries** (`.agent/kits/<kit-id>/registry-entry.md`): Contain 15-20 line summaries
 
 This design ensures that:
@@ -141,7 +141,7 @@ dot-agent kit install <kit-id> --force
 
 ### Registry file missing
 
-**Symptom**: `.claude/docs/kit-registry.md` doesn't exist
+**Symptom**: `.agent/kits/kit-registry.md` doesn't exist
 
 **Solution**: Run sync command - it will create the file
 

@@ -51,6 +51,9 @@ class FakeClaudeExecutor(ClaudeExecutor):
         claude_available: bool = True,
         command_should_fail: bool = False,
         simulated_pr_url: str | None = None,
+        simulated_pr_number: int | None = None,
+        simulated_pr_title: str | None = None,
+        simulated_issue_number: int | None = None,
     ) -> None:
         """Initialize fake with predetermined behavior.
 
@@ -58,10 +61,16 @@ class FakeClaudeExecutor(ClaudeExecutor):
             claude_available: Whether Claude CLI should appear available
             command_should_fail: Whether execute_command should raise RuntimeError
             simulated_pr_url: PR URL to return in CommandResult (simulates successful PR creation)
+            simulated_pr_number: PR number to return (simulates PR metadata)
+            simulated_pr_title: PR title to return (simulates PR metadata)
+            simulated_issue_number: Issue number to return (simulates linked issue)
         """
         self._claude_available = claude_available
         self._command_should_fail = command_should_fail
         self._simulated_pr_url = simulated_pr_url
+        self._simulated_pr_number = simulated_pr_number
+        self._simulated_pr_title = simulated_pr_title
+        self._simulated_issue_number = simulated_issue_number
         self._executed_commands: list[tuple[str, Path, bool, bool]] = []
         self._interactive_calls: list[tuple[Path, bool]] = []
 
@@ -106,9 +115,15 @@ class FakeClaudeExecutor(ClaudeExecutor):
         yield StreamEvent("spinner_update", f"Running {command}...")
         yield StreamEvent("text", "Execution complete")
 
-        # Yield PR URL if configured
+        # Yield PR metadata if configured
         if self._simulated_pr_url is not None:
             yield StreamEvent("pr_url", self._simulated_pr_url)
+        if self._simulated_pr_number is not None:
+            yield StreamEvent("pr_number", str(self._simulated_pr_number))
+        if self._simulated_pr_title is not None:
+            yield StreamEvent("pr_title", self._simulated_pr_title)
+        if self._simulated_issue_number is not None:
+            yield StreamEvent("issue_number", str(self._simulated_issue_number))
 
     def execute_command(
         self, command: str, worktree_path: Path, dangerous: bool, verbose: bool = False
@@ -136,6 +151,9 @@ class FakeClaudeExecutor(ClaudeExecutor):
             return CommandResult(
                 success=False,
                 pr_url=None,
+                pr_number=None,
+                pr_title=None,
+                issue_number=None,
                 duration_seconds=0.0,
                 error_message=f"Claude command {command} failed (simulated failure)",
                 filtered_messages=[],
@@ -144,6 +162,9 @@ class FakeClaudeExecutor(ClaudeExecutor):
         return CommandResult(
             success=True,
             pr_url=self._simulated_pr_url,
+            pr_number=self._simulated_pr_number,
+            pr_title=self._simulated_pr_title,
+            issue_number=self._simulated_issue_number,
             duration_seconds=0.0,
             error_message=None,
             filtered_messages=[],

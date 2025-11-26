@@ -242,7 +242,7 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 
 ✓ Created commit with AI-generated message
 ✓ Submitted branch to Graphite
-✓ Updated PR #<pr_number> metadata
+✓ Updated PR #<pr_number>: <pr_title>
 ✓ Linked to issue #<number> (will auto-close on merge)
 ✓ Posted PR link to issue #<number>
 

@@ -70,6 +70,8 @@ Core patterns for this codebase:
 
 **Worktree Terminology:** Use "root worktree" (not "main worktree") to refer to the primary git worktree created with `git init`. This ensures "main" unambiguously refers to the branch name, since trunk branches can be named either "main" or "master". In code, use the `is_root` field to identify the root worktree.
 
+**CLI Command Organization:** Plan verbs are top-level (create, get, implement), worktree verbs are grouped under `erk wt`, stack verbs under `erk stack`. This follows the "plan is dominant noun" principle for ergonomic access to high-frequency operations. See [docs/agent/cli-command-organization.md](docs/agent/cli-command-organization.md) for complete decision framework.
+
 ## Project Constraints
 
 **No time estimates in plans:**

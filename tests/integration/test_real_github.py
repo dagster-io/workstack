@@ -6,6 +6,7 @@ responses. We use pytest monkeypatch to mock subprocess calls.
 
 import json
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -707,6 +708,7 @@ def test_list_workflow_runs_success() -> None:
                 "conclusion": "success",
                 "headBranch": "feat-1",
                 "headSha": "abc123def456",
+                "createdAt": "2025-01-15T10:30:00Z",
             },
             {
                 "databaseId": 1234567891,
@@ -714,6 +716,7 @@ def test_list_workflow_runs_success() -> None:
                 "conclusion": "failure",
                 "headBranch": "feat-2",
                 "headSha": "def456ghi789",
+                "createdAt": "2025-01-15T11:00:00Z",
             },
             {
                 "databaseId": 1234567892,
@@ -721,6 +724,7 @@ def test_list_workflow_runs_success() -> None:
                 "conclusion": None,
                 "headBranch": "feat-3",
                 "headSha": "ghi789jkl012",
+                "createdAt": "2025-01-15T11:30:00Z",
             },
         ]
     )
@@ -734,7 +738,7 @@ def test_list_workflow_runs_success() -> None:
             "--workflow",
             "implement-plan.yml",
             "--json",
-            "databaseId,status,conclusion,headBranch,headSha,displayTitle",
+            "databaseId,status,conclusion,headBranch,headSha,displayTitle,createdAt",
             "--limit",
             "50",
         ]
@@ -759,10 +763,13 @@ def test_list_workflow_runs_success() -> None:
         assert result[0].conclusion == "success"
         assert result[0].branch == "feat-1"
         assert result[0].head_sha == "abc123def456"
+        assert result[0].created_at == datetime(2025, 1, 15, 10, 30, 0, tzinfo=UTC)
 
         assert result[1].conclusion == "failure"
+        assert result[1].created_at == datetime(2025, 1, 15, 11, 0, 0, tzinfo=UTC)
         assert result[2].status == "in_progress"
         assert result[2].conclusion is None
+        assert result[2].created_at == datetime(2025, 1, 15, 11, 30, 0, tzinfo=UTC)
     finally:
         subprocess.run = original_run
 

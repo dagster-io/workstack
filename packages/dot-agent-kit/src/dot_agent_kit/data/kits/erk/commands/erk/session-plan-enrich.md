@@ -12,7 +12,7 @@ This command enables iterative plan refinement by enriching the plan in your cur
 
 **What this command does:**
 
-- ✅ Find plan in session logs (ExitPlanMode markers)
+- ✅ Find plan in `~/.claude/plans/`
 - ✅ Apply optional guidance to plan
 - ✅ Interactively enhance plan for autonomous execution
 - ✅ Extract semantic understanding and context (8 categories)
@@ -49,7 +49,7 @@ Create plan → ExitPlanMode
 
 ## Prerequisites
 
-- An implementation plan must exist in session logs (created with ExitPlanMode)
+- An implementation plan must exist in `~/.claude/plans/` (created with ExitPlanMode)
 - Current working directory must be in a git repository
 - GitHub CLI (gh) must be installed and authenticated
 
@@ -59,7 +59,7 @@ Create plan → ExitPlanMode
 /erk:session-plan-enrich (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
-  ├─→ Extract plan from session logs via kit CLI
+  ├─→ Extract plan from ~/.claude/plans/ via kit CLI
   │     ↓
   │     dot-agent run erk save-plan-from-session --extract-only
   │     Returns JSON: {plan_content, title}
@@ -87,7 +87,7 @@ You are executing the `/erk:session-plan-enrich` command. Follow these steps car
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Extract Plan from Session Logs
+### Step 2: Extract Plan from Plans Directory
 
 @../../docs/erk/includes/planning/extract-plan-from-session.md
 
@@ -99,7 +99,7 @@ Use the Task tool to launch the specialized agent with the extracted plan:
 {
   "subagent_type": "plan-extractor",
   "description": "Enrich plan with context",
-  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from session logs]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from session logs using ExitPlanMode markers. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
+  "prompt": "Enrich the pre-extracted implementation plan with semantic understanding and guidance.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[pre-extracted plan markdown from ~/.claude/plans/]\",\n  \"guidance\": \"[guidance text or empty string]\"\n}\n\nThe plan has been pre-extracted from ~/.claude/plans/. Your job:\n1. Apply guidance if provided (in-memory)\n2. Ask clarifying questions via AskUserQuestion tool\n3. Extract semantic understanding (8 categories) from conversation context\n4. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full plan content.",
   "model": "haiku"
 }
 ```
@@ -116,7 +116,7 @@ Use the Task tool to launch the specialized agent with the extracted plan:
 
 ### Step 4: Present Enriched Plan via ExitPlanMode
 
-After receiving the enriched plan from the agent, use the **ExitPlanMode** tool to present the plan to the user and store it in session logs.
+After receiving the enriched plan from the agent, use the **ExitPlanMode** tool to present the plan to the user and store it in `~/.claude/plans/`.
 
 **Critical:** This step makes the enriched plan available for subsequent `/erk:plan-save` command.
 
@@ -166,10 +166,10 @@ The plan-extractor agent captures **8 categories of context:**
 
 ## Error Scenarios
 
-### No Plan Found in Session Logs
+### No Plan Found
 
 ```
-❌ Error: No plan found in session logs
+❌ Error: No plan found in ~/.claude/plans/
 
 This command requires a plan created with ExitPlanMode. To fix:
 
@@ -177,7 +177,7 @@ This command requires a plan created with ExitPlanMode. To fix:
 2. Exit Plan mode using the ExitPlanMode tool
 3. Run this command again
 
-The plan will be extracted from session logs automatically.
+The plan will be extracted from ~/.claude/plans/ automatically.
 ```
 
 ### Agent Error
@@ -204,14 +204,14 @@ Please create a plan first using ExitPlanMode, then run this command.
 This command succeeds when ALL of the following are true:
 
 **Plan Extraction:**
-✅ Implementation plan extracted from session logs (ExitPlanMode markers)
+✅ Implementation plan extracted from `~/.claude/plans/`
 ✅ Kit CLI extraction returns valid JSON with plan_content
 ✅ If guidance provided, it has been applied to the plan by agent
 ✅ Semantic understanding extracted from conversation and integrated
 
 **Presentation:**
 ✅ Enriched plan presented via ExitPlanMode
-✅ Plan stored in session logs for subsequent commands
+✅ Plan stored in `~/.claude/plans/` for subsequent commands
 ✅ Summary displayed with next steps
 
 ## Development Notes
@@ -220,7 +220,7 @@ This command succeeds when ALL of the following are true:
 
 This command demonstrates the **session-based enrichment pattern**:
 
-1. Command extracts plan from session logs
+1. Command extracts plan from `~/.claude/plans/`
 2. Command launches specialized agent for enrichment
 3. Agent enriches plan (structurally safe)
 4. Command presents via ExitPlanMode (enables composition)
@@ -229,6 +229,6 @@ This command demonstrates the **session-based enrichment pattern**:
 **Related commands:**
 
 - `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue
-- `/erk:plan-save` - Save plan from session logs to GitHub issue
+- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue
 
 **Agent file:** `.claude/agents/erk/plan-extractor.md`

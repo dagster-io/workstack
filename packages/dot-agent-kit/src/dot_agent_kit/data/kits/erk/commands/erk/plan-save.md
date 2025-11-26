@@ -1,18 +1,18 @@
 ---
-description: Save plan from session logs to GitHub issue (no enrichment)
+description: Save plan from ~/.claude/plans/ to GitHub issue (no enrichment)
 ---
 
 # /erk:plan-save
 
 ## Goal
 
-**Save the latest implementation plan from session logs to a GitHub issue.**
+**Save the latest implementation plan from `~/.claude/plans/` to a GitHub issue.**
 
-This command saves whatever plan is currently in session logs - raw or enriched - to GitHub. It does NOT perform enrichment. Use `/erk:session-plan-enrich` or `/erk:plan-enrich` to enrich plans before saving.
+This command saves whatever plan is currently in the plans directory - raw or enriched - to GitHub. It does NOT perform enrichment. Use `/erk:session-plan-enrich` or `/erk:plan-enrich` to enrich plans before saving.
 
 **What this command does:**
 
-- ✅ Extract latest plan from session logs (ExitPlanMode markers)
+- ✅ Extract latest plan from `~/.claude/plans/`
 - ✅ Detect enrichment status (raw vs enriched)
 - ✅ Create GitHub issue with plan content
 - ✅ Display enrichment status in output
@@ -50,7 +50,7 @@ Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save →
 
 ## Prerequisites
 
-- An implementation plan must exist in session logs (created with ExitPlanMode)
+- An implementation plan must exist in `~/.claude/plans/` (created with ExitPlanMode)
 - Current working directory must be in a git repository
 - GitHub CLI (gh) must be installed and authenticated
 - Repository must have issues enabled
@@ -61,7 +61,7 @@ Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save →
 /erk:plan-save (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
-  ├─→ Extract plan from session logs via kit CLI
+  ├─→ Extract plan from ~/.claude/plans/ via kit CLI
   │     ↓
   │     dot-agent run erk save-plan-from-session --extract-only
   │     Returns JSON: {plan_content, title}
@@ -73,7 +73,7 @@ Create plan → ExitPlanMode → /erk:session-plan-enrich → /erk:plan-save →
   └─→ Display results with enrichment status
 ```
 
-**No Agent Required:** This command does not launch any agents. It simply reads from session logs and creates a GitHub issue.
+**No Agent Required:** This command does not launch any agents. It simply reads from `~/.claude/plans/` and creates a GitHub issue.
 
 ---
 
@@ -85,7 +85,7 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Extract Plan from Session Logs
+### Step 2: Extract Plan from Plans Directory
 
 @../../docs/erk/includes/planning/extract-plan-from-session.md
 
@@ -116,7 +116,7 @@ temp_plan=$(mktemp)
 
 # Write plan content
 cat > "$temp_plan" <<'PLAN_EOF'
-[plan_content from session logs]
+[plan_content from ~/.claude/plans/]
 PLAN_EOF
 ```
 
@@ -218,10 +218,10 @@ Submit plan to erk queue:
 
 ## Error Scenarios
 
-### No Plan Found in Session Logs
+### No Plan Found
 
 ```
-❌ Error: No plan found in session logs
+❌ Error: No plan found in ~/.claude/plans/
 
 This command requires a plan created with ExitPlanMode. To fix:
 
@@ -229,7 +229,7 @@ This command requires a plan created with ExitPlanMode. To fix:
 2. Exit Plan mode using the ExitPlanMode tool
 3. Run this command again
 
-The plan will be extracted from session logs automatically.
+The plan will be extracted from ~/.claude/plans/ automatically.
 ```
 
 ### GitHub CLI Not Authenticated
@@ -262,7 +262,7 @@ Common causes:
 This command succeeds when ALL of the following are true:
 
 **Plan Extraction:**
-✅ Implementation plan extracted from session logs (ExitPlanMode markers)
+✅ Implementation plan extracted from `~/.claude/plans/`
 ✅ Kit CLI extraction returns valid JSON with plan_content
 ✅ Enrichment status detected correctly
 
@@ -285,7 +285,7 @@ This command succeeds when ALL of the following are true:
 This command demonstrates the **raw save pattern**:
 
 1. Command validates prerequisites
-2. Command extracts plan from session logs (no agent)
+2. Command extracts plan from `~/.claude/plans/` (no agent)
 3. Command detects enrichment status
 4. Command creates GitHub issue
 5. Command displays results

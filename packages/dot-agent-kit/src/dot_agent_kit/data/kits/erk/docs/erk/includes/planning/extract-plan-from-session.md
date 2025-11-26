@@ -1,6 +1,6 @@
-# Extract Plan from Session Logs
+# Extract Plan from Plans Directory
 
-Use the kit CLI to extract the plan from session logs:
+Use the kit CLI to extract the latest plan from `~/.claude/plans/`:
 
 ```bash
 # Extract plan using kit CLI
@@ -18,15 +18,15 @@ if echo "$plan_result" | jq -e '.success' > /dev/null 2>&1; then
 else
     # FAILURE: Report error
     error_msg=$(echo "$plan_result" | jq -r '.error // "Unknown error"')
-    echo "❌ Error: Failed to extract plan from session logs"
+    echo "❌ Error: Failed to extract plan"
     echo "Details: $error_msg"
 fi
 ```
 
-**If no plan found in session logs:**
+**If no plan found:**
 
 ```
-❌ Error: No plan found in session logs
+❌ Error: No plan found in ~/.claude/plans/
 
 This command requires a plan created with ExitPlanMode. To fix:
 
@@ -34,5 +34,5 @@ This command requires a plan created with ExitPlanMode. To fix:
 2. Exit Plan mode using the ExitPlanMode tool
 3. Run this command again
 
-The plan will be extracted from session logs automatically.
+The plan will be extracted from ~/.claude/plans/ automatically.
 ```

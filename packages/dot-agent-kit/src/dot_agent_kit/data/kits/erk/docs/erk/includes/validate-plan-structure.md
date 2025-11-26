@@ -67,7 +67,7 @@ exit 1
 
 In `/erk:plan-save`, validation occurs after plan extraction:
 
-1. Extract plan content from session logs
+1. Extract plan content from `~/.claude/plans/`
 2. Validate using `validate-plan-content` kit CLI command
 3. If invalid, format error using `format-error` kit CLI command
 4. Exit with error if validation fails
@@ -76,7 +76,7 @@ In `/erk:plan-save`, validation occurs after plan extraction:
 
 In `/erk:session-plan-enrich`, the same validation pattern applies:
 
-1. Extract plan content from session logs
+1. Extract plan content from `~/.claude/plans/`
 2. Validate using `validate-plan-content` kit CLI command
 3. If invalid, format error using `format-error` kit CLI command
 4. Exit with error if validation fails

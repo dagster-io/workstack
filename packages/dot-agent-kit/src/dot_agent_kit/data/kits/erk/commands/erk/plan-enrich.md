@@ -174,7 +174,7 @@ Use the Task tool to launch the specialized agent with the fetched plan content:
 
 ### Step 5: Present Enriched Plan via ExitPlanMode
 
-After receiving the enriched plan from the agent, use the **ExitPlanMode** tool to present the plan to the user and store it in session logs.
+After receiving the enriched plan from the agent, use the **ExitPlanMode** tool to present the plan to the user and store it in `~/.claude/plans/`.
 
 **Critical:** This step makes the enriched plan available for subsequent `/erk:plan-save` command.
 
@@ -253,7 +253,7 @@ This command succeeds when ALL of the following are true:
 
 **Presentation:**
 ✅ Enriched plan presented via ExitPlanMode
-✅ Plan stored in session logs for subsequent commands
+✅ Plan stored in `~/.claude/plans/` for subsequent commands
 ✅ Summary displayed with next steps
 
 ## Development Notes
@@ -271,6 +271,6 @@ This command demonstrates the **issue-based enrichment pattern**:
 **Related commands:**
 
 - `/erk:session-plan-enrich [guidance]` - Enrich plan from current session
-- `/erk:plan-save` - Save plan from session logs to GitHub issue
+- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue
 
 **Agent file:** `.claude/agents/erk/plan-extractor.md`

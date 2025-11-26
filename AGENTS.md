@@ -19,6 +19,16 @@
 - **Test code** → `fake-driven-testing` skill (5-layer architecture, test placement)
 - **Dev tools** → Use `devrun` agent (NOT direct Bash for pytest/pyright/ruff/prettier/make/gt)
 
+## Skill Loading Behavior
+
+**Skills persist for the entire session.** Once loaded, they remain in context.
+
+- **DO NOT reload skills already loaded in this session**
+- Hook reminders fire as safety nets, not commands
+- If you see a reminder for an already-loaded skill, acknowledge and continue
+
+**Check if loaded**: Look for `<command-message>The "{name}" skill is loading</command-message>` earlier in conversation
+
 ## Quick Routing Table
 
 | If you're about to...                            | STOP! Check this instead                                                               |

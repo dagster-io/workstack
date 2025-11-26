@@ -111,8 +111,9 @@ erk goto WORKTREE          # Jump directly to worktree by name
 erk up                     # Navigate to child branch in Graphite stack
 erk down                   # Navigate to parent branch in Graphite stack
 erk status                 # Show status of current worktree
-erk list                   # List all worktrees (alias: ls)
-erk list --ci              # Fetch CI check status from GitHub (slower)
+erk list                   # List all plans (alias: ls)
+erk list --with-run        # Show workflow run columns
+erk wt list                # List all worktrees
 erk rename OLD NEW         # Rename a worktree
 erk delete NAME            # Delete worktree
 erk submit                 # Submit plan for remote AI implementation (GitHub Actions)

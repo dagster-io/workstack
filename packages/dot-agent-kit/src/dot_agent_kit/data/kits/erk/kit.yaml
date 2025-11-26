@@ -12,6 +12,7 @@ artifacts:
     - commands/erk/plan-submit.md
   agent:
     - agents/erk/issue-wt-creator.md
+    - agents/erk/plan-extractor.md
   doc:
     - docs/erk/EXAMPLES.md
     - docs/erk/includes/create-github-issue.md

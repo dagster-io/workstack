@@ -74,7 +74,7 @@ check:
 	uv run dot-agent check
 
 md-check:
-	uv run dot-agent md check
+	uv run dot-agent md check --check-links --exclude "packages/*/src/*/data/kits"
 
 # Removed: land-branch command has been deprecated
 # Removed: sync-dignified-python-universal (obsolete - shared content now referenced directly)

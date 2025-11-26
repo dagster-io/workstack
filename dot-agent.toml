@@ -69,6 +69,7 @@ artifacts = [
     ".claude/commands/erk/merge-conflicts-fix.md",
     ".claude/commands/erk/plan-submit.md",
     ".claude/agents/erk/issue-wt-creator.md",
+    ".claude/agents/erk/plan-extractor.md",
     ".claude/docs/erk/EXAMPLES.md",
     ".claude/docs/erk/includes/create-github-issue.md",
     ".claude/docs/erk/includes/enrichment-process.md",

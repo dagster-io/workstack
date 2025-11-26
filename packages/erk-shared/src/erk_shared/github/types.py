@@ -66,3 +66,17 @@ class PRCheckoutInfo:
     head_ref_name: str  # Branch name in source repo
     is_cross_repository: bool  # True if from a fork
     state: str  # OPEN, CLOSED, MERGED
+
+
+@dataclass(frozen=True)
+class PRDetailedInfo:
+    """Detailed PR information including linked issues.
+
+    Used for validating PR state and detecting branch collisions
+    before submission.
+    """
+
+    number: int
+    state: str  # "OPEN", "MERGED", "CLOSED"
+    linked_issue_number: int | None  # From closingIssuesReferences
+    branch_name: str

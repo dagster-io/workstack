@@ -37,22 +37,8 @@ def test_erk_kit_cli_commands_are_symlinks() -> None:
         if f.name != "__init__.py" and "__pycache__" not in str(f)
     ]
 
-    # Files that should NOT be symlinks (exist only in src/)
-    src_only_files = {
-        "post_completion_comment.py",
-        "post_progress_comment.py",
-    }
-
     for src_file in src_files:
-        if src_file.name in src_only_files:
-            # These files should be regular files, not symlinks
-            assert not src_file.is_symlink(), (
-                f"{src_file.name} should be a regular file (not in packages/dot-agent-kit), "
-                f"but it's a symlink"
-            )
-            continue
-
-        # All other files should be symlinks
+        # All files should be symlinks
         symlink_path = (
             "../../../../../../../packages/dot-agent-kit/src/"
             f"dot_agent_kit/data/kits/erk/kit_cli_commands/erk/{src_file.name}"

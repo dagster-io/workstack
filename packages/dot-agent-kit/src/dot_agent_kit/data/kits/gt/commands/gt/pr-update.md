@@ -37,3 +37,17 @@ Streamlined workflow to update an existing PR with fail-fast execution and natur
 
 - Update an existing PR with new changes
 - Quick iteration on PR feedback
+
+## Implementation
+
+When this command is invoked, delegate to the gt-update-pr-submitter agent:
+
+```
+Task(
+    subagent_type="gt-update-pr-submitter",
+    description="Update PR workflow",
+    prompt="Execute the pr-update workflow to update the existing PR with new changes"
+)
+```
+
+The agent executes a single atomic command and reports results.

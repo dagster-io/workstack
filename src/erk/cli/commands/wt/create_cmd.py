@@ -608,8 +608,7 @@ def create_wt(
     if from_current_branch:
         # Get the current branch
         current_branch = Ensure.not_none(
-            ctx.git.get_current_branch(ctx.cwd),
-            "HEAD is detached (not on a branch)"
+            ctx.git.get_current_branch(ctx.cwd), "HEAD is detached (not on a branch)"
         )
 
         # Set branch to current branch and derive name if not provided
@@ -761,8 +760,7 @@ def create_wt(
     to_branch = None
     if from_current_branch:
         current_branch = Ensure.not_none(
-            ctx.git.get_current_branch(ctx.cwd),
-            "Unable to determine current branch"
+            ctx.git.get_current_branch(ctx.cwd), "Unable to determine current branch"
         )
 
         # Determine preferred branch to checkout (prioritize Graphite parent)

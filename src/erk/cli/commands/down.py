@@ -48,8 +48,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
 
     # Get current branch
     current_branch = Ensure.not_none(
-        ctx.git.get_current_branch(ctx.cwd),
-        "Not currently on a branch (detached HEAD)"
+        ctx.git.get_current_branch(ctx.cwd), "Not currently on a branch (detached HEAD)"
     )
 
     # Store current worktree path for deletion (before navigation)
@@ -58,7 +57,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     if delete_current:
         current_worktree_path = Ensure.not_none(
             ctx.git.find_worktree_for_branch(repo.root, current_branch),
-            f"Cannot find worktree for current branch '{current_branch}'."
+            f"Cannot find worktree for current branch '{current_branch}'.",
         )
 
     # Safety checks before navigation (if --delete-current flag is set)
@@ -113,7 +112,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     # Resolve target branch to actual worktree path
     target_wt_path = Ensure.not_none(
         ctx.git.find_worktree_for_branch(repo.root, target_name),
-        f"Branch '{target_name}' has no worktree. This should not happen."
+        f"Branch '{target_name}' has no worktree. This should not happen.",
     )
 
     if delete_current and current_worktree_path is not None:

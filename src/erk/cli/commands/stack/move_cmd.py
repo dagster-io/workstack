@@ -24,10 +24,7 @@ def _resolve_current_worktree(ctx: ErkContext, repo_root: Path) -> Path:
 
     Raises SystemExit if not in a git repository or not in any worktree.
     """
-    git_common_dir = Ensure.not_none(
-        ctx.git.get_git_common_dir(ctx.cwd),
-        "Not in a git repository"
-    )
+    Ensure.not_none(ctx.git.get_git_common_dir(ctx.cwd), "Not in a git repository")
 
     cwd = ctx.cwd.resolve()
     worktrees = ctx.git.list_worktrees(repo_root)
@@ -72,7 +69,7 @@ def resolve_source_worktree(
         worktrees = ctx.git.list_worktrees(repo_root)
         wt = Ensure.not_none(
             find_worktree_with_branch(worktrees, branch),
-            f"Branch '{branch}' not found in any worktree"
+            f"Branch '{branch}' not found in any worktree",
         )
         return wt
 
@@ -115,8 +112,7 @@ def execute_move(
     # Validate source has a branch
     worktrees = ctx.git.list_worktrees(repo_root)
     source_branch = Ensure.not_none(
-        get_worktree_branch(worktrees, source_wt),
-        "Source worktree is in detached HEAD state"
+        get_worktree_branch(worktrees, source_wt), "Source worktree is in detached HEAD state"
     )
 
     # Check for uncommitted changes in source

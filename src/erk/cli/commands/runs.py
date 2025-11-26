@@ -181,8 +181,7 @@ def logs(click_ctx: click.Context, run_id: str | None) -> None:
     if run_id is None:
         # Auto-detect: find most recent run for current branch
         current_branch = Ensure.not_none(
-            ctx.git.get_current_branch(ctx.cwd),
-            "Could not determine current branch"
+            ctx.git.get_current_branch(ctx.cwd), "Could not determine current branch"
         )
 
         runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml", limit=50)

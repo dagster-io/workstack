@@ -45,8 +45,7 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
 
     # Get current branch
     current_branch = Ensure.not_none(
-        ctx.git.get_current_branch(ctx.cwd),
-        "Not currently on a branch (detached HEAD)"
+        ctx.git.get_current_branch(ctx.cwd), "Not currently on a branch (detached HEAD)"
     )
 
     # Get all worktrees for checking if target has a worktree
@@ -76,7 +75,7 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
         # Store current worktree path for later deletion
         current_worktree_path = Ensure.not_none(
             ctx.git.find_worktree_for_branch(repo.root, current_branch),
-            f"Could not find worktree for branch '{current_branch}'"
+            f"Could not find worktree for branch '{current_branch}'",
         )
 
         # Validate clean working tree (no uncommitted changes)
@@ -98,7 +97,7 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     # Resolve target branch to actual worktree path
     target_wt_path = Ensure.not_none(
         ctx.git.find_worktree_for_branch(repo.root, target_name),
-        f"Branch '{target_name}' has no worktree. This should not happen."
+        f"Branch '{target_name}' has no worktree. This should not happen.",
     )
 
     if delete_current and current_worktree_path is not None:

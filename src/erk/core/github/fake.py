@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import cast
 
 from erk_shared.github.abc import GitHub
-from erk_shared.github.types import PRInfo, PRMergeability, PRState, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PRState,
+    PullRequestInfo,
+    WorkflowRun,
+)
 
 
 class FakeGitHub(GitHub):
@@ -29,6 +36,7 @@ class FakeGitHub(GitHub):
         run_logs: dict[str, str] | None = None,
         pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
         polled_run_id: str | None = None,
+        pr_checkout_infos: dict[int, PRCheckoutInfo] | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -42,6 +50,7 @@ class FakeGitHub(GitHub):
             run_logs: Mapping of run_id -> log string
             pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
             polled_run_id: Run ID to return from poll_for_workflow_run (None for timeout)
+            pr_checkout_infos: Mapping of pr_number -> PRCheckoutInfo
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -76,6 +85,7 @@ class FakeGitHub(GitHub):
         self._run_logs = run_logs or {}
         self._pr_issue_linkages = pr_issue_linkages or {}
         self._polled_run_id = polled_run_id
+        self._pr_checkout_infos = pr_checkout_infos or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -430,3 +440,10 @@ class FakeGitHub(GitHub):
         Returns list of (workflow, branch_name, timeout, poll_interval) tuples.
         """
         return self._poll_attempts
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR checkout info from pre-configured state.
+
+        Returns None if pr_number not found in pr_checkout_infos mapping.
+        """
+        return self._pr_checkout_infos.get(pr_number)

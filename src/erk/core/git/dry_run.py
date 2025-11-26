@@ -208,3 +208,8 @@ class DryRunGit(Git):
     def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
         """Get branch issue (read-only, delegates to wrapped)."""
         return self._wrapped.get_branch_issue(repo_root, branch)
+
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """No-op for fetching PR ref in dry-run mode."""
+        # Do nothing - prevents actual fetch execution
+        pass

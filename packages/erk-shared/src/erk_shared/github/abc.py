@@ -3,7 +3,13 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 
 
 class GitHub(ABC):
@@ -313,5 +319,23 @@ class GitHub(ABC):
 
         Returns:
             Run ID as string if found within timeout, None otherwise
+        """
+        ...
+
+    @abstractmethod
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR details needed for checkout.
+
+        Fetches the minimal information required to checkout a PR into a worktree:
+        - head_ref_name: The branch name in the source repository
+        - is_cross_repository: Whether this PR is from a fork
+        - state: The PR state (OPEN, CLOSED, MERGED)
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to query
+
+        Returns:
+            PRCheckoutInfo with checkout details, or None if PR not found
         """
         ...

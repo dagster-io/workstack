@@ -3,7 +3,13 @@
 from pathlib import Path
 
 from erk_shared.github.abc import GitHub
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 
 
 class DryRunGitHub(GitHub):
@@ -146,3 +152,7 @@ class DryRunGitHub(GitHub):
         return self._wrapped.poll_for_workflow_run(
             repo_root, workflow, branch_name, timeout, poll_interval
         )
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_pr_checkout_info(repo_root, pr_number)

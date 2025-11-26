@@ -48,3 +48,19 @@ class WorkflowRun:
     branch: str
     head_sha: str
     display_title: str | None = None  # The display title (e.g., issue title for dispatch workflows)
+
+
+@dataclass(frozen=True)
+class PRCheckoutInfo:
+    """Information needed to checkout a PR into a worktree.
+
+    This dataclass contains the minimal information required to:
+    1. Determine the local branch name to use
+    2. Decide whether to fetch from GitHub's special PR ref
+    3. Warn users about closed/merged PRs
+    """
+
+    number: int
+    head_ref_name: str  # Branch name in source repo
+    is_cross_repository: bool  # True if from a fork
+    state: str  # OPEN, CLOSED, MERGED

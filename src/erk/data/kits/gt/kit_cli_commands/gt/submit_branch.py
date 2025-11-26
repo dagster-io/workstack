@@ -558,6 +558,10 @@ def execute_post_analysis(
         if graphite_url_result is not None:
             graphite_url = graphite_url_result
 
+        # Add checkout command for easy worktree creation
+        checkout_cmd = f"\n📥 **Checkout:** `erk pr checkout {pr_number}`"
+        pr_body = pr_body + checkout_cmd
+
         if not ops.github().update_pr_metadata(pr_title, pr_body):
             click.echo(
                 ("⚠️  Warning: Failed to update PR metadata (possible timeout), but PR was created"),

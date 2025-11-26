@@ -10,8 +10,10 @@ Domain-Specific Methods:
 - Argument validations (count, type, range)
 - File/path validations (readable, writable, not hidden)
 - String/collection validations (non-empty, non-null)
+- External tool validations (gh CLI installed)
 """
 
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -302,4 +304,28 @@ class Ensure:
         """
         if ctx.git.path_exists(path):
             user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def gh_installed() -> None:
+        """Ensure GitHub CLI (gh) is installed and available on PATH.
+
+        Uses shutil.which to check for gh availability, which is the LBYL
+        approach to validating external tool availability before use.
+
+        Raises:
+            SystemExit: If gh CLI is not found on PATH
+
+        Example:
+            >>> Ensure.gh_installed()
+            >>> # Now safe to call gh commands
+            >>> pr_info = ctx.github.get_pr_checkout_info(repo.root, pr_number)
+        """
+        if shutil.which("gh") is None:
+            user_output(
+                click.style("Error: ", fg="red")
+                + "GitHub CLI (gh) is not installed\n\n"
+                + "Install it from: https://cli.github.com/\n"
+                + "Then authenticate with: gh auth login"
+            )
             raise SystemExit(1)

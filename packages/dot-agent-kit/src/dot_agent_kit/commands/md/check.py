@@ -8,6 +8,7 @@ This command validates that repositories follow the AGENTS.md standard where:
 See: https://code.claude.com/docs/en/claude-code-on-the-web
 """
 
+import fnmatch
 import subprocess
 from pathlib import Path
 
@@ -16,67 +17,79 @@ import click
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io.link_validation import BrokenLink, validate_links_in_file
 
+# Default exclusion patterns - always excluded unless explicitly included
+DEFAULT_EXCLUSIONS = [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".tox",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
 
-def _is_kit_source_file(file_path: Path) -> bool:
-    """Check if a file is in a kit source directory.
 
-    Kit source files are in packages/*/src/*/data/kits/ and have @ references
-    relative to their installed location (.claude/), not their source location.
-    These should be excluded from validation.
+def _matches_exclusion(file_path: Path, repo_root: Path, exclusions: list[str]) -> bool:
+    """Check if a file matches any exclusion pattern.
+
+    Patterns can be:
+    - Simple directory names (e.g., "node_modules") - matches anywhere in path
+    - Glob patterns (e.g., "packages/*/src/*/data/kits") - matches from repo root
 
     Args:
-        file_path: Path to check
+        file_path: Absolute path to the file
+        repo_root: Repository root path
+        exclusions: List of exclusion patterns
 
     Returns:
-        True if the file is in a kit source directory
+        True if file should be excluded
     """
-    parts = file_path.parts
-    # Look for pattern: packages/*/src/*/data/kits/
-    for i, part in enumerate(parts):
-        if part == "packages" and i + 5 < len(parts):
-            if parts[i + 2] == "src" and parts[i + 4] == "data" and parts[i + 5] == "kits":
+    rel_path = file_path.relative_to(repo_root)
+    rel_path_str = str(rel_path)
+
+    for pattern in exclusions:
+        # If pattern contains path separators or wildcards, treat as glob from repo root
+        if "/" in pattern or "*" in pattern:
+            if fnmatch.fnmatch(rel_path_str, pattern):
                 return True
+            # Also check if it matches as a prefix (for directory patterns)
+            if fnmatch.fnmatch(rel_path_str, f"{pattern}/*"):
+                return True
+            if fnmatch.fnmatch(rel_path_str, f"{pattern}/**"):
+                return True
+        else:
+            # Simple name - check if it appears as a path component
+            if pattern in rel_path.parts:
+                return True
+
     return False
 
 
-def _discover_markdown_files(repo_root: Path) -> list[Path]:
+def _discover_markdown_files(repo_root: Path, exclusions: list[str] | None = None) -> list[Path]:
     """Discover all markdown files to check for @ references.
 
-    Discovers:
-    - All CLAUDE.md files in the repository
-    - All .md files in .claude/ directories
-    - All .md files in .agent/ directories
-
-    Excludes:
-    - Kit source files (packages/*/src/*/data/kits/) since they have
-      @ references relative to their installed location, not source location
+    Discovers all .md files in the repository, excluding:
+    - Files matching patterns in the exclusions list
+    - Files in default excluded directories (.git, node_modules, etc.)
 
     Args:
         repo_root: Repository root path
+        exclusions: Additional exclusion patterns (glob-style)
 
     Returns:
         List of unique markdown file paths to check
     """
-    files: set[Path] = set()
+    all_exclusions = DEFAULT_EXCLUSIONS.copy()
+    if exclusions:
+        all_exclusions.extend(exclusions)
 
-    # All CLAUDE.md files
-    for claude_file in repo_root.rglob("CLAUDE.md"):
-        if not _is_kit_source_file(claude_file):
-            files.add(claude_file)
+    files: list[Path] = []
 
-    # All .md files in .claude/ directories
-    for claude_dir in repo_root.rglob(".claude"):
-        if claude_dir.is_dir():
-            for md_file in claude_dir.rglob("*.md"):
-                if not _is_kit_source_file(md_file):
-                    files.add(md_file)
-
-    # All .md files in .agent/ directories
-    for agent_dir in repo_root.rglob(".agent"):
-        if agent_dir.is_dir():
-            for md_file in agent_dir.rglob("*.md"):
-                if not _is_kit_source_file(md_file):
-                    files.add(md_file)
+    for md_file in repo_root.rglob("*.md"):
+        if not _matches_exclusion(md_file, repo_root, all_exclusions):
+            files.append(md_file)
 
     return sorted(files)
 
@@ -88,7 +101,14 @@ def _discover_markdown_files(repo_root: Path) -> list[Path]:
     default=False,
     help="Also validate that @ file references point to existing files.",
 )
-def check_command(*, check_links: bool) -> None:
+@click.option(
+    "--exclude",
+    multiple=True,
+    help="Exclude files matching pattern (can be specified multiple times). "
+    "Patterns can be directory names (e.g., 'vendor') or glob patterns "
+    "(e.g., 'packages/*/src/*/data/kits').",
+)
+def check_command(*, check_links: bool, exclude: tuple[str, ...]) -> None:
     """Validate AGENTS.md standard compliance in the repository.
 
     Checks that:
@@ -96,8 +116,12 @@ def check_command(*, check_links: bool) -> None:
     - Every CLAUDE.md file contains '@AGENTS.md' reference
 
     With --check-links:
-    - All @ file references point to existing files
+    - All @ file references in markdown files point to existing files
     - All # fragment anchors reference valid headings
+
+    Default exclusions (always applied):
+    .git, node_modules, __pycache__, .venv, venv, .tox, .mypy_cache,
+    .pytest_cache, .ruff_cache
 
     Exit codes:
     - 0: All checks passed
@@ -144,7 +168,8 @@ def check_command(*, check_links: bool) -> None:
     # Optionally validate @ references
     all_md_files: list[Path] = []
     if check_links:
-        all_md_files = _discover_markdown_files(repo_root_path)
+        exclusions = list(exclude) if exclude else None
+        all_md_files = _discover_markdown_files(repo_root_path, exclusions)
         for md_file in all_md_files:
             broken_links.extend(validate_links_in_file(md_file, repo_root_path))
 

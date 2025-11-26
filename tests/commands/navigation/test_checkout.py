@@ -102,7 +102,7 @@ def test_checkout_to_branch_not_found() -> None:
 
         assert result.exit_code == 1
         assert "does not exist" in result.stderr
-        assert "erk create --branch nonexistent-branch" in result.stderr
+        assert "erk wt create --branch nonexistent-branch" in result.stderr
 
 
 def test_checkout_creates_worktree_for_unchecked_branch() -> None:
@@ -510,7 +510,7 @@ def test_checkout_fails_when_branch_not_on_origin() -> None:
         # Should fail with error message
         assert result.exit_code == 1
         assert "does not exist" in result.stderr
-        assert "erk create --branch nonexistent-branch" in result.stderr
+        assert "erk wt create --branch nonexistent-branch" in result.stderr
 
 
 def test_checkout_message_when_switching_worktrees() -> None:

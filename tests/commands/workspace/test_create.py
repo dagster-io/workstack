@@ -1632,3 +1632,49 @@ def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
         assert "Warning:" in result.output
         assert "Could not check remote branches" in result.output
         assert "new-feature" in result.output
+
+
+def test_create_with_branch_only_derives_name() -> None:
+    """Test that --branch alone derives worktree name from branch.
+
+    This enables: `erk wt create --branch license-update` to work,
+    creating worktree and branch both named 'license-update'.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        config_toml = repo_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        test_ctx = env.build_context(git=git_ops)
+
+        result = runner.invoke(cli, ["wt", "create", "--branch", "license-update"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        assert "license-update" in result.output
+
+        # Verify worktree was created with branch name
+        expected_wt = repo_dir / "worktrees" / "license-update"
+        assert (expected_wt, "license-update") in git_ops.added_worktrees
+
+
+def test_create_error_message_suggests_wt_create() -> None:
+    """Test that error message suggests 'erk wt create' not 'erk create'."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+
+        test_ctx = env.build_context(git=git_ops)
+
+        # Invoke without NAME or any flag
+        result = runner.invoke(cli, ["wt", "create"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        # Should mention --branch as a valid option
+        assert "--branch" in result.output

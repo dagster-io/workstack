@@ -1139,32 +1139,49 @@ query {{
         # Timeout reached without finding matching run
         return None
 
-    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
-        """Get PR details needed for checkout via gh CLI.
+    def _execute_gh_json_command(self, cmd: list[str], repo_root: Path) -> dict[str, Any] | None:
+        """Execute gh CLI command and parse JSON response.
 
-        Note: Uses try/except as an acceptable error boundary for handling gh CLI
-        availability and authentication. We cannot reliably check gh installation
-        and authentication status a priori without duplicating gh's logic.
+        Encapsulates the third-party error boundary for gh CLI operations.
+        We cannot reliably check gh installation and authentication status
+        a priori without duplicating gh's logic.
+
+        Args:
+            cmd: gh CLI command as list of arguments
+            repo_root: Repository root directory
+
+        Returns:
+            Parsed JSON data as dict, or None if command failed
         """
         try:
-            cmd = [
-                "gh",
-                "pr",
-                "view",
-                str(pr_number),
-                "--json",
-                "number,headRefName,isCrossRepository,state",
-            ]
             stdout = execute_gh_command(cmd, repo_root)
-            data = json.loads(stdout)
-
-            return PRCheckoutInfo(
-                number=data["number"],
-                head_ref_name=data["headRefName"],
-                is_cross_repository=data["isCrossRepository"],
-                state=data["state"],
-            )
-
-        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
-            # gh not installed, not authenticated, PR not found, or JSON parsing failed
+            return json.loads(stdout)
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
+            # gh not installed, not authenticated, command failed, or JSON parsing failed
             return None
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR details needed for checkout via gh CLI."""
+        cmd = [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--json",
+            "number,headRefName,isCrossRepository,state",
+        ]
+        data = self._execute_gh_json_command(cmd, repo_root)
+        if data is None:
+            return None
+
+        # LBYL: Validate required keys before accessing
+        required_keys = ("number", "headRefName", "isCrossRepository", "state")
+        if not all(key in data for key in required_keys):
+            return None
+
+        return PRCheckoutInfo(
+            number=data["number"],
+            head_ref_name=data["headRefName"],
+            is_cross_repository=data["isCrossRepository"],
+            state=data["state"],
+        )

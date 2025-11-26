@@ -9,6 +9,7 @@ from erk_shared.output.output import user_output
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.pr.parse_pr_reference import parse_pr_reference
 from erk.cli.core import worktree_path_for
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import NoRepoSentinel, RepoContext
 
@@ -30,7 +31,9 @@ def pr_checkout(ctx: ErkContext, pr_reference: str) -> None:
         # Checkout by GitHub URL
         erk pr checkout https://github.com/owner/repo/pull/123
     """
-    # Validate we have a repo context
+    # Validate preconditions upfront (LBYL)
+    Ensure.gh_installed()
+
     if isinstance(ctx.repo, NoRepoSentinel):
         user_output(click.style("Error: ", fg="red") + "Not in a git repository")
         raise SystemExit(1)

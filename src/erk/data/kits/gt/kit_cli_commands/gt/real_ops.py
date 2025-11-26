@@ -333,10 +333,15 @@ class RealGitHubGtKit(GitHubGtKit):
         return (data["number"], data["state"])
 
     def update_pr_metadata(self, title: str, body: str) -> bool:
-        """Update PR title and body using gh pr edit."""
+        """Update PR title and body using gh pr edit.
+
+        Uses stdin (--body-file -) to avoid command-line argument length limits
+        that can occur with large PR bodies.
+        """
         result = _run_subprocess_with_timeout(
-            ["gh", "pr", "edit", "--title", title, "--body", body],
+            ["gh", "pr", "edit", "--title", title, "--body-file", "-"],
             timeout=30,
+            input=body,
             capture_output=True,
             text=True,
             check=False,

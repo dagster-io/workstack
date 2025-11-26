@@ -1,50 +1,51 @@
 ---
-description: Enrich plan from GitHub issue with context extraction
+description: Enrich plan from GitHub issue and update it in place
 ---
 
 # /erk:plan-enrich
 
 ## Goal
 
-**Fetch an implementation plan from a GitHub issue, enrich it with semantic understanding, and present for review.**
+**Fetch an implementation plan from a GitHub issue, enrich it with semantic understanding, and update the same issue in place.**
 
-This command enables iterative plan refinement by enriching already-persisted plans with context extraction.
+This command enables plan refinement by fetching a plan from GitHub, enriching it with context extraction, and updating the original issue with the enriched version.
 
 **What this command does:**
 
 - ✅ Fetch plan content from GitHub issue
 - ✅ Interactively enhance plan for autonomous execution
 - ✅ Extract semantic understanding and context (8 categories)
-- ✅ Present enriched plan via ExitPlanMode for review
-- ✅ Enable save to new GitHub issue via `/erk:plan-save`
+- ✅ Present enriched plan for user review in conversation
+- ✅ **Update the SAME GitHub issue** with enriched content (after confirmation)
 
 **What this command CANNOT do:**
 
 - ❌ Edit files on current branch (structurally impossible - agent lacks tools)
 - ❌ Implement code (agent has no Write/Edit capabilities)
 - ❌ Make commits (agent restricted from git mutations)
-- ❌ Modify the original GitHub issue
 
 **Workflow:**
 
 ```
-/erk:plan-enrich <issue>
+/erk:plan-enrich [issue]    ← issue number optional (uses context if omitted)
   ↓
-Review enriched plan in conversation
+Agent asks clarifying questions
   ↓
-/erk:plan-save → New GitHub issue (enriched version)
+Enriched plan displayed for review
+  ↓
+User confirms → Issue #[issue] UPDATED in place
 ```
 
 ## Usage
 
 ```bash
-/erk:plan-enrich <issue-number>
+/erk:plan-enrich [issue-number]
 ```
 
 **Examples:**
 
 - `/erk:plan-enrich 456` - Fetch and enrich plan from issue #456
-- `/erk:plan-enrich 123` - Fetch and enrich plan from issue #123
+- `/erk:plan-enrich` - Use the most recently mentioned issue from conversation context
 
 ## Prerequisites
 
@@ -58,14 +59,16 @@ Review enriched plan in conversation
 /erk:plan-enrich (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
-  ├─→ Validate issue number argument
+  ├─→ Resolve issue number (argument or conversation context)
   ├─→ Fetch plan from GitHub issue via gh CLI
   ├─→ Launch plan-extractor agent (enriched mode)
   │     ↓
   │     Agent enriches plan with context + questions
   │     Agent returns markdown: # Plan: ... with Enrichment Details
   │     (Agent has NO Edit/Write tools - structurally safe)
-  └─→ Present enriched plan via ExitPlanMode
+  ├─→ Display enriched plan in conversation for review
+  ├─→ Ask user for confirmation (AskUserQuestion)
+  └─→ UPDATE the SAME GitHub issue with enriched content
 ```
 
 ---
@@ -78,11 +81,42 @@ You are executing the `/erk:plan-enrich` command. Follow these steps carefully:
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Validate Issue Number Argument
+### Step 2: Resolve Issue Number
 
-The command requires an issue number as argument. Parse the command input to extract the issue number.
+Determine the issue number from argument or conversation context.
 
-**Expected input format:** `/erk:plan-enrich <issue-number>`
+**Resolution order:**
+
+1. **Explicit argument** - If `/erk:plan-enrich 456` was invoked, use `456`
+2. **Conversation context** - If no argument, check if a GitHub issue was recently created or discussed in this session (look for issue numbers like `#1259` or `issue 1259` mentioned in recent messages)
+3. **Error** - If neither available, show error
+
+**Expected input formats:**
+
+- `/erk:plan-enrich 456` - Explicit issue number
+- `/erk:plan-enrich` - Use last issue from context (if available)
+
+**Resolution logic:**
+
+```
+1. Parse command arguments for issue number
+2. If no argument provided:
+   a. Search conversation context for recently mentioned GitHub issue numbers
+   b. Look for patterns like "#1259", "issue #1259", "Issue 1259",
+      "created issue 1259", "gh issue view 1259"
+   c. Use the most recently mentioned issue number
+3. Validate the resolved number is a positive integer
+```
+
+**When using context:**
+
+Display confirmation before proceeding:
+
+```
+📋 Using issue #[number] from conversation context
+
+Proceeding to fetch and enrich...
+```
 
 **Validation:**
 
@@ -95,10 +129,12 @@ fi
 
 **Error handling:**
 
-If no issue number provided:
+If no issue number provided AND none found in context:
 
 ```
 ❌ Error: Issue number required
+
+No issue number was provided and none found in conversation context.
 
 Usage: /erk:plan-enrich <issue-number>
 
@@ -172,42 +208,102 @@ Use the Task tool to launch the specialized agent with the fetched plan content:
 
 @../../docs/erk/includes/planning/plan-extractor-agent-restrictions.md
 
-### Step 5: Present Enriched Plan via ExitPlanMode
+### Step 5: Display Enriched Plan for Review
 
-After receiving the enriched plan from the agent, use the **ExitPlanMode** tool to present the plan to the user and store it in `~/.claude/plans/`.
-
-**Critical:** This step makes the enriched plan available for subsequent `/erk:plan-save` command.
+After receiving the enriched plan from the agent, display it directly in the conversation:
 
 ```
-Call ExitPlanMode with the enriched markdown content from the agent.
-```
-
-The user will see the enriched plan in the conversation and can:
-
-1. Review the enrichment
-2. Run `/erk:plan-enrich [guidance]` again to iterate (using session-plan-enrich for session-based)
-3. Run `/erk:plan-save` to save to a new GitHub issue
-
-### Step 6: Display Summary
-
-After presenting the plan, display a summary:
-
-```
-✅ Plan enriched and ready for review
+## Enriched Plan
 
 **Source:** GitHub issue #[issue_number]: [issue_title]
+
+---
+
+[Full enriched plan markdown from agent]
+
+---
+```
+
+This allows the user to review the enriched plan before it is saved.
+
+### Step 6: Ask User for Confirmation
+
+Use the **AskUserQuestion** tool to confirm before updating the GitHub issue:
+
+```json
+{
+  "questions": [
+    {
+      "question": "Update issue #[issue_number] with this enriched plan?",
+      "header": "Update issue",
+      "options": [
+        {
+          "label": "Yes, update issue",
+          "description": "Replace the issue body with the enriched plan"
+        },
+        {
+          "label": "No, cancel",
+          "description": "Do not update - you can copy the plan above if needed"
+        }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+**If user selects "No, cancel":**
+
+```
+Issue not updated. The enriched plan is displayed above for reference.
+
+To re-run enrichment:
+    /erk:plan-enrich [issue_number]
+```
+
+Then STOP - do not proceed to Step 7.
+
+**If user selects "Yes, update issue":** Proceed to Step 7.
+
+### Step 7: Update GitHub Issue with Enriched Plan
+
+Update the **same** GitHub issue with the enriched plan content:
+
+```bash
+# Write enriched plan to temp file
+temp_plan=$(mktemp)
+cat > "$temp_plan" <<'PLAN_EOF'
+[enriched plan content from agent]
+PLAN_EOF
+
+# Update the existing GitHub issue
+gh issue edit "$issue_number" --body-file "$temp_plan"
+
+# Clean up
+rm "$temp_plan"
+```
+
+**Note:** This updates the issue in place, preserving the issue number, URL, comments, and labels.
+
+### Step 8: Display Success Summary
+
+```
+✅ Issue #[issue_number] updated with enriched plan
+
+**Issue:** #[issue_number]: [issue_title]
+**URL:** [issue_url]
 **Enrichment:** [N] context categories extracted, [M] questions asked
 
 **Next steps:**
 
-Save enriched plan to new GitHub issue:
-    /erk:plan-save
-
-Iterate with additional guidance (session-based):
-    /erk:session-plan-enrich "Add retry logic"
-
-View original issue:
+View the enriched plan:
     gh issue view [issue_number]
+
+Implement the plan:
+    erk implement [issue_number]
+
+Implement with auto-confirmation (yolo mode):
+    erk implement [issue_number] --yolo
 ```
 
 ## Error Scenarios
@@ -238,6 +334,19 @@ The plan-extractor agent encountered an error during enrichment.
 The issue body is empty. Ensure the issue contains an implementation plan.
 ```
 
+### GitHub Issue Update Failed
+
+```
+❌ Error: Failed to update GitHub issue #[issue_number]
+
+[gh error output]
+
+Common causes:
+- Insufficient permissions to edit the issue
+- Network connectivity issue
+- GitHub API rate limit
+```
+
 ## Success Criteria
 
 This command succeeds when ALL of the following are true:
@@ -251,26 +360,34 @@ This command succeeds when ALL of the following are true:
 ✅ Clarifying questions asked (if needed)
 ✅ Semantic understanding extracted
 
-**Presentation:**
-✅ Enriched plan presented via ExitPlanMode
-✅ Plan stored in `~/.claude/plans/` for subsequent commands
-✅ Summary displayed with next steps
+**Review:**
+✅ Enriched plan displayed in conversation
+✅ User confirmation obtained via AskUserQuestion
+
+**Updating:**
+✅ Original GitHub issue updated with enriched plan
+✅ Issue number, URL, comments, and labels preserved
+✅ Success summary displayed with next steps
 
 ## Development Notes
 
 **For maintainers:**
 
-This command demonstrates the **issue-based enrichment pattern**:
+This command demonstrates the **in-place enrichment pattern**:
 
-1. Command fetches plan from external source (GitHub issue)
+1. Command fetches plan from GitHub issue
 2. Command launches specialized agent for enrichment
 3. Agent enriches plan (structurally safe)
-4. Command presents via ExitPlanMode (enables composition)
-5. User can iterate or save
+4. Command displays enriched plan for user review
+5. Command asks user for confirmation
+6. Command **updates the same issue** with enriched content
+
+**Key design choice:** This command updates the issue in place rather than creating a new one. This preserves issue number, URL, comments, labels, and any other metadata.
 
 **Related commands:**
 
-- `/erk:session-plan-enrich [guidance]` - Enrich plan from current session
-- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue
+- `/erk:plan-save-enriched` - Enrich plan from `~/.claude/plans/` and save to NEW issue
+- `/erk:session-plan-enrich [guidance]` - Enrich plan from current session (uses `~/.claude/plans/`)
+- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue (no enrichment)
 
 **Agent file:** `.claude/agents/erk/plan-extractor.md`

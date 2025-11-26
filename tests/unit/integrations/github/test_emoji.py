@@ -7,6 +7,7 @@ from erk_shared.github.emoji import (
     CONFLICTS_EMOJI,
     PR_STATE_EMOJIS,
     get_checks_status_emoji,
+    get_issue_state_emoji,
     get_pr_status_emoji,
 )
 from erk_shared.github.types import PullRequestInfo
@@ -297,3 +298,15 @@ def test_get_checks_status_emoji_draft_pr_with_pending_checks() -> None:
 
     result = get_checks_status_emoji(pr)
     assert result == "🔄"
+
+
+def test_get_issue_state_emoji_open() -> None:
+    """Test emoji for OPEN issue state."""
+    result = get_issue_state_emoji("OPEN")
+    assert result == "🟢"
+
+
+def test_get_issue_state_emoji_closed() -> None:
+    """Test emoji for CLOSED issue state."""
+    result = get_issue_state_emoji("CLOSED")
+    assert result == "🔴"

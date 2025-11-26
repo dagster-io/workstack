@@ -1,62 +1,51 @@
-"""Unified ls command that lists plans by default, worktrees with --worktrees flag."""
+"""Unified ls command that lists plans."""
 
 import click
 
 from erk.cli.commands.plan.list_cmd import _list_plans_impl
-from erk.cli.commands.wt.list_cmd import _list_worktrees
 from erk.core.context import ErkContext
 
 
 @click.command("ls")
-@click.option("--worktrees", is_flag=True, help="List worktrees instead of plans")
 @click.option(
     "--label",
     multiple=True,
-    help="Filter by label (plans only)",
+    help="Filter by label",
 )
 @click.option(
     "--state",
     type=click.Choice(["open", "closed"], case_sensitive=False),
-    help="Filter by state (plans only)",
+    help="Filter by state",
 )
 @click.option(
     "--action-state",
     type=click.Choice(["-", "pending", "running", "complete", "failed"], case_sensitive=False),
-    help="Filter by action state (plans only)",
+    help="Filter by action state",
 )
 @click.option(
     "--with-run",
     is_flag=True,
-    help="Show workflow run columns (run-id, run-state, plans only)",
+    help="Show workflow run columns (run-id, run-state)",
 )
 @click.option(
     "--limit",
     type=int,
-    help="Maximum number of results to return (plans only)",
+    help="Maximum number of results to return",
 )
 @click.pass_obj
 def ls_cmd(
     ctx: ErkContext,
-    worktrees: bool,
     label: tuple[str, ...],
     state: str | None,
     action_state: str | None,
     with_run: bool,
     limit: int | None,
 ) -> None:
-    """List plans (default) or worktrees.
-
-    By default, lists plans. Use --worktrees to list worktrees instead.
+    """List plans.
 
     Examples:
         erk ls                           # List plans
-        erk ls --worktrees               # List worktrees
         erk ls --label erk-plan          # List plans with label
         erk ls --with-run                # List plans with workflow run columns
     """
-    if worktrees:
-        # List worktrees
-        _list_worktrees(ctx)
-    else:
-        # List plans (default)
-        _list_plans_impl(ctx, label, state, action_state, with_run, limit)
+    _list_plans_impl(ctx, label, state, action_state, with_run, limit)

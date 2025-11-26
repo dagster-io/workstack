@@ -80,7 +80,7 @@ def test_ls_command_lists_plans_by_default() -> None:
         issues = FakeGitHubIssues(issues={1: plan_to_issue(plan1)})
         ctx = build_workspace_test_context(env, issues=issues)
 
-        # Act - Use ls command without --worktrees flag
+        # Act - Use ls command
         result = runner.invoke(ls_cmd, [], obj=ctx)
 
         # Assert - Should show plans
@@ -88,36 +88,6 @@ def test_ls_command_lists_plans_by_default() -> None:
         assert "Found 1 plan(s)" in result.output
         assert "#1" in result.output
         assert "Test Plan" in result.output
-
-
-def test_ls_command_with_worktrees_flag() -> None:
-    """Test that 'erk ls --worktrees' lists worktrees."""
-    from erk_shared.git.abc import WorktreeInfo
-
-    from erk.core.git.fake import FakeGit
-
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        # Configure FakeGit with worktrees
-        git = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-                ]
-            },
-        )
-
-        ctx = build_workspace_test_context(env, git=git, show_pr_info=False)
-
-        # Act - Use ls command with --worktrees flag
-        result = runner.invoke(ls_cmd, ["--worktrees"], obj=ctx)
-
-        # Assert - Should show worktrees table with columns
-        assert result.exit_code == 0
-        assert "worktree" in result.output  # Table header
-        assert "root" in result.output
 
 
 def test_ls_command_plan_filters_work() -> None:

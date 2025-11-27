@@ -1,6 +1,6 @@
 # The TAO of `erk`
 
-`erk` is a tool for the orchestration and management of plan-oriented agentic engineering.
+`erk` is a CLI tool built for the orchestration and management of plan-oriented agentic engineering.
 
 ## What is Plan-Oriented Agentic Engineering?
 

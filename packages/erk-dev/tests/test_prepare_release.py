@@ -9,7 +9,7 @@ These tests verify the prepare-release workflow:
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -56,15 +56,9 @@ def test_prepare_release_dry_run(mock_repo_root: Path) -> None:
         patch(
             "erk_dev.commands.prepare_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.prepare_release.command.get_git_status"
-        ) as mock_git_status,
-        patch(
-            "erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync"
-        ) as mock_sync,
-        patch(
-            "erk_dev.commands.prepare_release.command.run_git_pull"
-        ) as mock_pull,
+        patch("erk_dev.commands.prepare_release.command.get_git_status") as mock_git_status,
+        patch("erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync") as mock_sync,
+        patch("erk_dev.commands.prepare_release.command.run_git_pull") as mock_pull,
         patch(
             "erk_dev.commands.prepare_release.command.validate_version_consistency"
         ) as mock_validate,
@@ -72,12 +66,8 @@ def test_prepare_release_dry_run(mock_repo_root: Path) -> None:
             "erk_dev.commands.prepare_release.command.synchronize_versions"
         ) as mock_sync_versions,
         patch("erk_dev.commands.prepare_release.command.run_uv_sync") as mock_uv,
-        patch(
-            "erk_dev.commands.prepare_release.command.build_all_packages"
-        ) as mock_build,
-        patch(
-            "erk_dev.commands.prepare_release.command.validate_build_artifacts"
-        ) as mock_validate_artifacts,
+        patch("erk_dev.commands.prepare_release.command.build_all_packages") as mock_build,
+        patch("erk_dev.commands.prepare_release.command.validate_build_artifacts"),
     ):
         mock_package = MagicMock()
         mock_package.name = "test-pkg"
@@ -91,9 +81,7 @@ def test_prepare_release_dry_run(mock_repo_root: Path) -> None:
         # Verify all steps were called with dry_run=True
         mock_sync.assert_called_once_with(mock_repo_root, True)
         mock_pull.assert_called_once_with(mock_repo_root, True)
-        mock_sync_versions.assert_called_once_with(
-            [mock_package], "1.0.0", "1.0.1", True
-        )
+        mock_sync_versions.assert_called_once_with([mock_package], "1.0.0", "1.0.1", True)
         mock_uv.assert_called_once_with(mock_repo_root, True)
         mock_build.assert_called_once_with([mock_package], mock_repo_root, True)
 
@@ -105,12 +93,8 @@ def test_prepare_release_fails_on_uncommitted_changes(mock_repo_root: Path) -> N
         patch(
             "erk_dev.commands.prepare_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.prepare_release.command.get_git_status"
-        ) as mock_git_status,
-        patch(
-            "erk_dev.commands.prepare_release.command.filter_git_status"
-        ) as mock_filter,
+        patch("erk_dev.commands.prepare_release.command.get_git_status") as mock_git_status,
+        patch("erk_dev.commands.prepare_release.command.filter_git_status") as mock_filter,
     ):
         mock_package = MagicMock()
         mock_package.name = "test-pkg"
@@ -130,15 +114,9 @@ def test_prepare_release_success_workflow(mock_repo_root: Path) -> None:
         patch(
             "erk_dev.commands.prepare_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.prepare_release.command.get_git_status"
-        ) as mock_git_status,
-        patch(
-            "erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync"
-        ) as mock_sync,
-        patch(
-            "erk_dev.commands.prepare_release.command.run_git_pull"
-        ) as mock_pull,
+        patch("erk_dev.commands.prepare_release.command.get_git_status") as mock_git_status,
+        patch("erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync") as mock_sync,
+        patch("erk_dev.commands.prepare_release.command.run_git_pull") as mock_pull,
         patch(
             "erk_dev.commands.prepare_release.command.validate_version_consistency"
         ) as mock_validate,
@@ -146,9 +124,7 @@ def test_prepare_release_success_workflow(mock_repo_root: Path) -> None:
             "erk_dev.commands.prepare_release.command.synchronize_versions"
         ) as mock_sync_versions,
         patch("erk_dev.commands.prepare_release.command.run_uv_sync") as mock_uv,
-        patch(
-            "erk_dev.commands.prepare_release.command.build_all_packages"
-        ) as mock_build,
+        patch("erk_dev.commands.prepare_release.command.build_all_packages") as mock_build,
         patch(
             "erk_dev.commands.prepare_release.command.validate_build_artifacts"
         ) as mock_validate_artifacts,
@@ -166,9 +142,7 @@ def test_prepare_release_success_workflow(mock_repo_root: Path) -> None:
         mock_sync.assert_called_once_with(mock_repo_root, False)
         mock_pull.assert_called_once_with(mock_repo_root, False)
         mock_validate.assert_called_once()
-        mock_sync_versions.assert_called_once_with(
-            [mock_package], "1.2.3", "1.2.4", False
-        )
+        mock_sync_versions.assert_called_once_with([mock_package], "1.2.3", "1.2.4", False)
         mock_uv.assert_called_once_with(mock_repo_root, False)
         mock_build.assert_called_once_with([mock_package], mock_repo_root, False)
         mock_validate_artifacts.assert_called_once()
@@ -181,12 +155,8 @@ def test_prepare_release_version_bump_logic(mock_repo_root: Path) -> None:
         patch(
             "erk_dev.commands.prepare_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.prepare_release.command.get_git_status"
-        ) as mock_git_status,
-        patch(
-            "erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync"
-        ),
+        patch("erk_dev.commands.prepare_release.command.get_git_status") as mock_git_status,
+        patch("erk_dev.commands.prepare_release.command.ensure_branch_is_in_sync"),
         patch("erk_dev.commands.prepare_release.command.run_git_pull"),
         patch(
             "erk_dev.commands.prepare_release.command.validate_version_consistency"

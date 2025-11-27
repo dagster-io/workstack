@@ -6,8 +6,9 @@ These tests verify the git status filtering logic correctly handles:
 - Exclusion of specific files
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

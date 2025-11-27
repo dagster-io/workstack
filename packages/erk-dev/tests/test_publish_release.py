@@ -150,18 +150,10 @@ def test_publish_release_dry_run(mock_repo_root: Path, mock_dist_dir: Path) -> N
         patch(
             "erk_dev.commands.publish_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.publish_release.command.get_current_version"
-        ) as mock_version,
-        patch(
-            "erk_dev.commands.publish_release.command.validate_artifacts_exist"
-        ) as mock_validate,
-        patch(
-            "erk_dev.commands.publish_release.command.publish_all_packages"
-        ) as mock_publish,
-        patch(
-            "erk_dev.commands.publish_release.command.push_to_remote"
-        ) as mock_push,
+        patch("erk_dev.commands.publish_release.command.get_current_version") as mock_version,
+        patch("erk_dev.commands.publish_release.command.validate_artifacts_exist") as mock_validate,
+        patch("erk_dev.commands.publish_release.command.publish_all_packages") as mock_publish,
+        patch("erk_dev.commands.publish_release.command.push_to_remote") as mock_push,
     ):
         mock_package = MagicMock()
         mock_package.name = "test-pkg"
@@ -172,9 +164,7 @@ def test_publish_release_dry_run(mock_repo_root: Path, mock_dist_dir: Path) -> N
 
         # Verify all steps were called with dry_run=True
         mock_validate.assert_called_once()
-        mock_publish.assert_called_once_with(
-            [mock_package], mock_repo_root / "dist", "1.0.0", True
-        )
+        mock_publish.assert_called_once_with([mock_package], mock_repo_root / "dist", "1.0.0", True)
         mock_push.assert_called_once_with(mock_repo_root, True)
 
 
@@ -185,18 +175,10 @@ def test_publish_release_success_workflow(mock_repo_root: Path) -> None:
         patch(
             "erk_dev.commands.publish_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.publish_release.command.get_current_version"
-        ) as mock_version,
-        patch(
-            "erk_dev.commands.publish_release.command.validate_artifacts_exist"
-        ) as mock_validate,
-        patch(
-            "erk_dev.commands.publish_release.command.publish_all_packages"
-        ) as mock_publish,
-        patch(
-            "erk_dev.commands.publish_release.command.push_to_remote"
-        ) as mock_push,
+        patch("erk_dev.commands.publish_release.command.get_current_version") as mock_version,
+        patch("erk_dev.commands.publish_release.command.validate_artifacts_exist") as mock_validate,
+        patch("erk_dev.commands.publish_release.command.publish_all_packages") as mock_publish,
+        patch("erk_dev.commands.publish_release.command.push_to_remote") as mock_push,
     ):
         mock_package = MagicMock()
         mock_package.name = "test-pkg"
@@ -220,9 +202,7 @@ def test_publish_release_fails_on_missing_artifacts(mock_repo_root: Path) -> Non
         patch(
             "erk_dev.commands.publish_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.publish_release.command.get_current_version"
-        ) as mock_version,
+        patch("erk_dev.commands.publish_release.command.get_current_version") as mock_version,
     ):
         mock_package = MagicMock()
         mock_package.name = "test-pkg"
@@ -242,18 +222,10 @@ def test_publish_release_multiple_packages(mock_repo_root: Path) -> None:
         patch(
             "erk_dev.commands.publish_release.command.get_workspace_packages"
         ) as mock_get_packages,
-        patch(
-            "erk_dev.commands.publish_release.command.get_current_version"
-        ) as mock_version,
-        patch(
-            "erk_dev.commands.publish_release.command.validate_artifacts_exist"
-        ) as mock_validate,
-        patch(
-            "erk_dev.commands.publish_release.command.publish_all_packages"
-        ) as mock_publish,
-        patch(
-            "erk_dev.commands.publish_release.command.push_to_remote"
-        ) as mock_push,
+        patch("erk_dev.commands.publish_release.command.get_current_version") as mock_version,
+        patch("erk_dev.commands.publish_release.command.validate_artifacts_exist"),
+        patch("erk_dev.commands.publish_release.command.publish_all_packages") as mock_publish,
+        patch("erk_dev.commands.publish_release.command.push_to_remote"),
     ):
         pkg1 = MagicMock()
         pkg1.name = "package-one"

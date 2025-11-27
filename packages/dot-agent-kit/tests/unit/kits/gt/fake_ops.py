@@ -64,6 +64,7 @@ class GitHubState:
     pr_states: dict[str, str] = field(default_factory=dict)
     pr_titles: dict[int, str] = field(default_factory=dict)
     pr_bodies: dict[int, str] = field(default_factory=dict)
+    pr_diffs: dict[int, str] = field(default_factory=dict)
     merge_success: bool = True
     pr_update_success: bool = True
     pr_delay_attempts_until_visible: int = 0
@@ -329,6 +330,20 @@ class FakeGitHubGtKitOps(GitHubGtKit):
     def get_graphite_pr_url(self, pr_number: int) -> str | None:
         """Get Graphite PR URL (fake returns test URL)."""
         return f"https://app.graphite.com/github/pr/test-owner/test-repo/{pr_number}"
+
+    def get_pr_diff(self, pr_number: int) -> str:
+        """Get PR diff from configured state or return default."""
+        if pr_number in self._state.pr_diffs:
+            return self._state.pr_diffs[pr_number]
+        # Return a simple default diff
+        return (
+            "diff --git a/file.py b/file.py\n"
+            "--- a/file.py\n"
+            "+++ b/file.py\n"
+            "@@ -1,1 +1,1 @@\n"
+            "-old\n"
+            "+new"
+        )
 
 
 class FakeGtKitOps(GtKit):

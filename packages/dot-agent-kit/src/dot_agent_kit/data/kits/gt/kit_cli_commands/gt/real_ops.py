@@ -471,6 +471,16 @@ class RealGitHubGtKit(GitHubGtKit):
 
         return (False, None, None)
 
+    def get_pr_diff(self, pr_number: int) -> str:
+        """Get the diff for a PR using gh pr diff."""
+        result = subprocess.run(
+            ["gh", "pr", "diff", str(pr_number)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout
+
 
 class RealGtKit(GtKit):
     """Real composite operations implementation.

@@ -28,6 +28,7 @@ from erk.core.context import ErkContext
 @click.option(
     "--runs",
     is_flag=True,
+    default=True,
     help="Show workflow run columns (run-id, run-state)",
 )
 @click.option(

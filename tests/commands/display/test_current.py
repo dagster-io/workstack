@@ -80,7 +80,7 @@ def test_current_returns_root_in_root_repository() -> None:
 
 
 def test_current_exits_with_error_when_not_in_worktree() -> None:
-    """Test that current exits with code 1 when not in any worktree."""
+    """Test that current exits with code 1 and shows error message when not in any worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Construct sentinel path outside any worktree (no mkdir needed)
@@ -105,7 +105,8 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
         result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 1
-        assert result.output.strip() == ""
+        assert "Error:" in result.output
+        assert "Not in a worktree" in result.output
 
 
 def test_current_works_from_subdirectory() -> None:

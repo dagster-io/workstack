@@ -1,5 +1,0 @@
-{
-  "number": 1386,
-  "url": "https://github.com/dagster-io/erk/issues/1386",
-  "title": "Plan: Convert Silent Failure to Ensure.not_none in current_cmd.py"
-}

@@ -6,12 +6,15 @@ import click
 from erk_shared.github.metadata import create_submission_queued_block, render_erk_issue_event
 from erk_shared.output.output import user_output
 
+from erk.cli.constants import (
+    DISPATCH_WORKFLOW_METADATA_NAME,
+    DISPATCH_WORKFLOW_NAME,
+    ERK_PLAN_LABEL,
+)
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
-
-ERK_PLAN_LABEL = "erk-plan"
 
 
 def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
@@ -105,10 +108,10 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     submitted_by = username or "unknown"
 
     # Trigger workflow via direct dispatch
-    user_output("Triggering dispatch-erk-queue workflow...")
+    user_output(f"Triggering {DISPATCH_WORKFLOW_METADATA_NAME} workflow...")
     run_id = ctx.github.trigger_workflow(
         repo_root=repo.root,
-        workflow="dispatch-erk-queue.yml",
+        workflow=DISPATCH_WORKFLOW_NAME,
         inputs={
             "issue_number": str(issue_number),
             "submitted_by": submitted_by,
@@ -130,7 +133,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             submitted_by=submitted_by,
             issue_number=issue_number,
             validation_results=validation_results,
-            expected_workflow="dispatch-erk-queue",
+            expected_workflow=DISPATCH_WORKFLOW_METADATA_NAME,
         )
 
         comment_body = render_erk_issue_event(
@@ -138,7 +141,8 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             metadata=metadata_block,
             description=(
                 f"Issue submitted by **{submitted_by}** at {queued_at}.\n\n"
-                f"The `dispatch-erk-queue` workflow has been triggered via direct dispatch.\n\n"
+                f"The `{DISPATCH_WORKFLOW_METADATA_NAME}` workflow has been "
+                f"triggered via direct dispatch.\n\n"
                 f"**Workflow run:** {workflow_url}\n\n"
                 f"The workflow will:\n"
                 f"- Create a branch from trunk\n"

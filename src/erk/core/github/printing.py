@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import click
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 from erk_shared.printing.base import PrintingBase
@@ -117,8 +118,9 @@ class PrintingGitHub(PrintingBase, GitHub):
         ref_arg = f"--ref {ref} " if ref else ""
         input_args = " ".join(f"-f {key}={value}" for key, value in inputs.items())
         self._emit(self._format_command(f"gh workflow run {workflow} {ref_arg}{input_args}"))
+        self._emit(f"   Polling for run (max {15} attempts)...")
         run_id = self._wrapped.trigger_workflow(repo_root, workflow, inputs, ref=ref)
-        self._emit(f"-> Run ID: {run_id}")
+        self._emit(f"-> Run ID: {click.style(run_id, fg='green')}")
         return run_id
 
     def create_pr(

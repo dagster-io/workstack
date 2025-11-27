@@ -32,13 +32,11 @@ def check_clean_working_tree(ctx: ErkContext) -> None:
 
     Raises SystemExit if uncommitted changes found.
     """
-    if ctx.git.has_uncommitted_changes(ctx.cwd):
-        user_output(
-            click.style("Error: ", fg="red")
-            + "Cannot delete current branch with uncommitted changes.\n"
-            "Please commit or stash your changes first."
-        )
-        raise SystemExit(1)
+    Ensure.invariant(
+        not ctx.git.has_uncommitted_changes(ctx.cwd),
+        "Cannot delete current branch with uncommitted changes.\n"
+        "Please commit or stash your changes first.",
+    )
 
 
 def verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:

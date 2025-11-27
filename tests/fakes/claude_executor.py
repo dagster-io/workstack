@@ -54,6 +54,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
         simulated_pr_number: int | None = None,
         simulated_pr_title: str | None = None,
         simulated_issue_number: int | None = None,
+        simulated_commit_message: str | None = None,
     ) -> None:
         """Initialize fake with predetermined behavior.
 
@@ -64,6 +65,8 @@ class FakeClaudeExecutor(ClaudeExecutor):
             simulated_pr_number: PR number to return (simulates PR metadata)
             simulated_pr_title: PR title to return (simulates PR metadata)
             simulated_issue_number: Issue number to return (simulates linked issue)
+            simulated_commit_message: Commit message to return in filtered_messages
+                (used by /gt:generate-commit-message)
         """
         self._claude_available = claude_available
         self._command_should_fail = command_should_fail
@@ -71,6 +74,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
         self._simulated_pr_number = simulated_pr_number
         self._simulated_pr_title = simulated_pr_title
         self._simulated_issue_number = simulated_issue_number
+        self._simulated_commit_message = simulated_commit_message
         self._executed_commands: list[tuple[str, Path, bool, bool]] = []
         self._interactive_calls: list[tuple[Path, bool]] = []
 
@@ -159,6 +163,12 @@ class FakeClaudeExecutor(ClaudeExecutor):
                 filtered_messages=[],
             )
 
+        # Determine filtered_messages based on command and configuration
+        filtered_messages: list[str] = []
+        if self._simulated_commit_message is not None:
+            # Return commit message as filtered_messages (used by /gt:generate-commit-message)
+            filtered_messages = [self._simulated_commit_message]
+
         return CommandResult(
             success=True,
             pr_url=self._simulated_pr_url,
@@ -167,7 +177,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
             issue_number=self._simulated_issue_number,
             duration_seconds=0.0,
             error_message=None,
-            filtered_messages=[],
+            filtered_messages=filtered_messages,
         )
 
     def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:

@@ -1,95 +1,113 @@
-"""Submit current branch as a pull request using Claude Code."""
+"""Submit current branch as a pull request using Python orchestration.
 
-import time
+This command orchestrates the PR submission workflow directly in Python,
+using Claude only for what requires intelligence: generating commit messages.
+
+Architecture:
+    erk pr submit → Python orchestration
+                    ├── execute_pre_analysis() (direct function call)
+                    ├── get_diff_context() (direct function call)
+                    ├── Claude CLI → /gt:generate-commit-message (AI-only)
+                    ├── execute_post_analysis() (direct function call)
+                    └── display results (Python)
+
+Benefits:
+    - No improvisation: Python controls all operations
+    - Token efficiency: AI only sees diff, not orchestration context
+    - Faster execution: No roundtrips between agent and tools
+    - Deterministic: Mechanical operations are predictable
+    - Testable: Can unit test orchestration without Claude
+"""
+
+import tempfile
+from pathlib import Path
 
 import click
 from rich.console import Console
 
-from erk.cli.output import format_implement_summary
-from erk.core.claude_executor import ClaudeExecutor, CommandResult
+from erk.core.claude_executor import ClaudeExecutor
 from erk.core.context import ErkContext
+from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+    DiffContextResult,
+    PostAnalysisError,
+    PostAnalysisResult,
+    PreAnalysisError,
+    execute_post_analysis,
+    execute_pre_analysis,
+    get_diff_context,
+)
 
 
-def _execute_streaming_submit(
+def _generate_commit_message(
     executor: ClaudeExecutor,
-    worktree_path: str,
+    diff_context: DiffContextResult,
+    cwd: Path,
     dangerous: bool,
-    verbose: bool,
-    console: Console,
-) -> CommandResult:
-    """Execute /gt:pr-submit command with streaming output.
+) -> str:
+    """Call Claude to generate commit message from diff.
+
+    Writes diff to temp file to handle large diffs without hitting
+    context limits in the prompt.
 
     Args:
         executor: Claude CLI executor
-        worktree_path: Path to worktree directory
+        diff_context: Result from get_diff_context()
+        cwd: Current working directory for Claude execution
         dangerous: Whether to skip permission prompts
-        verbose: Whether to show full output
-        console: Rich console for output
 
     Returns:
-        CommandResult with success status and PR URL if created
+        Generated commit message text
     """
-    from pathlib import Path
+    # Write diff to temp file (handles large diffs)
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".diff", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(f"Branch: {diff_context.current_branch}\n")
+        f.write(f"Parent: {diff_context.parent_branch}\n\n")
+        f.write(diff_context.diff)
+        diff_file = Path(f.name)
 
-    command = "/gt:pr-submit"
+    try:
+        # Invoke minimal command that reads diff file
+        prompt = f"/gt:generate-commit-message {diff_file}"
+        result = executor.execute_command(prompt, cwd, dangerous)
+        return "\n".join(result.filtered_messages)
+    finally:
+        diff_file.unlink(missing_ok=True)
 
-    if verbose:
-        click.echo(f"Running {command}...", err=True)
-        return executor.execute_command(command, Path(worktree_path), dangerous, verbose=True)
 
-    # Filtered mode - streaming with spinner
-    with console.status(f"Running {command}...", spinner="dots") as status:
-        start_time = time.time()
-        filtered_messages: list[str] = []
-        pr_url: str | None = None
-        pr_number: int | None = None
-        pr_title: str | None = None
-        issue_number: int | None = None
-        error_message: str | None = None
-        success = True
+def _display_success_results(
+    console: Console,
+    result: PostAnalysisResult,
+) -> None:
+    """Display success results from PR submission.
 
-        for event in executor.execute_command_streaming(
-            command, Path(worktree_path), dangerous, verbose=False
-        ):
-            if event.event_type == "text":
-                console.print(event.content)
-                filtered_messages.append(event.content)
-            elif event.event_type == "tool":
-                console.print(event.content)
-                filtered_messages.append(event.content)
-            elif event.event_type == "spinner_update":
-                status.update(event.content)
-            elif event.event_type == "pr_url":
-                pr_url = event.content
-            elif event.event_type == "pr_number":
-                # Convert string back to int - safe because we control the source
-                if event.content.isdigit():
-                    pr_number = int(event.content)
-            elif event.event_type == "pr_title":
-                pr_title = event.content
-            elif event.event_type == "issue_number":
-                # Convert string back to int - safe because we control the source
-                if event.content.isdigit():
-                    issue_number = int(event.content)
-            elif event.event_type == "error":
-                error_message = event.content
-                success = False
+    Args:
+        console: Rich console for output
+        result: Success result from post-analysis
+    """
+    console.print()
+    console.print("[bold]## Branch Submission Complete[/bold]")
+    console.print()
+    console.print("[bold]### What Was Done[/bold]")
+    console.print()
+    console.print("✓ Created commit with AI-generated message")
+    console.print("✓ Submitted branch to Graphite")
 
-        duration = time.time() - start_time
+    if result.pr_number is not None:
+        console.print(f"✓ Updated PR #{result.pr_number}: {result.pr_title}")
 
-        final_status = "✅ Complete" if success else "❌ Failed"
-        status.update(final_status)
+    if result.issue_number is not None:
+        console.print(f"✓ Linked to issue #{result.issue_number} (will auto-close on merge)")
 
-        return CommandResult(
-            success=success,
-            pr_url=pr_url,
-            pr_number=pr_number,
-            pr_title=pr_title,
-            issue_number=issue_number,
-            duration_seconds=duration,
-            error_message=error_message,
-            filtered_messages=filtered_messages,
-        )
+    console.print()
+    console.print("[bold]### View PR[/bold]")
+    console.print()
+
+    # Prefer Graphite URL, fall back to GitHub URL
+    url = result.graphite_url if result.graphite_url else result.pr_url
+    if url:
+        console.print(url)
 
 
 @click.command("submit")
@@ -99,9 +117,8 @@ def _execute_streaming_submit(
 def pr_submit(ctx: ErkContext, dangerous: bool, verbose: bool) -> None:
     """Submit current branch as a pull request using Claude Code.
 
-    Invokes Claude Code to execute the /gt:pr-submit slash command,
-    which analyzes your changes, generates a commit message, and
-    creates a pull request.
+    Orchestrates the workflow in Python, using Claude only for
+    generating the commit message from the diff analysis.
 
     Examples:
 
@@ -119,6 +136,7 @@ def pr_submit(ctx: ErkContext, dangerous: bool, verbose: bool) -> None:
     """
     executor = ctx.claude_executor
     console = Console()
+    cwd = ctx.cwd
 
     # Verify Claude is available
     if not executor.is_claude_available():
@@ -126,29 +144,53 @@ def pr_submit(ctx: ErkContext, dangerous: bool, verbose: bool) -> None:
             "Claude CLI not found\nInstall from: https://claude.com/download"
         )
 
-    # Get current working directory (worktree path)
-    worktree_path = str(ctx.cwd)
+    # Step 1: Pre-analysis (direct Python call)
+    with console.status("Preparing branch...", spinner="dots"):
+        pre_result = execute_pre_analysis()
+        if isinstance(pre_result, PreAnalysisError):
+            raise click.ClickException(
+                f"{pre_result.message}\n\nError type: {pre_result.error_type}"
+            )
 
-    # Execute the submit command
-    start_time = time.time()
-    result = _execute_streaming_submit(
-        executor=executor,
-        worktree_path=worktree_path,
-        dangerous=dangerous,
-        verbose=verbose,
-        console=console,
-    )
+    # Display pre-analysis status
+    if verbose:
+        click.echo(pre_result.message, err=True)
 
-    # Show summary (unless verbose mode)
-    if not verbose:
-        total_duration = time.time() - start_time
-        summary = format_implement_summary([result], total_duration)
-        console.print(summary)
+    # Step 2: Get diff context (direct Python call)
+    with console.status("Analyzing changes...", spinner="dots"):
+        try:
+            diff_context = get_diff_context()
+        except ValueError as e:
+            raise click.ClickException(str(e)) from e
+
+    # Step 3: Generate commit message (AI - the only Claude call)
+    with console.status("Generating commit message...", spinner="dots"):
+        commit_message = _generate_commit_message(
+            executor,
+            diff_context,
+            cwd,
+            dangerous,
+        )
+
+    if not commit_message.strip():
+        raise click.ClickException("Failed to generate commit message")
+
+    if verbose:
+        click.echo("\n--- Generated Commit Message ---", err=True)
+        click.echo(commit_message, err=True)
+        click.echo("--- End Commit Message ---\n", err=True)
+
+    # Step 4: Post-analysis (direct Python call)
+    with console.status("Submitting PR...", spinner="dots"):
+        post_result = execute_post_analysis(commit_message)
+        if isinstance(post_result, PostAnalysisError):
+            raise click.ClickException(
+                f"{post_result.message}\n\nError type: {post_result.error_type}"
+            )
+
+    # Step 5: Display results (Python)
+    _display_success_results(console, post_result)
 
     # Show PR URL prominently if created
-    if result.pr_url:
-        click.echo(f"\n🔗 PR: {result.pr_url}")
-
-    # Raise exception if command failed
-    if not result.success:
-        raise click.ClickException(result.error_message or "PR submission failed")
+    if post_result.pr_url:
+        click.echo(f"\n🔗 PR: {post_result.pr_url}")

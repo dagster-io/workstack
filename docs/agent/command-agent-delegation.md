@@ -52,13 +52,13 @@ Does command orchestrate 3+ steps?
 
 **Examples:**
 
-| Scenario                                                        | Delegate? | Rationale                                                          |
-| --------------------------------------------------------------- | --------- | ------------------------------------------------------------------ |
-| Run pytest with specialized output parsing                      | ✅ Yes    | Complex parsing, multiple tools (devrun agent)                     |
-| Create worktree with validation, JSON parsing, formatted output | ✅ Yes    | Multi-step workflow with error handling (planned-wt-creator)       |
-| Submit branch: stage, diff analysis, commit, PR creation        | ✅ Yes    | Complex orchestration with git + GitHub CLI (git-branch-submitter) |
-| Run single git command with no processing                       | ❌ No     | Simple wrapper, no orchestration needed                            |
-| Display help text or documentation                              | ❌ No     | No workflow, just content display                                  |
+| Scenario                                                        | Delegate? | Rationale                                                    |
+| --------------------------------------------------------------- | --------- | ------------------------------------------------------------ |
+| Run pytest with specialized output parsing                      | ✅ Yes    | Complex parsing, multiple tools (devrun agent)               |
+| Create worktree with validation, JSON parsing, formatted output | ✅ Yes    | Multi-step workflow with error handling (planned-wt-creator) |
+| Submit branch: stage, diff analysis, commit, PR creation        | ❌ No     | Python orchestration with single AI call for commit message  |
+| Run single git command with no processing                       | ❌ No     | Simple wrapper, no orchestration needed                      |
+| Display help text or documentation                              | ❌ No     | No workflow, just content display                            |
 
 ## Delegation Patterns
 
@@ -112,7 +112,6 @@ prompt="Run unit tests with pytest, then run pyright. Fix any failures iterative
 
 **Examples:**
 
-- `/gt:submit-branch` → `gt-branch-submitter` agent
 - `/erk:create-wt-from-plan-file` → `planned-wt-creator` agent
 
 **Characteristics:**
@@ -401,8 +400,8 @@ Choose the appropriate model based on agent's cognitive requirements:
 **Examples:**
 
 - `devrun` (haiku) - Runs tools, parses output, iterates
-- `gt-branch-submitter` (haiku) - Orchestrates git/gh operations
 - `planned-wt-creator` (haiku) - Detects files, validates, creates worktree
+- `gt-commit-message-generator` (haiku) - Read-only agent that generates commit messages from diffs
 - Code review agent (sonnet) - Analyzes code quality and patterns
 
 ### Tools Available
@@ -444,25 +443,33 @@ Delegates to devrun agent to run pytest and pyright iteratively.
 
 **Key insight:** One agent serves multiple commands by accepting different tool invocations.
 
-### Example 2: /gt:submit-branch → gt-branch-submitter
+### Example 2: Python-First Orchestration (Alternative to Delegation)
 
-**Pattern:** Workflow orchestration
+**Pattern:** Python orchestration with minimal AI
 
-**Command:** `.claude/commands/gt/submit-branch.md` (43 lines)
+**Example:** `erk pr submit` (Python CLI command)
 
-```markdown
-Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent.
+When AI is only needed for a specific task (like generating commit messages), consider Python-first orchestration instead of agent delegation:
+
+```python
+# Python orchestrates all mechanical operations
+pre_result = execute_pre_analysis()  # Direct function call
+diff_context = get_diff_context()    # Direct function call
+commit_message = executor.execute_command(  # Single AI call
+    "/gt:generate-commit-message", diff_file
+)
+post_result = execute_post_analysis(commit_message)  # Direct function call
 ```
 
-**Agent:** `.claude/agents/gt/gt-branch-submitter.md`
+**Benefits:**
 
-- Pre-analysis phase (check changes, squash commits)
-- Diff analysis phase (understand changes)
-- Commit message generation
-- Post-analysis phase (amend, submit, update PR)
-- Comprehensive error handling at each step
+- No improvisation: Python controls all operations
+- Token efficiency: AI only sees diff, not orchestration context
+- Faster execution: No roundtrips between agent and tools
+- Deterministic: Mechanical operations are predictable
+- Testable: Can unit test orchestration without Claude
 
-**Key insight:** Agent coordinates multiple steps with dependencies, handling errors at each boundary.
+**Key insight:** Not all workflows need full agent delegation. When AI is only needed for one step, Python orchestration with a minimal read-only agent is more efficient.
 
 ### Example 3: /erk:create-wt-from-plan-file → planned-wt-creator
 
@@ -650,7 +657,7 @@ Documentation follows a progressive disclosure model:
 
 3. **Implementation examples** - Actual commands and agents in codebase
    - `/fast-ci` → `devrun` (simple delegation)
-   - `/gt:submit-branch` → `gt-branch-submitter` (workflow orchestration)
+   - `erk pr submit` (Python-first orchestration with minimal AI)
    - `/erk:create-wt-from-plan-file` → `planned-wt-creator` (workflow orchestration)
 
 **Navigation:**

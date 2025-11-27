@@ -486,7 +486,7 @@ def build_pr_metadata_section(
 
 
 def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
-    """Invoke Claude agent to generate commit message from diff.
+    """Invoke Claude directly to generate commit message from diff.
 
     Args:
         diff_context: Diff and repository context
@@ -495,51 +495,61 @@ def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
         Generated commit message text
 
     Raises:
-        RuntimeError: If agent invocation fails
+        RuntimeError: If Claude invocation fails
     """
-    import tempfile
+    from erk.data.kits.gt.kit_cli_commands.gt.prompts import (
+        COMMIT_MESSAGE_SYSTEM_PROMPT,
+        truncate_diff,
+    )
 
-    # Write diff to temp file (handles large diffs better than prompt)
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".diff", delete=False) as f:
-        diff_path = f.name
-        f.write(diff_context.diff)
+    # Truncate if needed
+    diff_content, was_truncated = truncate_diff(diff_context.diff)
 
-    try:
-        # Build prompt for agent
-        prompt = f"""Generate commit message for this diff.
+    truncation_note = ""
+    if was_truncated:
+        truncation_note = "\n**NOTE**: Diff truncated. Focus on visible changes.\n"
 
-Diff file: {diff_path}
-Repository root: {diff_context.repo_root}
-Current branch: {diff_context.current_branch}
-Parent branch: {diff_context.parent_branch}
+    # Build prompt with inline diff
+    prompt = f"""Generate commit message for this diff.
 
-Return ONLY the commit message text (no explanations).
-First line = PR title, rest = PR body.
+Repository: {diff_context.repo_root}
+Branch: {diff_context.current_branch} (parent: {diff_context.parent_branch})
+{truncation_note}
+```diff
+{diff_content}
+```
 
-Use the Task tool to invoke the commit-message-generator agent from the gt kit."""
+Return ONLY the commit message. First line = PR title, rest = PR body."""
 
-        # Execute via Claude CLI in print mode with Task delegation
-        # Note: prompt must be a single argument (shell handles parsing)
-        result = subprocess.run(
-            ["claude", "--print", "--output-format", "text", "--tools", "Task", "--", prompt],
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=diff_context.repo_root,
-        )
+    # Direct Claude invocation - no Task delegation
+    result = subprocess.run(
+        [
+            "claude",
+            "--print",
+            "--output-format",
+            "text",
+            "--model",
+            "haiku",
+            "--tools",
+            "",  # No tools needed
+            "--append-system-prompt",
+            COMMIT_MESSAGE_SYSTEM_PROMPT,
+            "--",
+            prompt,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=diff_context.repo_root,
+    )
 
-        if result.returncode != 0:
-            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
+    if result.returncode != 0:
+        raise RuntimeError(f"Claude failed: {result.stderr or 'Unknown error'}")
 
-        # Claude outputs the generated message
-        if not result.stdout.strip():
-            raise RuntimeError("Agent returned no output")
+    if not result.stdout.strip():
+        raise RuntimeError("Claude returned no output")
 
-        return result.stdout.strip()
-
-    finally:
-        # Clean up temp file
-        Path(diff_path).unlink(missing_ok=True)
+    return result.stdout.strip()
 
 
 def orchestrate_submit_workflow(

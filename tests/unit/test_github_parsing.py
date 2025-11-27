@@ -2,6 +2,7 @@
 
 from erk_shared.github.parsing import (
     _determine_checks_status,
+    parse_gh_auth_status_output,
     parse_github_pr_list,
     parse_github_pr_status,
 )
@@ -141,3 +142,82 @@ def test_determine_checks_status_no_checks():
     """Test check status with no checks configured."""
     result = _determine_checks_status([])
     assert result is None
+
+
+# Tests for parse_gh_auth_status_output
+
+
+def test_parse_gh_auth_status_output_new_format():
+    """Test parsing new gh CLI format with 'account' keyword."""
+    output = """github.com
+  ✓ Logged in to github.com account schrockn (keyring)
+  - Active account: true
+  - Git operations protocol: https
+  - Token: gho_************************************
+  - Token scopes: 'gist', 'read:org', 'repo', 'workflow'
+"""
+    authenticated, username, hostname = parse_gh_auth_status_output(output)
+
+    assert authenticated is True
+    assert username == "schrockn"
+    assert hostname == "github.com"
+
+
+def test_parse_gh_auth_status_output_old_format():
+    """Test parsing old gh CLI format with 'as' keyword."""
+    output = """github.com
+  ✓ Logged in to github.com as testuser
+  - Git operations for github.com configured to use https protocol.
+  - Token: ghp_************************************
+"""
+    authenticated, username, hostname = parse_gh_auth_status_output(output)
+
+    assert authenticated is True
+    assert username == "testuser"
+    assert hostname == "github.com"
+
+
+def test_parse_gh_auth_status_output_github_enterprise():
+    """Test parsing with GitHub Enterprise hostname."""
+    output = """enterprise.github.com
+  ✓ Logged in to enterprise.github.com account admin (keyring)
+  - Active account: true
+"""
+    authenticated, username, hostname = parse_gh_auth_status_output(output)
+
+    assert authenticated is True
+    assert username == "admin"
+    assert hostname == "enterprise.github.com"
+
+
+def test_parse_gh_auth_status_output_checkmark_only():
+    """Test fallback when checkmark present but format unrecognized."""
+    output = """github.com
+  ✓ Some unrecognized format line here
+"""
+    authenticated, username, hostname = parse_gh_auth_status_output(output)
+
+    assert authenticated is True
+    assert username is None
+    assert hostname is None
+
+
+def test_parse_gh_auth_status_output_not_authenticated():
+    """Test handling of unauthenticated state."""
+    output = """You are not logged in to any GitHub hosts.
+To log in, run: gh auth login
+"""
+    authenticated, username, hostname = parse_gh_auth_status_output(output)
+
+    assert authenticated is False
+    assert username is None
+    assert hostname is None
+
+
+def test_parse_gh_auth_status_output_empty_string():
+    """Test handling of empty output."""
+    authenticated, username, hostname = parse_gh_auth_status_output("")
+
+    assert authenticated is False
+    assert username is None
+    assert hostname is None

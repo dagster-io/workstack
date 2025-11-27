@@ -273,6 +273,7 @@ jobs:
               --body-file pr_body.md \
               --head "$BRANCH_NAME"
 
+            rm -f pr_body.md
             echo "✅ Draft PR created"
           fi
 
@@ -322,6 +323,7 @@ jobs:
           EOF
 
           gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
+          rm -f comment_body.md
 
       - name: Update issue body with dispatch info
         env:
@@ -409,6 +411,43 @@ jobs:
         run: |
           gh pr ready "$BRANCH_NAME"
           echo "✅ PR marked ready for review"
+
+      - name: Update PR body with implementation summary
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
+        run: |
+          # Get the implementation commit message (the last commit before CI trigger)
+          commit_body=$(git log -1 --pretty=%B)
+
+          # Get PR number for checkout instructions
+          PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
+
+          # Create updated PR body preserving header
+          cat > pr_body.md <<BODY_EOF
+          **Author:** @$SUBMITTED_BY
+          **Plan:** #$ISSUE_NUMBER
+
+          To checkout this PR in a fresh worktree and environment locally, run:
+          \`\`\`
+          erk pr checkout $PR_NUMBER
+          \`\`\`
+
+          ## Summary
+
+          $commit_body
+
+          ---
+
+          Closes #$ISSUE_NUMBER
+          BODY_EOF
+
+          gh pr edit "$BRANCH_NAME" --body-file pr_body.md
+          rm -f pr_body.md
+          echo "✅ PR body updated with implementation summary"
 
       - name: Trigger CI workflows
         if: steps.implement.outputs.implementation_success == 'true'

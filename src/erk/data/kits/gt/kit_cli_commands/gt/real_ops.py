@@ -14,6 +14,8 @@ Design:
 import json
 import subprocess
 
+from erk_shared.github.parsing import parse_gh_auth_status_output
+
 from erk.data.kits.gt.kit_cli_commands.gt.ops import (
     CommandResult,
     GitGtKit,
@@ -445,31 +447,7 @@ class RealGitHubGtKit(GitHubGtKit):
             return (False, None, None)
 
         output = result.stdout + result.stderr
-
-        # Look for success pattern "Logged in to HOST as USER"
-        username: str | None = None
-        hostname: str | None = None
-
-        for line in output.split("\n"):
-            if "Logged in to" in line:
-                if " as " in line:
-                    parts = line.split(" as ")
-                    if len(parts) >= 2:
-                        username = parts[1].strip().split()[0] if parts[1].strip() else None
-                        logged_in_part = parts[0]
-                        if "Logged in to" in logged_in_part:
-                            host_part = logged_in_part.split("Logged in to")[-1].strip()
-                            hostname = host_part if host_part else None
-                break
-
-        if username:
-            return (True, username, hostname)
-
-        # Fallback: if checkmark present, still consider authenticated
-        if "✓" in output:
-            return (True, None, None)
-
-        return (False, None, None)
+        return parse_gh_auth_status_output(output)
 
     def get_pr_diff(self, pr_number: int) -> str:
         """Get the diff for a PR using gh pr diff."""

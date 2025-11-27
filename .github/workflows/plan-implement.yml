@@ -50,13 +50,10 @@ jobs:
           cd $GITHUB_WORKSPACE
 
           # Install workspace packages in dependency order (bottom-up)
-          # Step 1: Install erk-shared first (no workspace dependencies)
-          uv tool install --from ./packages/erk-shared erk-shared
-
-          # Step 2: Install dot-agent-kit (depends on erk-shared)
+          # Step 1: Install dot-agent-kit (depends on erk-shared)
           uv tool install --from ./packages/dot-agent-kit --with ./packages/erk-shared dot-agent-kit
 
-          # Step 3: Install erk (depends on erk-shared and dot-agent-kit)
+          # Step 2: Install erk (depends on erk-shared and dot-agent-kit)
           uv tool install --from . --with ./packages/erk-shared --with ./packages/dot-agent-kit erk
 
           # Install Claude Code

@@ -159,20 +159,12 @@ Display the issue URL, enrichment status, and next steps:
 
 **Issue:** [issue_url]
 
-**Next steps:**
+@../../docs/erk/includes/planning/next-steps-output.md
+```
 
-View the plan:
-    gh issue view [issue_number]
+Where `[OPTIONAL_COMMANDS]` in the include expands to:
 
-Implement directly:
-    erk implement [issue_number]
-
-Implement with auto-confirmation (yolo mode):
-    erk implement [issue_number] --yolo
-
-Implement and auto-submit PR (dangerous mode):
-    erk implement [issue_number] --dangerous
-
+```
 Submit plan to erk queue:
     erk submit [issue_number]
 ```

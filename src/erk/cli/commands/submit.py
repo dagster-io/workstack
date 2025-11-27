@@ -1,6 +1,5 @@
 """Submit issue for remote AI implementation via GitHub Actions."""
 
-import subprocess
 from datetime import UTC, datetime
 
 import click
@@ -8,6 +7,7 @@ from erk_shared.github.metadata import create_submission_queued_block, render_er
 from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 
@@ -56,6 +56,9 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
         - Issue must have erk-plan label
         - Issue must be OPEN
     """
+    # Validate GitHub CLI authentication upfront (LBYL)
+    Ensure.gh_authenticated(ctx)
+
     # Get repository context
     if isinstance(ctx.repo, RepoContext):
         repo = ctx.repo
@@ -97,21 +100,9 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()
 
-    # Get GitHub username from gh CLI (requires authentication)
-    try:
-        result = subprocess.run(
-            ["gh", "api", "user", "--jq", ".login"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        submitted_by = result.stdout.strip()
-    except subprocess.CalledProcessError:
-        # Fall back to "unknown" if gh API fails
-        submitted_by = "unknown"
-
-    if not submitted_by:
-        submitted_by = "unknown"
+    # Get GitHub username from gh CLI (authentication already validated)
+    is_authenticated, username, _ = ctx.github.check_auth_status()
+    submitted_by = username or "unknown"
 
     # Trigger workflow via direct dispatch
     user_output("Triggering dispatch-erk-queue workflow...")

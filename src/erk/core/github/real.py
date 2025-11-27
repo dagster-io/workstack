@@ -557,22 +557,19 @@ query {{
             runs_data = json.loads(runs_result.stdout)
             debug_log(f"trigger_workflow: found {len(runs_data)} runs")
 
-            # Validate response structure
+            # Validate response structure (must be a list)
             if not isinstance(runs_data, list):
                 msg = (
-                    "GitHub workflow list returned unexpected format. "
-                    f"Expected list, got: {type(runs_data).__name__}. "
+                    f"GitHub workflow '{workflow}' triggered but received invalid response format. "
+                    f"Expected JSON array, got: {type(runs_data).__name__}. "
                     f"Raw output: {runs_result.stdout[:200]}"
                 )
                 raise RuntimeError(msg)
 
-            # Empty list is OK - it means workflow hasn't appeared yet, continue polling
-            if len(runs_data) == 0:
-                # Continue to next polling iteration
-                if attempt < max_attempts - 1:
-                    delay = 1 if attempt < 5 else 2
-                    self._time.sleep(delay)
-                continue
+            # Empty list is valid - workflow hasn't appeared yet, continue polling
+            if not runs_data:
+                # Continue to retry logic below
+                pass
 
             # Find run by matching distinct_id in displayTitle
             for run in runs_data:

@@ -108,7 +108,8 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     submitted_by = username or "unknown"
 
     # Trigger workflow via direct dispatch
-    user_output(f"Triggering {DISPATCH_WORKFLOW_METADATA_NAME} workflow...")
+    user_output(f"Triggering workflow: {click.style(DISPATCH_WORKFLOW_NAME, fg='cyan')}")
+    user_output(f"  Display name: {DISPATCH_WORKFLOW_METADATA_NAME}")
     run_id = ctx.github.trigger_workflow(
         repo_root=repo.root,
         workflow=DISPATCH_WORKFLOW_NAME,

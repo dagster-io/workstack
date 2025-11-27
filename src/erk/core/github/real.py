@@ -26,6 +26,8 @@ from erk_shared.integrations.time.abc import Time
 from erk_shared.output.output import user_output
 from erk_shared.subprocess_utils import run_subprocess_with_context
 
+from erk.cli.debug import debug_log
+
 
 class RealGitHub(GitHub):
     """Production implementation using gh CLI.
@@ -503,6 +505,7 @@ query {{
         """
         # Generate distinct ID for reliable run matching
         distinct_id = self._generate_distinct_id()
+        debug_log(f"trigger_workflow: workflow={workflow}, distinct_id={distinct_id}, ref={ref}")
 
         cmd = ["gh", "workflow", "run", workflow]
 
@@ -517,17 +520,22 @@ query {{
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
+        debug_log(f"trigger_workflow: executing command: {' '.join(cmd)}")
         run_subprocess_with_context(
             cmd,
             operation_context=f"trigger workflow '{workflow}'",
             cwd=repo_root,
         )
+        debug_log("trigger_workflow: workflow triggered successfully")
 
         # Poll for the run by matching displayTitle containing the distinct ID
         # The workflow uses run-name: "<issue_number>:<distinct_id>"
         # GitHub API eventual consistency: fast path (5×1s) then slow path (10×2s)
         max_attempts = 15
+        runs_data: list[dict[str, Any]] = []
         for attempt in range(max_attempts):
+            debug_log(f"trigger_workflow: polling attempt {attempt + 1}/{max_attempts}")
+
             runs_cmd = [
                 "gh",
                 "run",
@@ -547,12 +555,24 @@ query {{
             )
 
             runs_data = json.loads(runs_result.stdout)
-            if not runs_data or not isinstance(runs_data, list):
+            debug_log(f"trigger_workflow: found {len(runs_data)} runs")
+
+            # Validate response structure
+            if not isinstance(runs_data, list):
                 msg = (
-                    "GitHub workflow triggered but could not find run ID. "
+                    "GitHub workflow list returned unexpected format. "
+                    f"Expected list, got: {type(runs_data).__name__}. "
                     f"Raw output: {runs_result.stdout[:200]}"
                 )
                 raise RuntimeError(msg)
+
+            # Empty list is OK - it means workflow hasn't appeared yet, continue polling
+            if len(runs_data) == 0:
+                # Continue to next polling iteration
+                if attempt < max_attempts - 1:
+                    delay = 1 if attempt < 5 else 2
+                    self._time.sleep(delay)
+                continue
 
             # Find run by matching distinct_id in displayTitle
             for run in runs_data:
@@ -564,6 +584,7 @@ query {{
                 # Check for match pattern: :<distinct_id> (new format: issue_number:distinct_id)
                 if f":{distinct_id}" in display_title:
                     run_id = run["databaseId"]
+                    debug_log(f"trigger_workflow: found run {run_id}, title='{display_title}'")
                     return str(run_id)
 
             # No matching run found, retry if attempts remaining
@@ -573,11 +594,41 @@ query {{
                 self._time.sleep(delay)
 
         # All attempts exhausted without finding matching run
-        msg = (
-            f"GitHub workflow triggered but could not find run with distinct_id '{distinct_id}' "
-            "in displayTitle. This may indicate GitHub API eventual consistency delay "
-            "or all recent runs were skipped/cancelled."
+        msg_parts = [
+            f"GitHub workflow triggered but could not find run ID after {max_attempts} attempts.",
+            "",
+            f"Workflow file: {workflow}",
+            f"Correlation ID: {distinct_id}",
+            "",
+        ]
+
+        if runs_data:
+            msg_parts.append(f"Found {len(runs_data)} recent runs, but none matched.")
+            msg_parts.append("Recent run titles:")
+            for run in runs_data[:5]:
+                title = run.get("displayTitle", "N/A")
+                status = run.get("status", "N/A")
+                msg_parts.append(f"  • {title} ({status})")
+            msg_parts.append("")
+        else:
+            msg_parts.append("No workflow runs found at all.")
+            msg_parts.append("")
+
+        msg_parts.extend(
+            [
+                "Possible causes:",
+                "  • GitHub API eventual consistency delay (rare but possible)",
+                "  • Workflow file doesn't use 'run-name' with distinct_id",
+                "  • All recent runs were cancelled/skipped",
+                "",
+                "Debug commands:",
+                f"  gh run list --workflow {workflow} --limit 10",
+                f"  gh workflow view {workflow}",
+            ]
         )
+
+        msg = "\n".join(msg_parts)
+        debug_log(f"trigger_workflow: exhausted all attempts, error: {msg}")
         raise RuntimeError(msg)
 
     def create_pr(

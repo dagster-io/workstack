@@ -54,10 +54,11 @@ docs/
 | Your Task                         | Start Here                                                                                                     |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Understanding erk terminology     | [glossary.md](glossary.md)                                                                                     |
+| Understanding plan enrichment     | [plan-enrichment.md](plan-enrichment.md)                                                                       |
 | Cleaning up branches/worktrees    | [erk/branch-cleanup.md](erk/branch-cleanup.md)                                                                 |
 | Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |
 | Using time.sleep() or delays      | [erk-architecture.md](erk-architecture.md#time-abstraction-for-testing)                                        |
-| Understanding or modifying hooks  | [hooks-erk.md](hooks-erk.md) → General: [hooks.md](hooks.md)                                                   |
+| Understanding or modifying hooks  | [hooks-erk.md](hooks-erk.md) (context-aware reminders) → General: [hooks.md](hooks.md)                         |
 | Creating command-agent delegation | [command-agent-delegation.md](command-agent-delegation.md)                                                     |
 | Implementing script mode          | [cli-script-mode.md](cli-script-mode.md)                                                                       |
 | Styling CLI output                | [cli-output-styling.md](cli-output-styling.md)                                                                 |

@@ -93,6 +93,65 @@ total_steps: 5
 
 The front matter enables progress indicators in `erk status` output.
 
+## 🔴 Line Number References Are DISALLOWED in Implementation Plans
+
+Line numbers drift as code changes, causing implementation failures. Use durable alternatives instead.
+
+### The Rule
+
+- 🔴 **DISALLOWED**: Line number references in implementation steps
+- ✅ **REQUIRED**: Use function names, behavioral descriptions, or structural anchors
+- **Why**: Line numbers become stale as code evolves, leading to confusion and incorrect implementations
+
+### Allowed Alternatives
+
+Use these durable reference patterns instead of line numbers:
+
+- ✅ **Function/class names**: `Update validate_user() in src/auth.py`
+- ✅ **Behavioral descriptions**: `Add null check before processing payment`
+- ✅ **File paths + context**: `In the payment loop in src/billing.py, add retry logic`
+- ✅ **Contextual anchors**: `At the start of process_order(), add validation`
+- ✅ **Structural references**: `In the User class constructor, initialize permissions`
+
+### Exception: Historical Context Only
+
+Line numbers ARE allowed in "Context & Understanding" or "Planning Artifacts" sections when documenting historical research:
+
+- Must include commit hash: `Examined auth.py lines 45-67 (commit: abc123)`
+- These are historical records, not implementation instructions
+- Provides breadcrumb trail for understanding research process
+
+### Examples
+
+**❌ WRONG - Fragile line number references:**
+
+```markdown
+1. Modify lines 120-135 in billing.py to add retry logic
+2. Update line 89 in auth.py with new validation
+3. Change lines 200-215 in api.py to handle errors
+```
+
+**✅ RIGHT - Durable behavioral references:**
+
+```markdown
+1. Update calculate_total() in src/billing.py to include retry logic
+2. Add null check to validate_user() in src/auth.py before database query
+3. Modify process_request() in src/api.py to handle timeout errors gracefully
+```
+
+**✅ ALLOWED - Historical context with commit hash:**
+
+```markdown
+## Context & Understanding
+
+### Planning Artifacts
+
+During planning, examined the authentication flow:
+
+- Reviewed auth.py lines 45-67 (commit: a1b2c3d) - shows current EAFP pattern
+- Checked validation.py lines 12-25 (commit: a1b2c3d) - demonstrates LBYL approach
+```
+
 ## Important Notes
 
 - **Never commit `.impl/` folders** - They're in `.gitignore` for a reason

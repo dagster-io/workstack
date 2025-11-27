@@ -21,24 +21,27 @@ Automatically create a git commit with a helpful summary message and submit the 
 
 ## What This Command Does
 
-Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent, which handles:
+Executes the complete submit-branch workflow via Python kit CLI, which handles:
 
 1. Check for uncommitted changes and commit them if needed
 2. Run pre-analysis phase (squash commits, get branch info)
-3. Analyze all changes and generate commit message
+3. Analyze all changes and generate commit message via AI
 4. Run post-analysis phase (amend commit, submit branch, update PR)
 5. Report results
 
 ## Implementation
 
-When this command is invoked, delegate to the gt-branch-submitter agent:
+When this command is invoked, call the Python orchestration command:
 
-```
-Task(
-    subagent_type="gt-branch-submitter",
-    description="Submit branch workflow",
-    prompt="Execute the complete submit-branch workflow for the current branch"
-)
+```bash
+dot-agent run gt pr-submit orchestrate
 ```
 
-The agent handles all workflow orchestration, error handling, and result reporting.
+The Python CLI handles all workflow orchestration:
+
+1. **Pre-analysis** (Python): Auth checks, commit uncommitted changes, squash commits
+2. **Get diff context** (Python): Extract full diff vs parent branch
+3. **Generate commit message** (AI): Invoke Claude via `claude --print` with Task delegation to commit-message-generator agent
+4. **Post-analysis** (Python): Amend commit with message, submit via Graphite, update PR metadata
+
+All phases are orchestrated in Python for testability and error handling. Only the commit message generation uses AI (via Claude CLI invocation).

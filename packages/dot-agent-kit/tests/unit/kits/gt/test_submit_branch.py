@@ -16,7 +16,8 @@ from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     build_pr_metadata_section,
     execute_post_analysis,
     execute_pre_analysis,
-    submit_pr,
+    orchestrate_submit_workflow,
+    pr_submit,
 )
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
@@ -1318,6 +1319,83 @@ worktree_name: test-worktree
         assert "Full description" in pr_body
 
 
+class TestOrchestrateWorkflow:
+    """Tests for orchestrate_submit_workflow function."""
+
+    def test_orchestrate_success(self) -> None:
+        """Test successful orchestration through all phases."""
+        from unittest.mock import patch
+
+        # Setup fake to succeed at each step
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/repo/pull/123")
+        )
+
+        # Mock the agent invocation to return a commit message
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+        ) as mock_agent:
+            mock_agent.return_value = "Add feature\n\nDetailed description of the feature"
+
+            result = orchestrate_submit_workflow(ops)
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.pr_url == "https://github.com/repo/pull/123"
+
+    def test_orchestrate_pre_analysis_error(self) -> None:
+        """Test error in pre-analysis phase."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gt_unauthenticated()
+        )
+
+        result = orchestrate_submit_workflow(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "gt_not_authenticated"
+
+    def test_orchestrate_diff_extraction_error(self) -> None:
+        """Test error getting diff."""
+        from dataclasses import replace
+
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
+        # Remove parent branch to simulate get_diff_context failure
+        gt_state = ops.graphite().get_state()
+        ops.graphite()._state = replace(gt_state, branch_parents={})
+
+        result = orchestrate_submit_workflow(ops)
+
+        # Pre-analysis catches the no_parent error before we get to diff extraction
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "no_parent"
+        assert "Could not determine parent branch" in result.message
+
+    def test_orchestrate_agent_invocation_error(self) -> None:
+        """Test error when agent invocation fails."""
+        from unittest.mock import patch
+
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
+
+        # Mock agent invocation to raise RuntimeError
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+        ) as mock_agent:
+            mock_agent.side_effect = RuntimeError("Agent execution failed")
+
+            result = orchestrate_submit_workflow(ops)
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "submit_failed"
+        assert "Failed to generate commit message" in result.message
+
+
 class TestSubmitBranchCLI:
     """Tests for submit_branch CLI commands."""
 
@@ -1336,7 +1414,7 @@ class TestSubmitBranchCLI:
         submit_module.execute_pre_analysis = patched_execute
 
         try:
-            result = runner.invoke(submit_pr, ["pre-analysis"])
+            result = runner.invoke(pr_submit, ["pre-analysis"])
 
             assert result.exit_code == 0
             output = json.loads(result.output)
@@ -1367,7 +1445,7 @@ class TestSubmitBranchCLI:
 
         try:
             result = runner.invoke(
-                submit_pr,
+                pr_submit,
                 [
                     "post-analysis",
                     "--commit-message",

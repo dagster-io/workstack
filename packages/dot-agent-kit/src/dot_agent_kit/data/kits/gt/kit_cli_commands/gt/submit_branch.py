@@ -51,6 +51,7 @@ Examples:
 """
 
 import json
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -58,6 +59,7 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
+from erk_shared.env import in_github_actions
 from erk_shared.impl_folder import (
     has_issue_reference,
     read_issue_reference,
@@ -78,6 +80,8 @@ class SubmitResult(NamedTuple):
 
 
 PreAnalysisErrorType = Literal[
+    "gt_not_authenticated",
+    "gh_not_authenticated",
     "no_branch",
     "no_parent",
     "no_commits",
@@ -212,9 +216,40 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     if ops is None:
         ops = RealGtKit()
 
-    # Step 0: Check for and commit uncommitted changes
+    # Step 0a: Check Graphite authentication FIRST (before any git operations)
+    click.echo("  ↳ Checking Graphite authentication...", err=True)
+    gt_authenticated, gt_username, _ = ops.graphite().check_auth_status()
+    if not gt_authenticated:
+        return PreAnalysisError(
+            success=False,
+            error_type="gt_not_authenticated",
+            message="Graphite CLI (gt) is not authenticated",
+            details={
+                "fix": "Run 'gt auth' to authenticate with Graphite",
+                "authenticated": False,
+            },
+        )
+    click.echo(f"  ✓ Authenticated as {gt_username}", err=True)
+
+    # Step 0b: Check GitHub authentication (required for PR operations)
+    click.echo("  ↳ Checking GitHub authentication...", err=True)
+    gh_authenticated, gh_username, _ = ops.github().check_auth_status()
+    if not gh_authenticated:
+        return PreAnalysisError(
+            success=False,
+            error_type="gh_not_authenticated",
+            message="GitHub CLI (gh) is not authenticated",
+            details={
+                "fix": "Run 'gh auth login' to authenticate with GitHub",
+                "authenticated": False,
+            },
+        )
+    click.echo(f"  ✓ Authenticated as {gh_username}", err=True)
+
+    # Step 0c: Check for and commit uncommitted changes
     uncommitted_changes_committed = False
     if ops.git().has_uncommitted_changes():
+        click.echo("  ↳ Committing uncommitted changes...", err=True)
         if not ops.git().add_all():
             return PreAnalysisError(
                 success=False,
@@ -230,6 +265,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
                 details={"reason": "git commit failed"},
             )
         uncommitted_changes_committed = True
+        click.echo("  ✓ Uncommitted changes committed", err=True)
 
     # Step 1: Get current branch
     branch_name = ops.git().get_current_branch()
@@ -255,40 +291,58 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
 
     # Step 2.5: Check for merge conflicts EARLY
     # First try GitHub API if PR exists (most accurate)
-    from erk_shared.integrations.time.real import RealTime
+    # TODO: Move full GitHub implementations to erk-shared
+    # Currently using erk-shared stub which raises NotImplementedError at runtime.
+    # This is the correct architectural solution but requires refactoring to move
+    # the complete RealGitHub implementation from erk.core.github.real.
+    # Until then, PR status/mergeability checks will fail if actually invoked.
+    try:
+        from erk_shared.github.real import RealGitHub
 
-    from erk.core.github.real import RealGitHub
+        github = RealGitHub()
+        repo_root = Path(ops.git().get_repository_root())
+        pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
 
-    github = RealGitHub(RealTime())
-    repo_root = Path(ops.git().get_repository_root())
-    pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
+        if pr_info.pr_number is not None:
+            # PR exists - check mergeability
+            mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
 
-    if pr_info.pr_number is not None:
-        # PR exists - check mergeability
-        mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
+            if mergeability and mergeability.mergeable == "CONFLICTING":
+                return PreAnalysisError(
+                    success=False,
+                    error_type="pr_has_conflicts",
+                    message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
+                    details={
+                        "branch_name": branch_name,
+                        "pr_number": str(pr_info.pr_number),
+                        "parent_branch": parent_branch,
+                        "merge_state": mergeability.merge_state_status,
+                    },
+                )
 
-        if mergeability and mergeability.mergeable == "CONFLICTING":
-            return PreAnalysisError(
-                success=False,
-                error_type="pr_has_conflicts",
-                message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
-                details={
-                    "branch_name": branch_name,
-                    "pr_number": str(pr_info.pr_number),
-                    "parent_branch": parent_branch,
-                    "merge_state": mergeability.merge_state_status,
-                },
-            )
+            # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
+            if mergeability and mergeability.mergeable == "UNKNOWN":
+                print(
+                    "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
+                    file=sys.stderr,
+                )
 
-        # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
-        if mergeability and mergeability.mergeable == "UNKNOWN":
-            print(
-                "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
-                file=sys.stderr,
-            )
-
-    else:
-        # No PR yet - fallback to local git merge-tree check
+        else:
+            # No PR yet - fallback to local git merge-tree check
+            if ops.git().check_merge_conflicts(parent_branch, branch_name):
+                return PreAnalysisError(
+                    success=False,
+                    error_type="pr_has_conflicts",
+                    message=f"Branch has local merge conflicts with {parent_branch}",
+                    details={
+                        "branch_name": branch_name,
+                        "parent_branch": parent_branch,
+                        "detection_method": "git_merge_tree",
+                    },
+                )
+    except (NotImplementedError, TypeError):
+        # RealGitHub from erk-shared is a stub - skip GitHub-based conflict checking
+        # Fall back to local git merge-tree check only
         if ops.git().check_merge_conflicts(parent_branch, branch_name):
             return PreAnalysisError(
                 success=False,
@@ -315,6 +369,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     # Step 4: Run gt squash only if 2+ commits
     squashed = False
     if commit_count >= 2:
+        click.echo(f"  ↳ Squashing {commit_count} commits...", err=True)
         result = ops.graphite().squash_commits()
         if not result.success:
             # Check if failure was due to merge conflict
@@ -345,6 +400,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
                 },
             )
         squashed = True
+        click.echo(f"  ✓ Squashed {commit_count} commits into 1", err=True)
 
     # Build success message
     message_parts = [f"Pre-analysis complete for branch: {branch_name}"]
@@ -370,6 +426,180 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     )
 
 
+def build_pr_metadata_section(
+    impl_dir: Path,
+    pr_number: int | None = None,
+) -> str:
+    """Build metadata section for PR body.
+
+    Args:
+        impl_dir: Path to .impl/ directory
+        pr_number: PR number (use None for placeholder)
+
+    Returns:
+        Metadata section as string (empty if no metadata exists)
+    """
+    issue_ref = read_issue_reference(impl_dir) if has_issue_reference(impl_dir) else None
+    plan_author = read_plan_author(impl_dir)
+    run_info = read_run_info(impl_dir)
+
+    # Only build metadata if we have something to show
+    if issue_ref is None and plan_author is None and run_info is None:
+        return ""
+
+    metadata_parts: list[str] = []
+
+    # Opening sentence - only for erk-queue submissions running in CI
+    # (not when locally re-submitting a PR that was originally created by the queue)
+    if run_info is not None and in_github_actions():
+        metadata_parts.append("This PR was generated by an agent in the `erk` queue.\n")
+
+    # Bullets
+    bullets: list[str] = []
+    if issue_ref is not None:
+        bullets.append(f"- **Plan:** [#{issue_ref.issue_number}]({issue_ref.issue_url})")
+    if plan_author is not None:
+        bullets.append(f"- **Plan Author:** @{plan_author}")
+    if run_info is not None and in_github_actions():
+        bullets.append(f"- **GitHub Action:** [View Run]({run_info.run_url})")
+
+    if bullets:
+        metadata_parts.append("\n".join(bullets) + "\n")
+
+    # Checkout command (with placeholder or actual number)
+    pr_display = str(pr_number) if pr_number is not None else "__PLACEHOLDER_PR_NUMBER__"
+    metadata_parts.append(
+        f"\nTo checkout this PR in a fresh worktree and environment locally, run:\n\n"
+        f"```\n"
+        f"erk pr checkout {pr_display}\n"
+        f"```\n"
+    )
+
+    # Closes #N
+    if issue_ref is not None:
+        metadata_parts.append(f"\nCloses #{issue_ref.issue_number}\n")
+
+    # Separator
+    metadata_parts.append("\n---\n")
+
+    return "\n".join(metadata_parts)
+
+
+def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
+    """Invoke Claude agent to generate commit message from diff.
+
+    Args:
+        diff_context: Diff and repository context
+
+    Returns:
+        Generated commit message text
+
+    Raises:
+        RuntimeError: If agent invocation fails
+    """
+    import tempfile
+
+    # Write diff to temp file (handles large diffs better than prompt)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".diff", delete=False) as f:
+        diff_path = f.name
+        f.write(diff_context.diff)
+
+    try:
+        # Build prompt for agent
+        prompt = f"""Generate commit message for this diff.
+
+Diff file: {diff_path}
+Repository root: {diff_context.repo_root}
+Current branch: {diff_context.current_branch}
+Parent branch: {diff_context.parent_branch}
+
+Return ONLY the commit message text (no explanations).
+First line = PR title, rest = PR body.
+
+Use the Task tool to invoke the commit-message-generator agent from the gt kit."""
+
+        # Execute via Claude CLI in print mode with Task delegation
+        # Note: prompt must be a single argument (shell handles parsing)
+        result = subprocess.run(
+            ["claude", "--print", "--output-format", "text", "--tools", "Task", "--", prompt],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=diff_context.repo_root,
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
+
+        # Claude outputs the generated message
+        if not result.stdout.strip():
+            raise RuntimeError("Agent returned no output")
+
+        return result.stdout.strip()
+
+    finally:
+        # Clean up temp file
+        Path(diff_path).unlink(missing_ok=True)
+
+
+def orchestrate_submit_workflow(
+    ops: GtKit | None = None,
+) -> PostAnalysisResult | PostAnalysisError | PreAnalysisError:
+    """Orchestrate complete PR submission with AI commit message.
+
+    Workflow:
+    1. Execute pre-analysis (existing function)
+    2. Get diff context (existing function)
+    3. Invoke Claude agent to generate commit message
+    4. Execute post-analysis with generated message (existing function)
+
+    Args:
+        ops: Optional GtKit for dependency injection (testing)
+
+    Returns:
+        Result or error from the workflow
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    # Step 1: Pre-analysis (reuses existing execute_pre_analysis)
+    click.echo("🔍 Running pre-analysis checks...", err=True)
+    pre_result = execute_pre_analysis(ops)
+    if isinstance(pre_result, PreAnalysisError):
+        return pre_result
+    click.echo("✓ Pre-analysis complete", err=True)
+
+    # Step 2: Get diff context (reuses existing get_diff_context)
+    click.echo("📊 Extracting diff context...", err=True)
+    try:
+        diff_context = get_diff_context(ops)
+    except (ValueError, subprocess.CalledProcessError) as e:
+        return PreAnalysisError(
+            success=False,
+            error_type="no_commits",
+            message=f"Failed to get diff: {e}",
+            details={"error": str(e)},
+        )
+    click.echo("✓ Diff extracted", err=True)
+
+    # Step 3: Generate commit message via Claude agent
+    click.echo("🤖 Generating commit message via AI...", err=True)
+    try:
+        commit_message = _invoke_commit_message_agent(diff_context)
+    except RuntimeError as e:
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_failed",
+            message=f"Failed to generate commit message: {e}",
+            details={"error": str(e)},
+        )
+    click.echo("✓ Commit message generated", err=True)
+
+    # Step 4: Post-analysis (reuses existing execute_post_analysis)
+    click.echo("🚀 Submitting PR...", err=True)
+    return execute_post_analysis(commit_message, ops)
+
+
 def execute_post_analysis(
     commit_message: str, ops: GtKit | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
@@ -377,78 +607,46 @@ def execute_post_analysis(
     if ops is None:
         ops = RealGtKit()
 
-    # Split commit message into PR title and body
+    # Get impl directory first
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+
+    # Read issue reference if present
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    # Split AI commit message into title and body
     lines = commit_message.split("\n", 1)
     pr_title = lines[0]
     ai_body = lines[1].lstrip() if len(lines) > 1 else ""
 
-    # Collect metadata from .impl/ files
-    cwd = Path.cwd()
-    impl_dir = cwd / ".impl"
+    # Build metadata section with placeholder
+    metadata_section = build_pr_metadata_section(impl_dir, pr_number=None)
 
-    issue_ref = read_issue_reference(impl_dir) if has_issue_reference(impl_dir) else None
-    issue_number: int | None = issue_ref.issue_number if issue_ref is not None else None
-    plan_author = read_plan_author(impl_dir)
-    run_info = read_run_info(impl_dir)
-
-    # Build metadata section at the top of PR body
-    metadata_parts: list[str] = []
-
-    # Only show metadata section if we have something to display
-    if issue_ref is not None or plan_author is not None or run_info is not None:
-        # Opening sentence - only for erk-queue submissions (has run_info)
-        if run_info is not None:
-            metadata_parts.append("This PR was generated by an agent in the `erk` queue.\n")
-
-        # Bullet list for available metadata
-        bullets: list[str] = []
-
-        if issue_ref is not None:
-            bullets.append(f"- **Plan:** [#{issue_ref.issue_number}]({issue_ref.issue_url})")
-
-        if plan_author is not None:
-            bullets.append(f"- **Plan Author:** @{plan_author}")
-
-        if run_info is not None:
-            bullets.append(f"- **GitHub Action:** [View Run]({run_info.run_url})")
-
-        if bullets:
-            metadata_parts.append("\n".join(bullets) + "\n")
-
-        # Checkout command placeholder (will be replaced with actual PR number after submission)
-        metadata_parts.append(
-            "\nTo checkout this PR in a fresh worktree and environment locally, run:\n\n"
-            "```\n"
-            "erk pr checkout __PLACEHOLDER_PR_NUMBER__\n"
-            "```\n"
-        )
-
-        # Closes #N for GitHub auto-close (after metadata, before separator)
-        if issue_ref is not None:
-            metadata_parts.append(f"\nCloses #{issue_ref.issue_number}\n")
-
-        # Separator between metadata and AI-generated content
-        metadata_parts.append("\n---\n")
-
-    # Construct final PR body: metadata section + AI-generated body
-    metadata_section = "\n".join(metadata_parts) if metadata_parts else ""
-    pr_body = metadata_section + ai_body
+    # Construct COMPLETE commit message (metadata + AI body)
+    complete_commit_message = pr_title + "\n\n" + metadata_section + ai_body
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()
     if branch_name is None:
         branch_name = "unknown"
 
-    # Step 2: Amend commit with AI-generated message
-    if not ops.git().amend_commit(commit_message):
+    # Step 2: Amend commit with COMPLETE message (metadata included!)
+    click.echo("  ↳ Amending commit with generated message...", err=True)
+    if not ops.git().amend_commit(complete_commit_message):
         return PostAnalysisError(
             success=False,
             error_type="amend_failed",
             message="Failed to amend commit with new message",
             details={"branch_name": branch_name},
         )
+    click.echo("  ✓ Commit amended", err=True)
 
     # Step 3: Submit branch
+    click.echo("  ↳ Running gt submit (this may take a moment)...", err=True)
     result = ops.graphite().submit(publish=True, restack=True)
 
     # Check for empty parent branch (Graphite returns success but nothing submitted)
@@ -543,6 +741,8 @@ def execute_post_analysis(
             },
         )
 
+    click.echo("  ✓ Branch submitted to Graphite", err=True)
+
     # Step 4: Check if PR exists (with retry for GitHub API delay)
     pr_info = None
     max_retries = 5
@@ -576,18 +776,21 @@ def execute_post_analysis(
         if graphite_url_result is not None:
             graphite_url = graphite_url_result
 
-        # Replace checkout placeholder with actual PR number
-        pr_body = pr_body.replace("__PLACEHOLDER_PR_NUMBER__", str(pr_number))
+        # Rebuild metadata section with actual PR number
+        metadata_with_pr = build_pr_metadata_section(impl_dir, pr_number=pr_number)
+        final_pr_body = metadata_with_pr + ai_body
 
-        if not ops.github().update_pr_metadata(pr_title, pr_body):
+        # Lightweight update (just replacing placeholder)
+        if not ops.github().update_pr_metadata(pr_title, final_pr_body):
+            # This is now truly optional - metadata already in PR
             click.echo(
-                ("⚠️  Warning: Failed to update PR metadata (possible timeout), but PR was created"),
+                "⚠️  Note: PR created with metadata, but checkout command shows placeholder",
                 err=True,
             )
             message = (
                 f"Successfully submitted branch: {branch_name}\n"
                 f"Created PR #{pr_number}: {pr_url}\n"
-                "⚠️  Warning: Failed to update PR metadata (possible timeout)"
+                "⚠️  Note: PR created with metadata, but checkout command shows placeholder"
             )
         else:
             message = (
@@ -685,7 +888,34 @@ def get_diff_context_cmd() -> None:
         raise SystemExit(1) from None
 
 
+@click.command()
+def orchestrate() -> None:
+    """Orchestrate PR submission with AI-generated commit message.
+
+    This command:
+    1. Runs pre-analysis (auth, squash, conflicts)
+    2. Extracts diff
+    3. Invokes Claude agent to generate commit message
+    4. Amends commit and submits PR
+
+    All in Python - agent only generates the message.
+    """
+    try:
+        result = orchestrate_submit_workflow()
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, (PreAnalysisError, PostAnalysisError)):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
 # Register subcommands
 pr_submit.add_command(pre_analysis)
 pr_submit.add_command(post_analysis)
 pr_submit.add_command(get_diff_context_cmd, name="get-diff-context")
+pr_submit.add_command(orchestrate)

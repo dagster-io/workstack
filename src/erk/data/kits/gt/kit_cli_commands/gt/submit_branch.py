@@ -51,6 +51,7 @@ Examples:
 """
 
 import json
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -289,38 +290,53 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     # This is the correct architectural solution but requires refactoring to move
     # the complete RealGitHub implementation from erk.core.github.real.
     # Until then, PR status/mergeability checks will fail if actually invoked.
-    from erk_shared.github.real import RealGitHub
+    try:
+        from erk_shared.github.real import RealGitHub
 
-    github = RealGitHub()
-    repo_root = Path(ops.git().get_repository_root())
-    pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
+        github = RealGitHub()
+        repo_root = Path(ops.git().get_repository_root())
+        pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
 
-    if pr_info.pr_number is not None:
-        # PR exists - check mergeability
-        mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
+        if pr_info.pr_number is not None:
+            # PR exists - check mergeability
+            mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
 
-        if mergeability and mergeability.mergeable == "CONFLICTING":
-            return PreAnalysisError(
-                success=False,
-                error_type="pr_has_conflicts",
-                message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
-                details={
-                    "branch_name": branch_name,
-                    "pr_number": str(pr_info.pr_number),
-                    "parent_branch": parent_branch,
-                    "merge_state": mergeability.merge_state_status,
-                },
-            )
+            if mergeability and mergeability.mergeable == "CONFLICTING":
+                return PreAnalysisError(
+                    success=False,
+                    error_type="pr_has_conflicts",
+                    message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
+                    details={
+                        "branch_name": branch_name,
+                        "pr_number": str(pr_info.pr_number),
+                        "parent_branch": parent_branch,
+                        "merge_state": mergeability.merge_state_status,
+                    },
+                )
 
-        # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
-        if mergeability and mergeability.mergeable == "UNKNOWN":
-            print(
-                "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
-                file=sys.stderr,
-            )
+            # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
+            if mergeability and mergeability.mergeable == "UNKNOWN":
+                print(
+                    "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
+                    file=sys.stderr,
+                )
 
-    else:
-        # No PR yet - fallback to local git merge-tree check
+        else:
+            # No PR yet - fallback to local git merge-tree check
+            if ops.git().check_merge_conflicts(parent_branch, branch_name):
+                return PreAnalysisError(
+                    success=False,
+                    error_type="pr_has_conflicts",
+                    message=f"Branch has local merge conflicts with {parent_branch}",
+                    details={
+                        "branch_name": branch_name,
+                        "parent_branch": parent_branch,
+                        "detection_method": "git_merge_tree",
+                    },
+                )
+    except (NotImplementedError, TypeError):
+        # RealGitHub from erk-shared is a stub - skip GitHub-based conflict checking
+        # Fall back to local git merge-tree check only
         if ops.git().check_merge_conflicts(parent_branch, branch_name):
             return PreAnalysisError(
                 success=False,
@@ -459,6 +475,118 @@ def build_pr_metadata_section(
     metadata_parts.append("\n---\n")
 
     return "\n".join(metadata_parts)
+
+
+def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
+    """Invoke Claude agent to generate commit message from diff.
+
+    Args:
+        diff_context: Diff and repository context
+
+    Returns:
+        Generated commit message text
+
+    Raises:
+        RuntimeError: If agent invocation fails
+    """
+    import tempfile
+
+    # Write diff to temp file (handles large diffs better than prompt)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".diff", delete=False) as f:
+        diff_path = f.name
+        f.write(diff_context.diff)
+
+    try:
+        # Build prompt for agent
+        prompt = f"""Generate commit message for this diff.
+
+Diff file: {diff_path}
+Repository root: {diff_context.repo_root}
+Current branch: {diff_context.current_branch}
+Parent branch: {diff_context.parent_branch}
+
+Return ONLY the commit message text (no explanations).
+First line = PR title, rest = PR body."""
+
+        # Execute agent via dot-agent run (standard pattern)
+        result = subprocess.run(
+            [
+                "dot-agent",
+                "run",
+                "gt",
+                "commit-message-generator",
+                "--prompt",
+                prompt,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=diff_context.repo_root,
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
+
+        # Agent outputs ONLY the message
+        if not result.stdout.strip():
+            raise RuntimeError("Agent returned no output")
+
+        return result.stdout.strip()
+
+    finally:
+        # Clean up temp file
+        Path(diff_path).unlink(missing_ok=True)
+
+
+def orchestrate_submit_workflow(
+    ops: GtKit | None = None,
+) -> PostAnalysisResult | PostAnalysisError | PreAnalysisError:
+    """Orchestrate complete PR submission with AI commit message.
+
+    Workflow:
+    1. Execute pre-analysis (existing function)
+    2. Get diff context (existing function)
+    3. Invoke Claude agent to generate commit message
+    4. Execute post-analysis with generated message (existing function)
+
+    Args:
+        ops: Optional GtKit for dependency injection (testing)
+
+    Returns:
+        Result or error from the workflow
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    # Step 1: Pre-analysis (reuses existing execute_pre_analysis)
+    pre_result = execute_pre_analysis(ops)
+    if isinstance(pre_result, PreAnalysisError):
+        return pre_result
+
+    # Step 2: Get diff context (reuses existing get_diff_context)
+    try:
+        diff_context = get_diff_context(ops)
+    except (ValueError, subprocess.CalledProcessError) as e:
+        return PreAnalysisError(
+            success=False,
+            error_type="no_commits",
+            message=f"Failed to get diff: {e}",
+            details={"error": str(e)},
+        )
+
+    # Step 3: Generate commit message via Claude agent
+    try:
+        commit_message = _invoke_commit_message_agent(diff_context)
+    except RuntimeError as e:
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_failed",
+            message=f"Failed to generate commit message: {e}",
+            details={"error": str(e)},
+        )
+
+    # Step 4: Post-analysis (reuses existing execute_post_analysis)
+    return execute_post_analysis(commit_message, ops)
 
 
 def execute_post_analysis(
@@ -668,7 +796,7 @@ def execute_post_analysis(
 
 
 @click.group()
-def submit_pr() -> None:
+def pr_submit() -> None:
     """Create git commit and submit current branch with Graphite (two-phase)."""
     pass
 
@@ -744,7 +872,34 @@ def get_diff_context_cmd() -> None:
         raise SystemExit(1) from None
 
 
+@click.command()
+def orchestrate() -> None:
+    """Orchestrate PR submission with AI-generated commit message.
+
+    This command:
+    1. Runs pre-analysis (auth, squash, conflicts)
+    2. Extracts diff
+    3. Invokes Claude agent to generate commit message
+    4. Amends commit and submits PR
+
+    All in Python - agent only generates the message.
+    """
+    try:
+        result = orchestrate_submit_workflow()
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, (PreAnalysisError, PostAnalysisError)):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
 # Register subcommands
-submit_pr.add_command(pre_analysis)
-submit_pr.add_command(post_analysis)
-submit_pr.add_command(get_diff_context_cmd, name="get-diff-context")
+pr_submit.add_command(pre_analysis)
+pr_submit.add_command(post_analysis)
+pr_submit.add_command(get_diff_context_cmd, name="get-diff-context")
+pr_submit.add_command(orchestrate)

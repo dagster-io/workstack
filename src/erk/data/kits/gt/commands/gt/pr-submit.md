@@ -3,42 +3,36 @@ description: Create git commit and submit current branch with Graphite (squashes
 argument-hint: <description>
 ---
 
-# Submit PR
+# Submit PR (Graphite)
 
-Automatically create a git commit with a helpful summary message and submit the current branch as a pull request.
+Automatically create a commit with AI-generated message and submit as PR.
 
 **Note:** This command squashes commits and rebases the stack. If you prefer a simpler workflow that preserves your commit history, use `/git:pr-push` instead.
 
 ## Usage
 
 ```bash
-# Invoke the command (description argument is optional but recommended)
-/gt:pr-submit "Add user authentication feature"
-
-# Without argument (will analyze changes automatically)
 /gt:pr-submit
 ```
 
+The optional `<description>` argument is now deprecated (AI analyzes the full diff).
+
 ## What This Command Does
 
-Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent, which handles:
+1. **Pre-analysis**: Check auth, commit uncommitted changes, squash commits
+2. **Diff extraction**: Get full diff for analysis
+3. **AI message generation**: Claude analyzes diff, creates commit message
+4. **Submission**: Amend commit, run `gt submit`, update PR metadata
 
-1. Check for uncommitted changes and commit them if needed
-2. Run pre-analysis phase (squash commits, get branch info)
-3. Analyze all changes and generate commit message
-4. Run post-analysis phase (amend commit, submit branch, update PR)
-5. Report results
+All orchestrated in Python - agent only generates the commit message.
 
 ## Implementation
 
-When this command is invoked, delegate to the gt-branch-submitter agent:
+Execute the Python orchestration workflow:
 
 ```
-Task(
-    subagent_type="gt-branch-submitter",
-    description="Submit branch workflow",
-    prompt="Execute the complete submit-branch workflow for the current branch"
+Bash(
+    command="dot-agent run gt submit-pr orchestrate",
+    description="Submit PR with orchestrated workflow"
 )
 ```
-
-The agent handles all workflow orchestration, error handling, and result reporting.

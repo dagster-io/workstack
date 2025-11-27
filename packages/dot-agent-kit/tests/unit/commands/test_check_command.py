@@ -885,7 +885,7 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     version="0.1.0",
                     source_type="bundled",
                     artifacts=[
-                        ".claude/agents/gt/gt-branch-submitter.md",
+                        ".claude/agents/gt/commit-message-generator.md",
                         ".claude/agents/gt/gt-update-pr-submitter.md",
                         ".claude/commands/gt/pr-submit.md",
                         ".claude/commands/gt/pr-update.md",
@@ -904,7 +904,7 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
         bundled_path = bundled_source._get_bundled_kit_path("gt")
         if bundled_path is not None:
             for artifact_rel in [
-                "agents/gt/gt-branch-submitter.md",
+                "agents/gt/commit-message-generator.md",
                 "agents/gt/gt-update-pr-submitter.md",
                 "commands/gt/pr-submit.md",
                 "commands/gt/pr-update.md",

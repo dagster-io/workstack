@@ -1,0 +1,404 @@
+# REQUIRED REPOSITORY SETTING:
+# Settings > Actions > General > Workflow permissions
+# ✓ Enable "Allow GitHub Actions to create and approve pull requests"
+#
+# Without this setting, PR creation will fail with:
+# "GitHub Actions is not permitted to create or approve pull requests"
+
+name: Dispatch Erk Queue (Git Only)
+run-name: "${{ inputs.issue_number }}:${{ inputs.distinct_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "GitHub issue number to implement"
+        required: true
+        type: string
+      submitted_by:
+        description: "GitHub username of the person who submitted the issue"
+        required: true
+        type: string
+      distinct_id:
+        description: "Unique identifier for run discovery (base36)"
+        required: true
+        type: string
+      issue_title:
+        description: "Issue title for workflow run display"
+        required: true
+        type: string
+
+concurrency:
+  group: implement-issue-${{ github.event.inputs.issue_number }}
+  cancel-in-progress: true
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      # =================================================================
+      # PHASE 1: CHECKOUT AND SETUP
+      # =================================================================
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Setup all tools
+        run: |
+          # Install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          cd $GITHUB_WORKSPACE
+
+          # Install workspace packages in dependency order
+          uv tool install --from ./packages/erk-shared erk-shared
+          uv tool install --from ./packages/dot-agent-kit --with ./packages/erk-shared dot-agent-kit
+          uv tool install --from . --with ./packages/erk-shared --with ./packages/dot-agent-kit erk
+
+          # Install Claude Code (curl-based, newer pattern)
+          curl -fsSL https://claude.ai/install.sh | bash
+
+          # Install Prettier via npm (no Graphite CLI needed)
+          npm install -g prettier
+
+          # Install erk kit for Claude Code
+          dot-agent kit install erk
+
+      - name: Configure git
+        env:
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
+        run: |
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "${SUBMITTED_BY}@users.noreply.github.com"
+
+      - name: Detect trunk branch
+        id: trunk
+        run: |
+          if git ls-remote --heads origin main | grep -q main; then
+            echo "trunk_branch=main" >> $GITHUB_OUTPUT
+            echo "Detected trunk branch: main"
+          elif git ls-remote --heads origin master | grep -q master; then
+            echo "trunk_branch=master" >> $GITHUB_OUTPUT
+            echo "Detected trunk branch: master"
+          else
+            echo "❌ Could not detect trunk branch (main or master)"
+            exit 1
+          fi
+
+      # =================================================================
+      # PHASE 2: BRANCH SETUP
+      # =================================================================
+      - name: Derive branch name from issue title
+        id: branch_name
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+
+          # Convert to kebab-case, truncate to 30 chars for worktree compatibility
+          BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+          BRANCH_NAME="${BRANCH_NAME:0:30}"
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/-$//')
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Derived branch name: $BRANCH_NAME"
+
+      - name: Check if branch exists
+        id: check_branch
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+        run: |
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Branch $BRANCH_NAME exists on remote"
+          else
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "Branch $BRANCH_NAME does not exist"
+          fi
+
+      - name: Create new branch
+        if: steps.check_branch.outputs.branch_exists == 'false'
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          TRUNK_BRANCH: ${{ steps.trunk.outputs.trunk_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source $HOME/.cargo/env
+
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          export ISSUE_TITLE
+
+          # Create branch from trunk
+          git fetch origin "$TRUNK_BRANCH"
+          git checkout -b "$BRANCH_NAME" "origin/$TRUNK_BRANCH"
+
+          # Create .erp/ folder with plan content
+          dot-agent run erk create-erp-from-issue "$ISSUE_NUMBER" "$ISSUE_TITLE"
+
+          if [ $? -ne 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**
+
+          Could not fetch plan content for issue #$ISSUE_NUMBER or create .erp/ folder.
+
+          Please ensure:
+          - Issue has a plan saved (run \`erk plan save\`)
+          - Issue has \`erk-plan\` label"
+            exit 1
+          fi
+
+          # Commit and push
+          git add .erp
+          git commit -m "Add plan for issue #$ISSUE_NUMBER"
+          git push -u origin "$BRANCH_NAME"
+
+          echo "✅ Branch created: $BRANCH_NAME"
+
+      - name: Reuse existing branch
+        if: steps.check_branch.outputs.branch_exists == 'true'
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          TRUNK_BRANCH: ${{ steps.trunk.outputs.trunk_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source $HOME/.cargo/env
+
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          export ISSUE_TITLE
+
+          git fetch origin "$BRANCH_NAME"
+          git checkout "$BRANCH_NAME"
+
+          # Verify clean state
+          if [[ -n $(git status --porcelain) ]]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Reuse Failed**
+
+          Branch \`$BRANCH_NAME\` has uncommitted changes."
+            exit 1
+          fi
+
+          # Check not ahead of remote
+          git fetch origin "$BRANCH_NAME"
+          AHEAD=$(git rev-list --count origin/$BRANCH_NAME..$BRANCH_NAME)
+          if [ "$AHEAD" -gt 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Reuse Failed**
+
+          Branch \`$BRANCH_NAME\` has unpushed commits."
+            exit 1
+          fi
+
+          # Update .erp/ with fresh plan
+          rm -rf .erp
+          dot-agent run erk create-erp-from-issue "$ISSUE_NUMBER" "$ISSUE_TITLE"
+
+          if [ $? -ne 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Plan Update Failed**
+
+          Could not fetch plan content for issue #$ISSUE_NUMBER."
+            exit 1
+          fi
+
+          # Commit if changed
+          git add .erp
+          if [[ -n $(git status --porcelain) ]]; then
+            git commit -m "Update plan for issue #$ISSUE_NUMBER (rerun)"
+            git push origin "$BRANCH_NAME"
+            echo "✅ Branch reused with updated plan: $BRANCH_NAME"
+          else
+            echo "✅ Branch reused (plan unchanged): $BRANCH_NAME"
+          fi
+
+          # Post reuse comment
+          gh issue comment "$ISSUE_NUMBER" --body "✅ **Reusing Existing Branch**
+
+          Branch \`$BRANCH_NAME\` already exists and will be reused for implementation."
+
+      # =================================================================
+      # PHASE 3: PR SETUP
+      # =================================================================
+      - name: Create draft PR
+        id: create_pr
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+
+          if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
+            echo "✅ PR already exists for branch $BRANCH_NAME"
+          else
+            cat > pr_body.md <<EOF
+          **Author:** @$SUBMITTED_BY
+          **Plan:** #$ISSUE_NUMBER
+
+          **Status:** Queued for implementation
+
+          This PR will be marked ready for review after implementation completes.
+
+          ---
+
+          Closes #$ISSUE_NUMBER
+          EOF
+
+            gh pr create \
+              --draft \
+              --title "$ISSUE_TITLE" \
+              --body-file pr_body.md \
+              --head "$BRANCH_NAME"
+
+            echo "✅ Draft PR created"
+          fi
+
+          PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Post workflow started comment
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          PR_NUMBER: ${{ steps.create_pr.outputs.pr_number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          WORKFLOW_RUN_ID="${{ github.run_id }}"
+          WORKFLOW_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          cat > comment_body.md <<EOF
+          ⚙️ GitHub Action Started
+
+          <details>
+          <summary>📋 Metadata</summary>
+
+          <!-- erk:metadata-block:workflow-started -->
+          \`\`\`yaml
+          schema: workflow-started
+          status: started
+          started_at: $STARTED_AT
+          workflow_run_id: "$WORKFLOW_RUN_ID"
+          workflow_run_url: $WORKFLOW_RUN_URL
+          branch_name: $BRANCH_NAME
+          issue_number: $ISSUE_NUMBER
+          \`\`\`
+          <!-- /erk:metadata-block:workflow-started -->
+
+          </details>
+
+          ---
+
+          Setup completed successfully.
+
+          **Branch:** \`$BRANCH_NAME\`
+          **PR:** [#$PR_NUMBER](https://github.com/${{ github.repository }}/pull/$PR_NUMBER)
+          **Status:** Ready for implementation
+
+          [View workflow run]($WORKFLOW_RUN_URL)
+          EOF
+
+          gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
+
+      - name: Update issue body with dispatch info
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source $HOME/.cargo/env
+          WORKFLOW_RUN_ID="${{ github.run_id }}"
+          DISPATCHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if dot-agent run erk update-dispatch-info "$ISSUE_NUMBER" "$WORKFLOW_RUN_ID" "$DISPATCHED_AT"; then
+            echo "✅ Updated issue body with dispatch info"
+          else
+            echo "⚠️ Issue does not have plan-header block - skipping update"
+          fi
+
+      # =================================================================
+      # PHASE 4: IMPLEMENTATION
+      # =================================================================
+      - name: Set up implementation folder
+        run: |
+          cp -r .erp .impl
+          echo "✓ Copied .erp/ to .impl/"
+
+          cat > .impl/run-info.json <<EOF
+          {
+            "run_id": "${{ github.run_id }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+          echo "✓ Created .impl/run-info.json"
+
+      - name: Run implementation
+        id: implement
+        run: |
+          set +e
+
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "/erk:plan-implement"
+
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "implementation_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "implementation_success=false" >> $GITHUB_OUTPUT
+          fi
+
+          exit 0
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+
+      # =================================================================
+      # PHASE 5: SUBMISSION (Pure Git - no Graphite)
+      # =================================================================
+      - name: Submit branch with proper commit message
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+        run: |
+          # Delete .erp/ and stage
+          git rm -rf .erp/
+          git add -A
+
+          # Submit with pure git - no Graphite needed
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "/git:pr-push Implement issue #$ISSUE_NUMBER"
+
+      - name: Mark PR ready for review
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+        run: |
+          gh pr ready "$BRANCH_NAME"
+          echo "✅ PR marked ready for review"
+
+      - name: Trigger CI workflows
+        if: steps.implement.outputs.implementation_success == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+        run: |
+          # Push empty commit to trigger CI
+          git commit --allow-empty -m "Trigger CI workflows"
+          git push origin "$BRANCH_NAME"
+          echo "✅ CI workflows triggered"

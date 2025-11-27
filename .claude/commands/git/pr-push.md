@@ -84,48 +84,7 @@ repo_root=$(git rev-parse --show-toplevel)
 git diff --staged
 ```
 
-**Analyze the diff** following these principles:
-
-- **Be concise and strategic** - focus on significant changes
-- **Use component-level descriptions** - reference modules/components, not individual functions
-- **Highlight breaking changes prominently**
-- **Note test coverage patterns**
-- **Use relative paths from repository root**
-- **Keep "Key Changes" to 3-5 major items**
-- **Group related changes together**
-
-**Structure your commit message:**
-
-```
-[Brief 2-4 sentence summary of what the branch does]
-
-## Summary
-[2-3 sentence high-level overview]
-
-## Files Changed
-
-### Added (X files)
-- `path/to/file` - Brief purpose
-
-### Modified (Y files)
-- `path/to/file` - What area changed
-
-### Deleted (Z files)
-- `path/to/file` - Why removed
-
-## Key Changes
-- [3-5 high-level component/architectural changes]
-
-## Critical Notes
-[Only if there are breaking changes or important warnings - 1-2 bullets max]
-```
-
-**Important:**
-
-- NO Claude footer or attribution
-- Use relative paths from repository root
-- Avoid function-level details unless critical
-- Maximum 5 key changes
+@.claude/docs/shared/diff-analysis-guide.md
 
 ### Step 4: Create Commit
 

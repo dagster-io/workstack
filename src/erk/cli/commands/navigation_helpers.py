@@ -21,12 +21,10 @@ def ensure_graphite_enabled(ctx: ErkContext) -> None:
     Raises:
         SystemExit: If Graphite is not enabled
     """
-    if not (ctx.global_config and ctx.global_config.use_graphite):
-        user_output(
-            "Error: This command requires Graphite to be enabled. "
-            "Run 'erk config set use_graphite true'"
-        )
-        raise SystemExit(1)
+    Ensure.invariant(
+        ctx.global_config is not None and ctx.global_config.use_graphite,
+        "This command requires Graphite to be enabled. Run 'erk config set use_graphite true'",
+    )
 
 
 def check_clean_working_tree(ctx: ErkContext) -> None:

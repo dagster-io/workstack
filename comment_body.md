@@ -1,0 +1,28 @@
+⚙️ GitHub Action Started
+
+<details>
+<summary>📋 Metadata</summary>
+
+<!-- erk:metadata-block:workflow-started -->
+```yaml
+schema: workflow-started
+status: started
+started_at: 2025-11-27T12:16:52Z
+workflow_run_id: "19735953829"
+workflow_run_url: https://github.com/dagster-io/erk/actions/runs/19735953829
+branch_name: decompose-make-publish-into-ma
+issue_number: 1361
+```
+<!-- /erk:metadata-block:workflow-started -->
+
+</details>
+
+---
+
+Setup completed successfully.
+
+**Branch:** `decompose-make-publish-into-ma`
+**PR:** [#1379](https://github.com/dagster-io/erk/pull/1379)
+**Status:** Ready for implementation
+
+[View workflow run](https://github.com/dagster-io/erk/actions/runs/19735953829)

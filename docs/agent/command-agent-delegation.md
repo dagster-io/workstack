@@ -52,13 +52,13 @@ Does command orchestrate 3+ steps?
 
 **Examples:**
 
-| Scenario                                                        | Delegate? | Rationale                                                          |
-| --------------------------------------------------------------- | --------- | ------------------------------------------------------------------ |
-| Run pytest with specialized output parsing                      | ✅ Yes    | Complex parsing, multiple tools (devrun agent)                     |
-| Create worktree with validation, JSON parsing, formatted output | ✅ Yes    | Multi-step workflow with error handling (planned-wt-creator)       |
-| Submit branch: stage, diff analysis, commit, PR creation        | ✅ Yes    | Complex orchestration with git + GitHub CLI (git-branch-submitter) |
-| Run single git command with no processing                       | ❌ No     | Simple wrapper, no orchestration needed                            |
-| Display help text or documentation                              | ❌ No     | No workflow, just content display                                  |
+| Scenario                                                        | Delegate? | Rationale                                                    |
+| --------------------------------------------------------------- | --------- | ------------------------------------------------------------ |
+| Run pytest with specialized output parsing                      | ✅ Yes    | Complex parsing, multiple tools (devrun agent)               |
+| Create worktree with validation, JSON parsing, formatted output | ✅ Yes    | Multi-step workflow with error handling (planned-wt-creator) |
+| Submit branch: stage, diff analysis, commit, PR creation        | ✅ Yes    | Complex orchestration with git + GitHub CLI                  |
+| Run single git command with no processing                       | ❌ No     | Simple wrapper, no orchestration needed                      |
+| Display help text or documentation                              | ❌ No     | No workflow, just content display                            |
 
 ## Delegation Patterns
 
@@ -112,7 +112,7 @@ prompt="Run unit tests with pytest, then run pyright. Fix any failures iterative
 
 **Examples:**
 
-- `/gt:submit-branch` → `gt-branch-submitter` agent
+- `/git:pr-push` → `git-branch-submitter` agent
 - `/erk:create-wt-from-plan-file` → `planned-wt-creator` agent
 
 **Characteristics:**
@@ -401,7 +401,7 @@ Choose the appropriate model based on agent's cognitive requirements:
 **Examples:**
 
 - `devrun` (haiku) - Runs tools, parses output, iterates
-- `gt-branch-submitter` (haiku) - Orchestrates git/gh operations
+- `git-branch-submitter` (haiku) - Orchestrates git/gh operations
 - `planned-wt-creator` (haiku) - Detects files, validates, creates worktree
 - Code review agent (sonnet) - Analyzes code quality and patterns
 
@@ -444,22 +444,21 @@ Delegates to devrun agent to run pytest and pyright iteratively.
 
 **Key insight:** One agent serves multiple commands by accepting different tool invocations.
 
-### Example 2: /gt:submit-branch → gt-branch-submitter
+### Example 2: /git:pr-push → git-branch-submitter
 
 **Pattern:** Workflow orchestration
 
-**Command:** `.claude/commands/gt/submit-branch.md` (43 lines)
+**Command:** `.claude/commands/git/pr-push.md`
 
 ```markdown
-Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent.
+Delegates the complete git-based PR push workflow to the `git-branch-submitter` agent.
 ```
 
-**Agent:** `.claude/agents/gt/gt-branch-submitter.md`
+**Agent:** `.claude/agents/git-branch-submitter.md`
 
-- Pre-analysis phase (check changes, squash commits)
-- Diff analysis phase (understand changes)
-- Commit message generation
-- Post-analysis phase (amend, submit, update PR)
+- Check uncommitted changes and stage/commit
+- Analyze diff and generate commit message
+- Push branch and create/update PR
 - Comprehensive error handling at each step
 
 **Key insight:** Agent coordinates multiple steps with dependencies, handling errors at each boundary.
@@ -650,7 +649,7 @@ Documentation follows a progressive disclosure model:
 
 3. **Implementation examples** - Actual commands and agents in codebase
    - `/fast-ci` → `devrun` (simple delegation)
-   - `/gt:submit-branch` → `gt-branch-submitter` (workflow orchestration)
+   - `/git:pr-push` → `git-branch-submitter` (workflow orchestration)
    - `/erk:create-wt-from-plan-file` → `planned-wt-creator` (workflow orchestration)
 
 **Navigation:**

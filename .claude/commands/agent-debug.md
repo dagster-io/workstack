@@ -148,7 +148,7 @@ Run pytest tests and fix any failures
 
 ---
 
-### gt-branch-submitter (agent-def67890)
+### git-branch-submitter (agent-def67890)
 
 **Started**: 2025-11-23 14:35:22
 **Status**: Failed
@@ -156,17 +156,17 @@ Run pytest tests and fix any failures
 **Task Description**:
 ````
 
-Execute simplified Graphite submit workflow
+Execute git-based PR push workflow
 
 ````
 
 **Failed Operations**:
 
-1. **Bash**: `gt stack submit`
-   - Exit code: `2`
+1. **Bash**: `git push origin feature-branch`
+   - Exit code: `1`
    - Error:
      ```
-     Error: No commits to submit
+     Error: Remote branch does not exist
      ```
 ````
 

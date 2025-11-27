@@ -94,7 +94,7 @@ kit_id = "gt"
 source_type = "bundled"
 version = "0.1.0"
 artifacts = [
-    ".claude/agents/gt/gt-branch-submitter.md",
+    ".claude/agents/gt/commit-message-generator.md",
     ".claude/agents/gt/gt-update-pr-submitter.md",
     ".claude/commands/gt/pr-submit.md",
     ".claude/commands/gt/pr-update.md",

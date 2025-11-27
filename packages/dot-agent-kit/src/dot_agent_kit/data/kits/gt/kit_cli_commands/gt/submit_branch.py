@@ -211,6 +211,19 @@ def get_diff_context(ops: GtKit | None = None) -> DiffContextResult:
     )
 
 
+def _branch_name_to_title(branch_name: str) -> str:
+    """Convert kebab-case branch name to readable title.
+
+    Examples:
+        "fix-user-auth-bug" -> "Fix user auth bug"
+        "add-new-feature" -> "Add new feature"
+    """
+    # Replace hyphens with spaces
+    words = branch_name.replace("-", " ").replace("_", " ")
+    # Capitalize first letter
+    return words.capitalize() if words else "PR submitted"
+
+
 def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAnalysisError:
     """Execute the pre-analysis phase. Returns success or error result."""
     if ops is None:
@@ -633,7 +646,7 @@ def orchestrate_submit_workflow(
             click.echo(f"⚠️  AI generation failed: {e}", err=True)
             # Continue without AI-generated content
 
-    # Step 5: Update PR metadata (if we have AI-generated content)
+    # Step 5: Update PR metadata (always - use AI content or fallback)
     cwd = Path.cwd()
     impl_dir = cwd / ".impl"
 
@@ -643,15 +656,18 @@ def orchestrate_submit_workflow(
         if issue_ref is not None:
             issue_number = issue_ref.issue_number
 
-    if pr_title and pr_body is not None:
-        click.echo("📝 Updating PR metadata...", err=True)
-        metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
-        final_body = metadata_section + pr_body
+    # Always update PR metadata - build metadata section regardless of AI success
+    click.echo("📝 Updating PR metadata...", err=True)
+    metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
 
-        if ops.github().update_pr_metadata(pr_title, final_body):
-            click.echo("✓ PR metadata updated", err=True)
-        else:
-            click.echo("⚠️  Failed to update PR metadata", err=True)
+    # Use AI-generated content if available, otherwise use fallbacks
+    final_title = pr_title if pr_title else _branch_name_to_title(branch_name)
+    final_body = metadata_section + (pr_body if pr_body else "")
+
+    if ops.github().update_pr_metadata(final_title, final_body):
+        click.echo("✓ PR metadata updated", err=True)
+    else:
+        click.echo("⚠️  Failed to update PR metadata", err=True)
 
     return PostAnalysisResult(
         success=True,

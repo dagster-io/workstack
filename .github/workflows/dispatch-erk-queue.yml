@@ -341,6 +341,7 @@ jobs:
               --body-file pr_body.md \
               --head "$BRANCH_NAME"
 
+            rm -f pr_body.md
             echo "✅ Draft PR created"
           fi
 
@@ -392,6 +393,7 @@ jobs:
           EOF
 
           gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
+          rm -f comment_body.md
 
       - name: Update issue body with dispatch info
         env:

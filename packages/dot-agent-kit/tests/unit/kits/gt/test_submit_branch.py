@@ -13,6 +13,7 @@ from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisResult,
     PreAnalysisError,
     PreAnalysisResult,
+    _branch_name_to_title,
     build_pr_metadata_section,
     execute_post_analysis,
     execute_pre_analysis,
@@ -67,6 +68,30 @@ def mock_github() -> Generator[Mock]:
         mock_pr_info.url = None
         mock_github.get_pr_status.return_value = mock_pr_info
         yield mock_github
+
+
+class TestBranchNameToTitle:
+    """Tests for _branch_name_to_title() function."""
+
+    def test_converts_kebab_case_to_title(self) -> None:
+        """Test converting kebab-case branch name to readable title."""
+        assert _branch_name_to_title("fix-user-auth-bug") == "Fix user auth bug"
+
+    def test_converts_underscores_to_spaces(self) -> None:
+        """Test converting underscores to spaces."""
+        assert _branch_name_to_title("add_new_feature") == "Add new feature"
+
+    def test_handles_mixed_separators(self) -> None:
+        """Test handling mixed hyphens and underscores."""
+        assert _branch_name_to_title("fix-user_auth-bug") == "Fix user auth bug"
+
+    def test_handles_empty_string(self) -> None:
+        """Test handling empty branch name."""
+        assert _branch_name_to_title("") == "PR submitted"
+
+    def test_capitalizes_first_letter(self) -> None:
+        """Test that only the first letter is capitalized."""
+        assert _branch_name_to_title("UPPERCASE-BRANCH") == "Uppercase branch"
 
 
 class TestBuildPRMetadataSection:
@@ -1431,6 +1456,44 @@ class TestOrchestrateWorkflow:
         assert result.pr_number == 123
         # Title defaults to "PR submitted" when AI fails
         assert result.pr_title == "PR submitted"
+
+    def test_orchestrate_updates_pr_metadata_when_ai_fails(self) -> None:
+        """Test that PR metadata is updated with fallback title when AI fails.
+
+        This verifies the bug fix: PR metadata should always be updated,
+        even when AI generation fails. The title falls back to a readable
+        version of the branch name.
+        """
+        from unittest.mock import patch
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("fix-workflow-temp-file", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/repo/pull/123")
+        )
+
+        # Mock agent invocation to raise RuntimeError
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+        ) as mock_agent:
+            mock_agent.side_effect = RuntimeError("Agent execution failed")
+
+            result = orchestrate_submit_workflow(ops)
+
+        # Submission succeeds
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+
+        # Verify PR metadata was updated via fake's state
+        github_state = ops.github().get_state()
+        # PR 123 should have its title and body updated
+        assert 123 in github_state.pr_titles, "PR metadata should be updated even when AI fails"
+        # The actual title sent to GitHub uses branch-name-derived fallback
+        assert github_state.pr_titles[123] == "Fix workflow temp file"
+        # Body should be set (metadata section, even if AI body is empty)
+        assert 123 in github_state.pr_bodies
+        assert github_state.pr_bodies[123] is not None
 
 
 class TestSubmitBranchCLI:

@@ -1,0 +1,1 @@
+/Users/schrockn/.erk/repos/erk/worktrees/create-erkplan-create-v2-comman-25-11-27/packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/v2-plan-create.md

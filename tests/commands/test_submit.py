@@ -61,7 +61,7 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
     # Verify workflow was triggered with correct parameters
     assert len(fake_github.triggered_workflows) == 1
     workflow, inputs = fake_github.triggered_workflows[0]
-    assert workflow == "dispatch-erk-queue.yml"
+    assert workflow == "dispatch-erk-queue-git.yml"
     assert inputs["issue_number"] == "123"
     assert inputs["issue_title"] == "Implement feature X"
 
@@ -71,7 +71,7 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
     issue_number, comment_body = added_comments[0]
     assert issue_number == 123
     assert "Issue Queued for Implementation" in comment_body
-    assert "dispatch-erk-queue" in comment_body
+    assert "dispatch-erk-queue-git" in comment_body
 
 
 def test_submit_missing_erk_plan_label(tmp_path: Path) -> None:

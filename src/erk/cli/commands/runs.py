@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from erk.cli.commands.plan.list_cmd import format_pr_cell, select_display_pr
-from erk.cli.constants import DISPATCH_ERK_QUEUE_WORKFLOW
+from erk.cli.constants import DISPATCH_WORKFLOW_NAME
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
@@ -53,8 +53,8 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
-    # 1. Fetch workflow runs from dispatch-erk-queue.yml
-    runs = ctx.github.list_workflow_runs(repo.root, DISPATCH_ERK_QUEUE_WORKFLOW)
+    # 1. Fetch workflow runs from dispatch workflow
+    runs = ctx.github.list_workflow_runs(repo.root, DISPATCH_WORKFLOW_NAME)
 
     # Handle empty state
     if not runs:

@@ -42,14 +42,14 @@ def test_retry_success_first_time() -> None:
         assert result.exit_code == 0
         assert "Fetched issue #42" in result.output
         assert "Parsing 0 comment(s) for retry history" in result.output
-        assert "Triggering dispatch-erk-queue workflow..." in result.output
+        assert "Triggering dispatch-erk-queue-git workflow..." in result.output
         assert "✓ Plan #42 requeued (retry #1)" in result.output
         assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
         # Verify workflow was triggered
         assert len(ctx.github.triggered_workflows) == 1
         workflow, inputs = ctx.github.triggered_workflows[0]
-        assert workflow == "dispatch-erk-queue.yml"
+        assert workflow == "dispatch-erk-queue-git.yml"
         assert inputs["issue_number"] == "42"
         assert inputs["issue_title"] == "Test Plan"
 
@@ -107,7 +107,7 @@ def test_retry_success_subsequent() -> None:
         assert result.exit_code == 0
         assert "Fetched issue #42" in result.output
         assert "Parsing 1 comment(s) for retry history" in result.output
-        assert "Triggering dispatch-erk-queue workflow..." in result.output
+        assert "Triggering dispatch-erk-queue-git workflow..." in result.output
         assert "✓ Plan #42 requeued (retry #2)" in result.output
         assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 

@@ -40,6 +40,7 @@
 | Work with Graphite stacks                        | → Load `gt-graphite` skill for stack visualization and terminology                     |
 | Understand erk architecture patterns             | → [docs/agent/erk-architecture.md](docs/agent/erk-architecture.md)                     |
 | Use planning workflow (.impl/ folders)           | → [docs/agent/planning-workflow.md](docs/agent/planning-workflow.md)                   |
+| Understand plan enrichment workflow              | → [docs/agent/plan-enrichment.md](docs/agent/plan-enrichment.md)                       |
 | Style CLI output                                 | → [docs/agent/cli-output-styling.md](docs/agent/cli-output-styling.md)                 |
 | Implement script mode for shell integration      | → [docs/agent/cli-script-mode.md](docs/agent/cli-script-mode.md)                       |
 | Use subprocess wrappers                          | → [docs/agent/subprocess-wrappers.md](docs/agent/subprocess-wrappers.md)               |

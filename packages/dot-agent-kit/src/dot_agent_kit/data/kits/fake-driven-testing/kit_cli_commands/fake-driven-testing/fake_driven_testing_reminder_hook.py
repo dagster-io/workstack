@@ -8,10 +8,12 @@ import click
 def fake_driven_testing_reminder_hook() -> None:
     """Output fake-driven-testing reminder for UserPromptSubmit hook."""
     click.echo(
-        "📌 fake-driven-testing: Load if not yet loaded this session (skills persist)\n"
+        "📌 fake-driven-testing: Check if already loaded (look for 'skill is loading' message)\n"
+        "   ↳ If NOT loaded and writing tests: Load skill now\n"
+        "   ↳ If already loaded or not writing tests: Continue\n"
         "\n"
-        "WHY: 5-layer defense-in-depth strategy (see skill for architecture)\n"
-        "NOTE: Guides test placement, fake usage, integration class architecture patterns"
+        "WHY: 5-layer defense-in-depth testing strategy\n"
+        "NOTE: Skills persist entire session - load once, use throughout"
     )
 
 

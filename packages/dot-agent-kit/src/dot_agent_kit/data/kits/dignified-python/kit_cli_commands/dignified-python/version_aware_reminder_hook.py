@@ -25,10 +25,12 @@ def version_aware_reminder_hook() -> None:
     version_code = f"3{minor}"
     skill_name = f"dignified-python-{version_code}"
     click.echo(
-        f"📌 {skill_name}: Load if not yet loaded this session (skills persist)\n"
+        f"📌 {skill_name}: Check if already loaded (look for 'skill is loading' message)\n"
+        f"   ↳ If NOT loaded and writing Python: Load skill now\n"
+        f"   ↳ If already loaded or not writing Python: Continue\n"
         "\n"
-        f"WHY: Ensures LBYL compliance, Python 3.{minor}+ types, ABC interfaces\n"
-        "NOTE: Checklist rules are EXCERPTS - skill contains complete philosophy & rationale"
+        f"WHY: LBYL compliance, Python 3.{minor}+ types, ABC interfaces\n"
+        "NOTE: Skills persist entire session - load once, use throughout"
     )
 
 

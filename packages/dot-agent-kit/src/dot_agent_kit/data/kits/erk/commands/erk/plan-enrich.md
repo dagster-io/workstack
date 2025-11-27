@@ -255,16 +255,7 @@ Common causes:
 **URL:** [issue_url]
 **Enrichment:** [N] context categories extracted, [M] questions asked
 
-**Next steps:**
-
-View the enriched plan:
-    gh issue view [issue_number]
-
-Implement the plan:
-    erk implement [issue_number]
-
-Implement with auto-confirmation (yolo mode):
-    erk implement [issue_number] --yolo
+@../../docs/erk/includes/planning/next-steps-output.md
 ```
 
 ## Error Scenarios

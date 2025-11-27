@@ -150,17 +150,12 @@ Common causes:
 **URL:** [issue_url]
 **Enrichment:** [N] context categories extracted, [M] questions asked
 
-**Next steps:**
+@../../docs/erk/includes/planning/next-steps-output.md
+```
 
-View the plan:
-    gh issue view [issue_number]
+Where `[OPTIONAL_COMMANDS]` in the include expands to:
 
-Implement the plan:
-    erk implement [issue_number]
-
-Implement with auto-confirmation (yolo mode):
-    erk implement [issue_number] --yolo
-
+```
 Re-enrich the plan (update in place):
     /erk:plan-enrich [issue_number]
 ```

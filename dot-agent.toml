@@ -73,6 +73,7 @@ artifacts = [
     ".claude/docs/erk/EXAMPLES.md",
     ".claude/docs/erk/includes/create-github-issue.md",
     ".claude/docs/erk/includes/enrichment-process.md",
+    ".claude/docs/erk/includes/planning/next-steps-output.md",
     ".claude/docs/erk/includes/session-file-location.md",
     ".claude/docs/erk/includes/success-output-format.md",
     ".claude/docs/erk/includes/validate-git-repository.md",

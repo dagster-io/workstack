@@ -57,7 +57,6 @@ jobs:
           cd $GITHUB_WORKSPACE
 
           # Install workspace packages in dependency order
-          uv tool install --from ./packages/erk-shared erk-shared
           uv tool install --from ./packages/dot-agent-kit --with ./packages/erk-shared dot-agent-kit
           uv tool install --from . --with ./packages/erk-shared --with ./packages/dot-agent-kit erk
 

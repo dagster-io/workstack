@@ -13,6 +13,7 @@ from erk_shared.github.metadata import (
 )
 from erk_shared.output.output import user_output
 
+from erk.cli.constants import DISPATCH_ERK_QUEUE_WORKFLOW
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -116,11 +117,11 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         triggered_by = "unknown"
 
     # Trigger workflow via direct dispatch
-    ctx.feedback.info("Triggering dispatch-erk-queue workflow...")
+    ctx.feedback.info(f"Triggering {DISPATCH_ERK_QUEUE_WORKFLOW} workflow...")
     try:
         ctx.github.trigger_workflow(
             repo_root=repo_root,
-            workflow="dispatch-erk-queue.yml",
+            workflow=DISPATCH_ERK_QUEUE_WORKFLOW,
             inputs={
                 "issue_number": str(issue_number),
                 "issue_title": issue.title,

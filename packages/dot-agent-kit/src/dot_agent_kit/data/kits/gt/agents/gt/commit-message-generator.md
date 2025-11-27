@@ -1,7 +1,7 @@
 ---
 name: commit-message-generator
 description: Generate commit messages from git diffs for PR submission
-model: sonnet
+model: haiku
 color: blue
 tools: Read
 ---

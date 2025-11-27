@@ -48,6 +48,7 @@ dot-agent run gt submit-pr get-diff-context
 ```
 
 Parse the JSON output to get:
+
 - `current_branch`: Current branch name
 - `parent_branch`: Parent branch name
 - `diff`: Full diff output

@@ -51,6 +51,7 @@ Return ONLY the commit message in this exact format:
 ## Guidelines
 
 **DO:**
+
 - Use imperative mood for title ("Add feature" not "Added feature")
 - Focus on component-level descriptions, not individual functions
 - Use relative paths from repository root
@@ -58,6 +59,7 @@ Return ONLY the commit message in this exact format:
 - Group related changes together
 
 **DO NOT:**
+
 - Add any text before or after the commit message
 - Include Claude attribution or footer
 - Speculate about intentions without code evidence

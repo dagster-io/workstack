@@ -278,6 +278,20 @@ class GitHubGtKit(ABC):
             - hostname: GitHub hostname or None
         """
 
+    @abstractmethod
+    def get_pr_diff(self, pr_number: int) -> str:
+        """Get the diff for a PR using gh pr diff.
+
+        Args:
+            pr_number: PR number to get diff for
+
+        Returns:
+            Diff content as string
+
+        Raises:
+            subprocess.CalledProcessError: If gh command fails
+        """
+
 
 class GtKit(ABC):
     """Composite interface combining all GT kit operations.

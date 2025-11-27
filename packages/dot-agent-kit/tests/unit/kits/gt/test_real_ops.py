@@ -484,11 +484,10 @@ class TestRealGitHubGtKitOps:
             ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Test Title", "Test Body")
 
-            # Verify correct command was called with stdin (--body-file -)
+            # Verify correct command was called
             mock_run.assert_called_once_with(
-                ["gh", "pr", "edit", "--title", "Test Title", "--body-file", "-"],
+                ["gh", "pr", "edit", "--title", "Test Title", "--body", "Test Body"],
                 timeout=30,
-                input="Test Body",
                 capture_output=True,
                 text=True,
                 check=False,

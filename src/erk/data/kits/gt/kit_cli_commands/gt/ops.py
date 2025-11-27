@@ -144,17 +144,6 @@ class GraphiteGtKit(ABC):
     """Graphite (gt) operations interface for GT kit commands."""
 
     @abstractmethod
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Check Graphite authentication status.
-
-        Returns:
-            Tuple of (is_authenticated, username, repo_info):
-            - is_authenticated: True if gt is authenticated
-            - username: Authenticated username or None
-            - repo_info: Repository info string or None
-        """
-
-    @abstractmethod
     def get_parent_branch(self) -> str | None:
         """Get the parent branch using gt parent.
 
@@ -206,20 +195,20 @@ class GraphiteGtKit(ABC):
             True on success, False on failure
         """
 
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check Graphite authentication status.
+
+        Returns:
+            Tuple of (is_authenticated, username, repo_info):
+            - is_authenticated: True if gt is authenticated
+            - username: Authenticated username or None
+            - repo_info: Repository info string or None
+        """
+
 
 class GitHubGtKit(ABC):
     """GitHub (gh) operations interface for GT kit commands."""
-
-    @abstractmethod
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Check GitHub CLI authentication status.
-
-        Returns:
-            Tuple of (is_authenticated, username, hostname):
-            - is_authenticated: True if gh CLI is authenticated
-            - username: Authenticated username or None
-            - hostname: GitHub hostname or None
-        """
 
     @abstractmethod
     def get_pr_info(self) -> tuple[int, str] | None:
@@ -276,6 +265,31 @@ class GitHubGtKit(ABC):
 
         Returns:
             Graphite URL or None if repo info cannot be determined
+        """
+
+    @abstractmethod
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check GitHub CLI authentication status.
+
+        Returns:
+            Tuple of (is_authenticated, username, hostname):
+            - is_authenticated: True if gh CLI is authenticated
+            - username: Authenticated username or None
+            - hostname: GitHub hostname or None
+        """
+
+    @abstractmethod
+    def get_pr_diff(self, pr_number: int) -> str:
+        """Get the diff for a PR using gh pr diff.
+
+        Args:
+            pr_number: PR number to get diff for
+
+        Returns:
+            Diff content as string
+
+        Raises:
+            subprocess.CalledProcessError: If gh command fails
         """
 
 

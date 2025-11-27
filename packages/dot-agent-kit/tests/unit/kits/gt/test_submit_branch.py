@@ -31,6 +31,31 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
+def extract_json_from_output(output: str) -> dict:
+    """Extract JSON object from CLI output that may contain styled messages.
+
+    The CLI outputs styled messages (with ↳, ✓, etc.) followed by JSON.
+    This function finds and parses the JSON portion.
+    """
+    # Find the start of JSON (first '{')
+    json_start = output.find("{")
+    if json_start == -1:
+        raise ValueError(f"No JSON found in output: {output}")
+
+    # Find matching closing brace
+    brace_count = 0
+    for i, char in enumerate(output[json_start:], start=json_start):
+        if char == "{":
+            brace_count += 1
+        elif char == "}":
+            brace_count -= 1
+            if brace_count == 0:
+                json_str = output[json_start : i + 1]
+                return json.loads(json_str)
+
+    raise ValueError(f"No complete JSON found in output: {output}")
+
+
 @pytest.fixture(autouse=True)
 def mock_github() -> Generator[Mock]:
     """Mock RealGitHub to prevent NotImplementedError from erk-shared stub."""
@@ -1377,11 +1402,20 @@ class TestOrchestrateWorkflow:
         assert result.error_type == "no_parent"
         assert "Could not determine parent branch" in result.message
 
-    def test_orchestrate_agent_invocation_error(self) -> None:
-        """Test error when agent invocation fails."""
+    def test_orchestrate_agent_invocation_error_continues(self) -> None:
+        """Test that AI failure doesn't block PR submission.
+
+        With the submit-first approach, AI failure only affects PR metadata,
+        not the submission itself. The workflow continues without AI content.
+        """
         from unittest.mock import patch
 
-        ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/repo/pull/123")
+        )
 
         # Mock agent invocation to raise RuntimeError
         with patch(
@@ -1391,9 +1425,12 @@ class TestOrchestrateWorkflow:
 
             result = orchestrate_submit_workflow(ops)
 
-        assert isinstance(result, PostAnalysisError)
-        assert result.error_type == "submit_failed"
-        assert "Failed to generate commit message" in result.message
+        # AI failure doesn't block submission - returns success
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        # Title defaults to "PR submitted" when AI fails
+        assert result.pr_title == "PR submitted"
 
 
 class TestSubmitBranchCLI:
@@ -1417,7 +1454,7 @@ class TestSubmitBranchCLI:
             result = runner.invoke(pr_submit, ["pre-analysis"])
 
             assert result.exit_code == 0
-            output = json.loads(result.output)
+            output = extract_json_from_output(result.output)
             assert output["success"] is True
             assert output["branch_name"] == "feature-branch"
             assert output["commit_count"] == 1
@@ -1454,27 +1491,7 @@ class TestSubmitBranchCLI:
             )
 
             assert result.exit_code == 0
-            # Parse JSON from output (may contain progress messages and multi-line JSON)
-            # Find the JSON object by looking for { and matching }
-            output_text = result.output
-            json_start = output_text.find("{")
-            assert json_start >= 0, f"No JSON object found in output: {output_text}"
-
-            # Find matching closing brace
-            brace_count = 0
-            json_end = -1
-            for i in range(json_start, len(output_text)):
-                if output_text[i] == "{":
-                    brace_count += 1
-                elif output_text[i] == "}":
-                    brace_count -= 1
-                    if brace_count == 0:
-                        json_end = i + 1
-                        break
-
-            assert json_end > json_start, f"No complete JSON object in output: {output_text}"
-            json_text = output_text[json_start:json_end]
-            output = json.loads(json_text)
+            output = extract_json_from_output(result.output)
             assert output["success"] is True
             assert output["pr_number"] == 123
         finally:

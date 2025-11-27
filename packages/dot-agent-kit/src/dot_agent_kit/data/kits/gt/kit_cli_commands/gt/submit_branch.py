@@ -545,13 +545,20 @@ Use the Task tool to invoke the commit-message-generator agent from the gt kit."
 def orchestrate_submit_workflow(
     ops: GtKit | None = None,
 ) -> PostAnalysisResult | PostAnalysisError | PreAnalysisError:
-    """Orchestrate complete PR submission with AI commit message.
+    """Orchestrate complete PR submission with AI-generated PR metadata.
 
-    Workflow:
-    1. Execute pre-analysis (existing function)
-    2. Get diff context (existing function)
-    3. Invoke Claude agent to generate commit message
-    4. Execute post-analysis with generated message (existing function)
+    Workflow (submit-first approach for reliability):
+    1. Execute pre-analysis (squash commits, auth checks)
+    2. Submit branch via Graphite (with existing commit message)
+    3. Wait for PR to be created
+    4. Get PR diff from GitHub API (accurate PR-specific diff)
+    5. Generate PR title/body via AI
+    6. Update PR metadata
+
+    This approach is more reliable because:
+    - The submit succeeds regardless of AI availability
+    - Uses `gh pr diff` for accurate PR-specific diff (not git diff)
+    - AI failure only affects cosmetic PR metadata, not the submission itself
 
     Args:
         ops: Optional GtKit for dependency injection (testing)
@@ -562,42 +569,223 @@ def orchestrate_submit_workflow(
     if ops is None:
         ops = RealGtKit()
 
-    # Step 1: Pre-analysis (reuses existing execute_pre_analysis)
+    # Step 1: Pre-analysis (squash commits, auth checks)
     click.echo("🔍 Running pre-analysis checks...", err=True)
     pre_result = execute_pre_analysis(ops)
     if isinstance(pre_result, PreAnalysisError):
         return pre_result
     click.echo("✓ Pre-analysis complete", err=True)
 
-    # Step 2: Get diff context (reuses existing get_diff_context)
-    click.echo("📊 Extracting diff context...", err=True)
-    try:
-        diff_context = get_diff_context(ops)
-    except (ValueError, subprocess.CalledProcessError) as e:
-        return PreAnalysisError(
-            success=False,
-            error_type="no_commits",
-            message=f"Failed to get diff: {e}",
-            details={"error": str(e)},
-        )
-    click.echo("✓ Diff extracted", err=True)
+    # Step 2: Submit branch FIRST (with existing commit message)
+    click.echo("🚀 Submitting PR...", err=True)
+    submit_result = _execute_submit_only(ops)
+    if isinstance(submit_result, PostAnalysisError):
+        return submit_result
+    click.echo("✓ Branch submitted", err=True)
 
-    # Step 3: Generate commit message via Claude agent
-    click.echo("🤖 Generating commit message via AI...", err=True)
+    pr_number, pr_url, graphite_url, branch_name = submit_result
+
+    # Step 3: Get PR diff from GitHub API (accurate PR-specific diff)
+    click.echo("📊 Getting PR diff from GitHub...", err=True)
     try:
-        commit_message = _invoke_commit_message_agent(diff_context)
-    except RuntimeError as e:
+        pr_diff = ops.github().get_pr_diff(pr_number)
+    except subprocess.CalledProcessError as e:
+        # If we can't get diff, still return success but note the issue
+        click.echo(f"⚠️  Could not get PR diff: {e}", err=True)
+        pr_diff = None
+    if pr_diff:
+        click.echo("✓ PR diff retrieved", err=True)
+
+    # Step 4: Generate PR title/body via AI (only if we have diff)
+    pr_title: str | None = None
+    pr_body: str | None = None
+
+    if pr_diff:
+        click.echo("🤖 Generating PR description via AI...", err=True)
+        try:
+            repo_root = ops.git().get_repository_root()
+            current_branch = ops.git().get_current_branch() or branch_name
+            parent_branch = ops.graphite().get_parent_branch() or "main"
+
+            diff_context = DiffContextResult(
+                success=True,
+                repo_root=repo_root,
+                current_branch=current_branch,
+                parent_branch=parent_branch,
+                diff=pr_diff,
+            )
+            commit_message = _invoke_commit_message_agent(diff_context)
+            lines = commit_message.split("\n", 1)
+            pr_title = lines[0]
+            pr_body = lines[1].lstrip() if len(lines) > 1 else ""
+            click.echo("✓ PR description generated", err=True)
+        except RuntimeError as e:
+            click.echo(f"⚠️  AI generation failed: {e}", err=True)
+            # Continue without AI-generated content
+
+    # Step 5: Update PR metadata (if we have AI-generated content)
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    if pr_title and pr_body is not None:
+        click.echo("📝 Updating PR metadata...", err=True)
+        metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
+        final_body = metadata_section + pr_body
+
+        if ops.github().update_pr_metadata(pr_title, final_body):
+            click.echo("✓ PR metadata updated", err=True)
+        else:
+            click.echo("⚠️  Failed to update PR metadata", err=True)
+
+    return PostAnalysisResult(
+        success=True,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        pr_title=pr_title or "PR submitted",
+        graphite_url=graphite_url,
+        branch_name=branch_name,
+        issue_number=issue_number,
+        message=f"Successfully submitted branch: {branch_name}\nUpdated PR #{pr_number}: {pr_url}",
+    )
+
+
+def _execute_submit_only(
+    ops: GtKit,
+) -> tuple[int, str, str, str] | PostAnalysisError:
+    """Submit branch and wait for PR info, without modifying commit message.
+
+    Returns:
+        Tuple of (pr_number, pr_url, graphite_url, branch_name) on success
+        PostAnalysisError on failure
+    """
+    branch_name = ops.git().get_current_branch() or "unknown"
+
+    # Submit branch
+    click.echo("  ↳ Running gt submit (this may take a moment)...", err=True)
+    result = ops.graphite().submit(publish=True, restack=True)
+
+    # Check for empty parent branch
+    combined_output = result.stdout + result.stderr
+    nothing_to_submit = "Nothing to submit!" in combined_output
+    no_changes = "does not introduce any changes" in combined_output
+    if nothing_to_submit or no_changes:
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_empty_parent",
+            message=(
+                "Stack contains an empty parent branch that was already merged. "
+                "Run 'gt track --parent <trunk>' to reparent this branch, then 'gt restack'."
+            ),
+            details={
+                "branch_name": branch_name,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            },
+        )
+
+    if not result.success:
+        combined_lower = combined_output.lower()
+
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_conflict",
+                message="Merge conflicts detected during branch submission",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
+
+        if "merged but the merged commits are not contained" in combined_output:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_merged_parent",
+                message="Parent branches have been merged but are not in main trunk",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
+
+        if "updated remotely" in combined_lower or "must sync" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_diverged",
+                message="Branch has diverged from remote - manual sync required",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
+
+        if "timed out after 120 seconds" in result.stderr:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_timeout",
+                message=(
+                    "gt submit timed out after 120 seconds. "
+                    "Check network connectivity and try again."
+                ),
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
+
         return PostAnalysisError(
             success=False,
             error_type="submit_failed",
-            message=f"Failed to generate commit message: {e}",
-            details={"error": str(e)},
+            message="Failed to submit branch with gt submit",
+            details={
+                "branch_name": branch_name,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+            },
         )
-    click.echo("✓ Commit message generated", err=True)
 
-    # Step 4: Post-analysis (reuses existing execute_post_analysis)
-    click.echo("🚀 Submitting PR...", err=True)
-    return execute_post_analysis(commit_message, ops)
+    click.echo("  ✓ Branch submitted to Graphite", err=True)
+
+    # Wait for PR info
+    pr_info = None
+    max_retries = 5
+    retry_delays = [0.5, 1.0, 2.0, 4.0, 8.0]
+
+    click.echo("⏳ Waiting for PR info from GitHub API...", err=True)
+
+    for attempt in range(max_retries):
+        if attempt > 0:
+            click.echo(f"   Attempt {attempt + 1}/{max_retries}...", err=True)
+        pr_info = ops.github().get_pr_info()
+        if pr_info is not None:
+            click.echo("✓ PR info retrieved", err=True)
+            break
+        if attempt < max_retries - 1:
+            time.sleep(retry_delays[attempt])
+
+    if pr_info is None:
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_failed",
+            message="PR was submitted but could not retrieve PR info from GitHub",
+            details={"branch_name": branch_name},
+        )
+
+    pr_number, pr_url = pr_info
+    graphite_url_result = ops.github().get_graphite_pr_url(pr_number)
+    graphite_url = graphite_url_result or ""
+
+    return (pr_number, pr_url, graphite_url, branch_name)
 
 
 def execute_post_analysis(

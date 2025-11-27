@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from click import Command
 from click.testing import CliRunner
 from erk_shared.output.output import user_output
 
@@ -26,6 +27,28 @@ from erk.core.context import create_context
 PASSTHROUGH_MARKER: Final[str] = "__ERK_PASSTHROUGH__"
 PASSTHROUGH_COMMANDS: Final[set[str]] = {"sync"}
 
+# Commands that support shell integration (directory switching)
+# Uses compound keys for subcommands (e.g., "wt create" instead of just "create")
+# Also supports legacy top-level aliases for backward compatibility
+SHELL_INTEGRATION_COMMANDS: Final[dict[str, Command]] = {
+    # Top-level commands
+    "checkout": checkout_cmd,
+    "co": checkout_cmd,  # Alias
+    "up": up_cmd,
+    "down": down_cmd,
+    "implement": implement,
+    "pr": pr_group,
+    # Legacy top-level aliases (for backward compatibility)
+    "create": create_wt,
+    "goto": goto_wt,
+    "consolidate": consolidate_stack,
+    # Subcommands under wt
+    "wt create": create_wt,
+    "wt goto": goto_wt,
+    # Subcommands under stack
+    "stack consolidate": consolidate_stack,
+}
+
 
 @dataclass(frozen=True)
 class ShellIntegrationResult:
@@ -47,20 +70,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     if "-h" in args or "--help" in args or "--script" in args or "--dry-run" in args:
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=0)
 
-    # Map command names to their Click commands
-    command_map = {
-        "checkout": checkout_cmd,
-        "co": checkout_cmd,  # Alias
-        "create": create_wt,
-        "up": up_cmd,
-        "down": down_cmd,
-        "goto": goto_wt,
-        "consolidate": consolidate_stack,
-        "implement": implement,
-        "pr": pr_group,
-    }
-
-    command = command_map.get(command_name)
+    command = SHELL_INTEGRATION_COMMANDS.get(command_name)
     if command is None:
         if command_name in PASSTHROUGH_COMMANDS:
             return _build_passthrough_script(command_name, args)
@@ -113,12 +123,18 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
 
 def handle_shell_request(args: tuple[str, ...]) -> ShellIntegrationResult:
     """Dispatch shell integration handling based on the original CLI invocation."""
-    if not args:
+    if len(args) == 0:
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=0)
 
-    command_name = args[0]
-    command_args = tuple(args[1:])
+    # Try compound command first (e.g., "wt create", "stack consolidate")
+    if len(args) >= 2:
+        compound_name = f"{args[0]} {args[1]}"
+        if compound_name in SHELL_INTEGRATION_COMMANDS:
+            return _invoke_hidden_command(compound_name, tuple(args[2:]))
 
+    # Fall back to single command
+    command_name = args[0]
+    command_args = args[1:] if len(args) > 1 else ()
     return _invoke_hidden_command(command_name, command_args)
 
 

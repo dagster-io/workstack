@@ -17,6 +17,7 @@ from erk_shared.github.parsing import (
 )
 from erk_shared.github.types import (
     PRCheckoutInfo,
+    PRDetailedInfo,
     PRInfo,
     PRMergeability,
     PullRequestInfo,
@@ -1263,3 +1264,82 @@ query {{
             return (True, None, None)
 
         return (False, None, None)
+
+    def get_pr_for_branch(self, repo_root: Path, branch: str) -> PRDetailedInfo | None:
+        """Get detailed PR information for a branch, including linked issue.
+
+        Uses GraphQL to query PR with closingIssuesReferences for linked issue info.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            # First get owner/repo info
+            cmd = ["gh", "repo", "view", "--json", "owner,name"]
+            result = run_subprocess_with_context(
+                cmd,
+                operation_context="get repository info",
+                cwd=repo_root,
+            )
+            repo_info = json.loads(result.stdout)
+            owner = repo_info["owner"]["login"]
+            repo_name = repo_info["name"]
+
+            # Build GraphQL query for PR with closingIssuesReferences
+            query = f"""query {{
+  repository(owner: "{owner}", name: "{repo_name}") {{
+    pullRequests(headRefName: "{branch}", first: 1) {{
+      nodes {{
+        number
+        state
+        closingIssuesReferences(first: 1) {{
+          nodes {{
+            number
+          }}
+        }}
+      }}
+    }}
+  }}
+}}"""
+
+            # Execute GraphQL query
+            graphql_cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+            graphql_result = run_subprocess_with_context(
+                graphql_cmd,
+                operation_context=f"get PR info for branch '{branch}'",
+                cwd=repo_root,
+            )
+            data = json.loads(graphql_result.stdout)
+
+            # Extract PR data from response
+            repo_data = data.get("data", {}).get("repository", {})
+            prs = repo_data.get("pullRequests", {}).get("nodes", [])
+            if not prs:
+                return None
+
+            pr = prs[0]
+            pr_number = pr.get("number")
+            pr_state = pr.get("state")
+
+            if pr_number is None or pr_state is None:
+                return None
+
+            # Extract linked issue number from closingIssuesReferences
+            linked_issue_number: int | None = None
+            closing_refs = pr.get("closingIssuesReferences", {})
+            if closing_refs:
+                closing_nodes = closing_refs.get("nodes", [])
+                if closing_nodes:
+                    linked_issue_number = closing_nodes[0].get("number")
+
+            return PRDetailedInfo(
+                number=pr_number,
+                state=pr_state,
+                linked_issue_number=linked_issue_number,
+                branch_name=branch,
+            )
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
+            # gh not installed, not authenticated, or command/parsing failed
+            return None

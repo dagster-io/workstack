@@ -1,5 +1,6 @@
 """Submit issue for remote AI implementation via GitHub Actions."""
 
+import re
 from datetime import UTC, datetime
 
 import click
@@ -15,6 +16,27 @@ from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
+
+
+def derive_branch_name(issue_title: str) -> str:
+    """Derive branch name from issue title (matches workflow logic).
+
+    Must exactly match the bash logic in dispatch-erk-queue.yml:
+    - tr '[:upper:]' '[:lower:]'  -> lowercase
+    - sed 's/[^a-z0-9-]/-/g'      -> non-alphanum to hyphen
+    - sed 's/--*/-/g'             -> collapse multiple hyphens
+    - sed 's/^-//'                -> remove leading hyphen
+    - sed 's/-$//'                -> remove trailing hyphen
+    - ${BRANCH_NAME:0:30}         -> truncate to 30 chars
+    - sed 's/-$//'                -> remove trailing hyphen again
+    """
+    branch = issue_title.lower()
+    branch = re.sub(r"[^a-z0-9-]", "-", branch)
+    branch = re.sub(r"-+", "-", branch)  # collapse multiple hyphens
+    branch = branch.strip("-")
+    branch = branch[:30]
+    branch = branch.rstrip("-")  # remove trailing hyphen after truncation
+    return branch
 
 
 def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
@@ -92,6 +114,36 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             "Cannot submit closed issues for automated implementation."
         )
         raise SystemExit(1)
+
+    # Derive branch name from issue title (same logic as workflow)
+    branch_name = derive_branch_name(issue.title)
+
+    # Check if a PR exists for this branch
+    pr_info = ctx.github.get_pr_for_branch(repo.root, branch_name)
+
+    if pr_info is not None:
+        # Check for branch collision (different issue)
+        if pr_info.linked_issue_number is not None and pr_info.linked_issue_number != issue_number:
+            linked_num = pr_info.linked_issue_number
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Branch '{branch_name}' is associated with issue #{linked_num}\n\n"
+                f"This issue (#{issue_number}) would derive the same branch name.\n"
+                "Please rename one of the issues to avoid collision."
+            )
+            raise SystemExit(1)
+
+        # Check PR state
+        if pr_info.state in ("CLOSED", "MERGED"):
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"PR for branch '{branch_name}' is {pr_info.state}\n\n"
+                f"Cannot submit to a {pr_info.state.lower()} PR.\n"
+                "Options:\n"
+                f"  - Reopen the PR: gh pr reopen {branch_name}\n"
+                f"  - Delete the branch and retry: git push origin --delete {branch_name}"
+            )
+            raise SystemExit(1)
 
     # Display issue details
     user_output("Submitting issue for automated implementation:")

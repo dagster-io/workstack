@@ -5,6 +5,7 @@ from pathlib import Path
 
 from erk_shared.github.types import (
     PRCheckoutInfo,
+    PRDetailedInfo,
     PRInfo,
     PRMergeability,
     PullRequestInfo,
@@ -351,5 +352,22 @@ class GitHub(ABC):
             (True, "octocat", "github.com")
             >>> # If not authenticated:
             (False, None, None)
+        """
+        ...
+
+    @abstractmethod
+    def get_pr_for_branch(self, repo_root: Path, branch: str) -> PRDetailedInfo | None:
+        """Get detailed PR information for a branch, including linked issue.
+
+        Uses GitHub's closingIssuesReferences to find the issue that this PR closes.
+        This is used for validating PR state before submission and detecting
+        branch name collisions between different issues.
+
+        Args:
+            repo_root: Repository root directory
+            branch: Branch name to query
+
+        Returns:
+            PRDetailedInfo with state and linked issue, or None if no PR exists
         """
         ...

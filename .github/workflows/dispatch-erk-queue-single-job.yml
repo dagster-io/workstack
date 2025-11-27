@@ -241,6 +241,35 @@ jobs:
       # =================================================================
       # PHASE 4: PR SETUP
       # =================================================================
+      - name: Validate PR state
+        id: validate_pr
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Use kit command to validate PR state
+          # Posts error comment on failure if validation fails
+          RESULT=$(dot-agent run erk validate-pr-state \
+            --issue-number "$ISSUE_NUMBER" \
+            --branch-name "$BRANCH_NAME" \
+            --post-comment)
+
+          echo "$RESULT"
+
+          # Check if validation passed
+          if echo "$RESULT" | jq -e '.valid == true' > /dev/null; then
+            if echo "$RESULT" | jq -e '.pr_exists == true' > /dev/null; then
+              echo "✅ PR exists and is valid for submission"
+            else
+              echo "✅ No existing PR for branch $BRANCH_NAME"
+            fi
+          else
+            ERROR_TYPE=$(echo "$RESULT" | jq -r '.error_type // "unknown"')
+            echo "❌ PR validation failed: $ERROR_TYPE"
+            exit 1
+          fi
+
       - name: Create draft PR
         id: create_pr
         env:
@@ -406,9 +435,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
-          gh pr ready "$BRANCH_NAME"
-          echo "✅ PR marked ready for review"
+          # Get PR state and draft status
+          PR_INFO=$(gh pr view "$BRANCH_NAME" --json state,isDraft 2>/dev/null || echo '{}')
+          PR_STATE=$(echo "$PR_INFO" | jq -r '.state // "NONE"')
+          IS_DRAFT=$(echo "$PR_INFO" | jq -r '.isDraft // false')
+
+          if [ "$PR_STATE" = "NONE" ]; then
+            echo "No PR found for branch $BRANCH_NAME"
+            gh issue comment "$ISSUE_NUMBER" --body "**Mark Ready Failed**
+
+          No PR found for branch \`$BRANCH_NAME\`. This is unexpected after successful implementation.
+
+          Please investigate the workflow logs."
+            exit 1
+          fi
+
+          if [ "$PR_STATE" = "CLOSED" ] || [ "$PR_STATE" = "MERGED" ]; then
+            echo "PR is $PR_STATE - cannot mark ready"
+            gh issue comment "$ISSUE_NUMBER" --body "**Mark Ready Failed**
+
+          PR for branch \`$BRANCH_NAME\` is **$PR_STATE**.
+
+          Implementation succeeded but cannot mark a $PR_STATE PR as ready for review.
+
+          **This should have been caught earlier.** Please report this as a bug."
+            exit 1
+          fi
+
+          if [ "$IS_DRAFT" = "false" ]; then
+            echo "PR is already ready for review (not draft)"
+          else
+            gh pr ready "$BRANCH_NAME"
+            echo "✅ PR marked ready for review"
+          fi
 
       - name: Trigger CI workflows
         if: steps.implement.outputs.implementation_success == 'true'

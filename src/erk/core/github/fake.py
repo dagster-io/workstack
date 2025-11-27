@@ -10,6 +10,7 @@ from typing import cast
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import (
     PRCheckoutInfo,
+    PRDetailedInfo,
     PRInfo,
     PRMergeability,
     PRState,
@@ -37,6 +38,7 @@ class FakeGitHub(GitHub):
         pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
         polled_run_id: str | None = None,
         pr_checkout_infos: dict[int, PRCheckoutInfo] | None = None,
+        pr_detailed_infos: dict[str, PRDetailedInfo] | None = None,
         authenticated: bool = True,
         auth_username: str | None = "test-user",
         auth_hostname: str | None = "github.com",
@@ -54,6 +56,7 @@ class FakeGitHub(GitHub):
             pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
             polled_run_id: Run ID to return from poll_for_workflow_run (None for timeout)
             pr_checkout_infos: Mapping of pr_number -> PRCheckoutInfo
+            pr_detailed_infos: Mapping of branch name -> PRDetailedInfo for get_pr_for_branch
             authenticated: Whether gh CLI is authenticated (default True for test convenience)
             auth_username: Username returned by check_auth_status() (default "test-user")
             auth_hostname: Hostname returned by check_auth_status() (default "github.com")
@@ -92,6 +95,7 @@ class FakeGitHub(GitHub):
         self._pr_issue_linkages = pr_issue_linkages or {}
         self._polled_run_id = polled_run_id
         self._pr_checkout_infos = pr_checkout_infos or {}
+        self._pr_detailed_infos = pr_detailed_infos or {}
         self._authenticated = authenticated
         self._auth_username = auth_username
         self._auth_hostname = auth_hostname
@@ -450,3 +454,10 @@ class FakeGitHub(GitHub):
         This property is for test assertions only.
         """
         return self._check_auth_status_calls
+
+    def get_pr_for_branch(self, repo_root: Path, branch: str) -> PRDetailedInfo | None:
+        """Get PR detailed info from pre-configured state.
+
+        Returns None if branch not found in pr_detailed_infos mapping.
+        """
+        return self._pr_detailed_infos.get(branch)

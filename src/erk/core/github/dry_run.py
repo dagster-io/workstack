@@ -5,6 +5,7 @@ from pathlib import Path
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import (
     PRCheckoutInfo,
+    PRDetailedInfo,
     PRInfo,
     PRMergeability,
     PullRequestInfo,
@@ -160,3 +161,7 @@ class DryRunGitHub(GitHub):
     def check_auth_status(self) -> tuple[bool, str | None, str | None]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.check_auth_status()
+
+    def get_pr_for_branch(self, repo_root: Path, branch: str) -> PRDetailedInfo | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_pr_for_branch(repo_root, branch)

@@ -14,6 +14,7 @@ from pathlib import Path
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import (
     PRCheckoutInfo,
+    PRDetailedInfo,
     PRInfo,
     PRMergeability,
     PullRequestInfo,
@@ -238,6 +239,15 @@ class RealGitHub(GitHub):
         raise NotImplementedError(msg)
 
     def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
+    def get_pr_for_branch(self, repo_root: Path, branch: str) -> PRDetailedInfo | None:
         """Stub method - not implemented in erk-shared."""
         msg = (
             "RealGitHub from erk-shared is a stub for context creation only. "

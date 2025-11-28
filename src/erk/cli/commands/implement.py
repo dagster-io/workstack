@@ -454,11 +454,20 @@ def _create_worktree_with_plan_content(
     branch = name
     local_branches = ctx.git.list_local_branches(repo_root)
     if branch in local_branches:
-        ctx.feedback.error(
-            f"Error: Branch '{branch}' already exists.\n"
-            + "Cannot create worktree with existing branch name.\n"
-            + "Use --worktree-name to specify a different name."
-        )
+        # Different error messages based on whether name was explicitly provided
+        if worktree_name:
+            # User explicitly provided this name - tell them to choose different one
+            ctx.feedback.error(
+                f"Error: Branch '{branch}' already exists.\n"
+                + "Please choose a different name with --worktree-name."
+            )
+        else:
+            # Auto-generated name conflicted - suggest using explicit name
+            ctx.feedback.error(
+                f"Error: Branch '{branch}' already exists.\n"
+                + "Cannot create worktree with existing branch name.\n"
+                + "Use --worktree-name to specify a different name."
+            )
         raise SystemExit(1)
 
     # Handle dry-run mode

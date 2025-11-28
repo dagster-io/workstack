@@ -428,7 +428,7 @@ def test_implement_from_plan_file_dry_run() -> None:
 
 
 def test_implement_fails_when_branch_exists_issue_mode() -> None:
-    """Test that issue mode fails when branch already exists."""
+    """Test that issue mode fails when branch already exists with explicit name."""
     plan_issue = _create_sample_plan_issue()
 
     runner = CliRunner()
@@ -448,11 +448,13 @@ def test_implement_fails_when_branch_exists_issue_mode() -> None:
         assert result.exit_code == 1
         assert "Error" in result.output
         assert "already exists" in result.output
+        # Should tell user to choose different name (not suggest --worktree-name)
+        assert "Please choose a different name" in result.output
         assert len(git.added_worktrees) == 0
 
 
 def test_implement_fails_when_branch_exists_file_mode() -> None:
-    """Test that file mode fails when branch already exists."""
+    """Test that file mode fails when branch already exists with explicit name."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -473,6 +475,8 @@ def test_implement_fails_when_branch_exists_file_mode() -> None:
         assert result.exit_code == 1
         assert "Error" in result.output
         assert "already exists" in result.output
+        # Should tell user to choose different name (not suggest --worktree-name)
+        assert "Please choose a different name" in result.output
         assert len(git.added_worktrees) == 0
 
 

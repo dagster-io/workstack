@@ -1908,6 +1908,199 @@ class TestInvokeCommitMessageAgentTempFile:
                 _invoke_commit_message_agent(diff_context)
 
 
+class TestExecutePreflight:
+    """Tests for execute_preflight() function."""
+
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_preflight_success(self, mock_sleep: Mock) -> None:
+        """Test successful preflight execution."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PreflightResult,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PreflightResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.pr_url == "https://github.com/org/repo/pull/123"
+        assert result.branch_name == "feature-branch"
+        assert result.diff_file.startswith("/tmp/")
+        assert result.diff_file.endswith(".diff")
+        assert result.current_branch == "feature-branch"
+        assert result.parent_branch == "main"
+
+        # Clean up temp file
+        import os
+
+        if os.path.exists(result.diff_file):
+            os.unlink(result.diff_file)
+
+    def test_preflight_pre_analysis_error(self) -> None:
+        """Test preflight returns error when pre-analysis fails."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PreAnalysisError,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gt_unauthenticated()
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "gt_not_authenticated"
+
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_preflight_submit_error(self, mock_sleep: Mock) -> None:
+        """Test preflight returns error when submit fails."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PostAnalysisError,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_submit_failure(stdout="", stderr="submit failed")
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "submit_failed"
+
+
+class TestExecuteFinalize:
+    """Tests for execute_finalize() function."""
+
+    def test_finalize_success(self) -> None:
+        """Test successful finalize execution."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_finalize(
+            pr_number=123,
+            pr_title="Add new feature",
+            pr_body="This adds a great new feature",
+            diff_file=None,
+            ops=ops,
+        )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.pr_title == "Add new feature"
+        assert result.branch_name == "feature-branch"
+
+        # Verify PR was updated
+        github_state = ops.github().get_state()
+        assert github_state.pr_titles[123] == "Add new feature"
+        assert "This adds a great new feature" in github_state.pr_bodies[123]
+
+    def test_finalize_cleans_up_diff_file(self, tmp_path: Path) -> None:
+        """Test that finalize cleans up the temp diff file."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        # Create a temp diff file
+        diff_file = tmp_path / "test.diff"
+        diff_file.write_text("test diff content", encoding="utf-8")
+        assert diff_file.exists()
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_finalize(
+            pr_number=123,
+            pr_title="Add feature",
+            pr_body="Description",
+            diff_file=str(diff_file),
+            ops=ops,
+        )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        # Diff file should be cleaned up
+        assert not diff_file.exists()
+
+    def test_finalize_with_issue_reference(self, tmp_path: Path) -> None:
+        """Test finalize includes metadata when issue reference exists."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        # Create .impl/issue.json
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 456, "issue_url": "https://github.com/repo/issues/456", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}',
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_finalize(
+                pr_number=123,
+                pr_title="Add feature",
+                pr_body="Description",
+                diff_file=None,
+                ops=ops,
+            )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        assert result.issue_number == 456
+
+        # Verify PR body includes metadata
+        github_state = ops.github().get_state()
+        pr_body = github_state.pr_bodies[123]
+        assert "- **Plan:** [#456](https://github.com/repo/issues/456)" in pr_body
+        assert "Closes #456" in pr_body
+        assert "Description" in pr_body
+
+
 class TestOrchestrateWorkflowClaudeValidation:
     """Tests for orchestrate_submit_workflow with Claude validation."""
 

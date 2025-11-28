@@ -176,6 +176,37 @@ class DiffContextResult:
         }
 
 
+@dataclass
+class PreflightResult:
+    """Result from preflight phase (pre-analysis + submit + diff extraction)."""
+
+    success: bool
+    pr_number: int
+    pr_url: str
+    graphite_url: str
+    branch_name: str
+    diff_file: str  # Path to temp diff file
+    repo_root: str
+    current_branch: str
+    parent_branch: str
+    issue_number: int | None
+    message: str
+
+
+@dataclass
+class FinalizeResult:
+    """Result from finalize phase (update PR metadata)."""
+
+    success: bool
+    pr_number: int
+    pr_url: str
+    pr_title: str
+    graphite_url: str
+    branch_name: str
+    issue_number: int | None
+    message: str
+
+
 def get_diff_context(ops: GtKit | None = None) -> DiffContextResult:
     """Get all context needed for AI diff analysis.
 
@@ -1029,6 +1060,161 @@ def _execute_submit_only(
     return (pr_number, pr_url, graphite_url, branch_name)
 
 
+def execute_preflight(
+    ops: GtKit | None = None,
+) -> PreflightResult | PreAnalysisError | PostAnalysisError:
+    """Execute preflight phase: auth, squash, submit, get diff.
+
+    This combines pre-analysis + submit + diff extraction into a single phase
+    for use by the slash command orchestration.
+
+    Returns:
+        PreflightResult on success, or PreAnalysisError/PostAnalysisError on failure
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    from erk_shared.integrations.gt.prompts import truncate_diff
+
+    # Step 1: Pre-analysis (squash commits, auth checks)
+    click.echo("🔍 Running pre-analysis checks...", err=True)
+    pre_result = execute_pre_analysis(ops)
+    if isinstance(pre_result, PreAnalysisError):
+        return pre_result
+    click.echo("✓ Pre-analysis complete", err=True)
+
+    # Step 2: Submit branch (with existing commit message)
+    click.echo("🚀 Submitting PR...", err=True)
+    submit_start = time.time()
+    submit_result = _execute_submit_only(ops)
+    if isinstance(submit_result, PostAnalysisError):
+        return submit_result
+    submit_elapsed = int(time.time() - submit_start)
+    click.echo(f"✓ Branch submitted ({submit_elapsed}s)", err=True)
+
+    pr_number, pr_url, graphite_url, branch_name = submit_result
+
+    # Step 3: Get PR diff from GitHub API
+    click.echo(f"📊 Getting PR diff from GitHub... (gh pr diff {pr_number})", err=True)
+    pr_diff = ops.github().get_pr_diff(pr_number)
+    diff_lines = len(pr_diff.splitlines())
+    click.echo(f"✓ PR diff retrieved ({diff_lines} lines)", err=True)
+
+    # Step 4: Truncate diff if needed and write to temp file
+    diff_content, was_truncated = truncate_diff(pr_diff)
+    if was_truncated:
+        click.echo("  ⚠️  Diff truncated for size", err=True)
+
+    # Write diff to temp file
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
+    ) as f:
+        diff_file = f.name
+        f.write(diff_content)
+    click.echo(f"✓ Diff written to {diff_file}", err=True)
+
+    # Get repo root and branch info for AI prompt
+    repo_root = ops.git().get_repository_root()
+    current_branch = ops.git().get_current_branch() or branch_name
+    parent_branch = ops.graphite().get_parent_branch() or "main"
+
+    # Get issue reference if present
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    return PreflightResult(
+        success=True,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        graphite_url=graphite_url,
+        branch_name=branch_name,
+        diff_file=diff_file,
+        repo_root=repo_root,
+        current_branch=current_branch,
+        parent_branch=parent_branch,
+        issue_number=issue_number,
+        message=f"Preflight complete for branch: {branch_name}\nPR #{pr_number}: {pr_url}",
+    )
+
+
+def execute_finalize(
+    pr_number: int,
+    pr_title: str,
+    pr_body: str,
+    diff_file: str | None = None,
+    ops: GtKit | None = None,
+) -> FinalizeResult | PostAnalysisError:
+    """Execute finalize phase: update PR metadata and clean up.
+
+    Args:
+        pr_number: PR number to update
+        pr_title: AI-generated PR title (first line of commit message)
+        pr_body: AI-generated PR body (remaining lines)
+        diff_file: Optional temp diff file to clean up
+        ops: Optional GtKit for dependency injection
+
+    Returns:
+        FinalizeResult on success, or PostAnalysisError on failure
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    # Get impl directory for metadata
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    # Build metadata section and combine with AI body
+    metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
+    final_body = metadata_section + pr_body
+
+    # Update PR metadata
+    click.echo("📝 Updating PR metadata... (gh pr edit)", err=True)
+    if ops.github().update_pr_metadata(pr_title, final_body):
+        click.echo("✓ PR metadata updated", err=True)
+    else:
+        click.echo("⚠️  Failed to update PR metadata", err=True)
+
+    # Clean up temp diff file
+    if diff_file is not None:
+        diff_path = Path(diff_file)
+        if diff_path.exists():
+            try:
+                diff_path.unlink()
+                click.echo(f"✓ Cleaned up temp file: {diff_file}", err=True)
+            except OSError:
+                pass  # Ignore cleanup errors
+
+    # Get PR info for result
+    branch_name = ops.git().get_current_branch() or "unknown"
+    pr_url_result = ops.github().get_pr_info()
+    pr_url = pr_url_result[1] if pr_url_result else ""
+    graphite_url = ops.github().get_graphite_pr_url(pr_number) or ""
+
+    return FinalizeResult(
+        success=True,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        pr_title=pr_title,
+        graphite_url=graphite_url,
+        branch_name=branch_name,
+        issue_number=issue_number,
+        message=f"Successfully updated PR #{pr_number}: {pr_url}",
+    )
+
+
 def execute_post_analysis(
     commit_message: str, ops: GtKit | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
@@ -1384,8 +1570,55 @@ def orchestrate() -> None:
         raise SystemExit(1) from None
 
 
+@click.command()
+def preflight() -> None:
+    """Execute preflight phase: auth, squash, submit, get diff.
+
+    Returns JSON with PR info and path to temp diff file for AI analysis.
+    This is phase 1 of the 3-phase workflow for slash command orchestration.
+    """
+    try:
+        result = execute_preflight()
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, (PreAnalysisError, PostAnalysisError)):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
+@click.command()
+@click.option("--pr-number", required=True, type=int, help="PR number to update")
+@click.option("--pr-title", required=True, help="AI-generated PR title")
+@click.option("--pr-body", required=True, help="AI-generated PR body")
+@click.option("--diff-file", required=False, help="Temp diff file to clean up")
+def finalize(pr_number: int, pr_title: str, pr_body: str, diff_file: str | None) -> None:
+    """Execute finalize phase: update PR metadata.
+
+    This is phase 3 of the 3-phase workflow for slash command orchestration.
+    """
+    try:
+        result = execute_finalize(pr_number, pr_title, pr_body, diff_file)
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, PostAnalysisError):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
 # Register subcommands
 pr_submit.add_command(pre_analysis)
 pr_submit.add_command(post_analysis)
 pr_submit.add_command(get_diff_context_cmd, name="get-diff-context")
 pr_submit.add_command(orchestrate)
+pr_submit.add_command(preflight)
+pr_submit.add_command(finalize)

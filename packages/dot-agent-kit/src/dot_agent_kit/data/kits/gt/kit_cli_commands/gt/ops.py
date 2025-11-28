@@ -292,6 +292,30 @@ class GitHubGtKit(ABC):
             subprocess.CalledProcessError: If gh command fails
         """
 
+    @abstractmethod
+    def get_pr_status(self, branch: str) -> tuple[int | None, str | None]:
+        """Get PR number and URL for a specific branch.
+
+        Args:
+            branch: Branch name to check
+
+        Returns:
+            Tuple of (pr_number, pr_url) or (None, None) if no PR exists
+        """
+
+    @abstractmethod
+    def get_pr_mergeability(self, pr_number: int) -> tuple[str, str]:
+        """Get PR mergeability status from GitHub API.
+
+        Args:
+            pr_number: PR number to check
+
+        Returns:
+            Tuple of (mergeable, merge_state_status):
+            - mergeable: "MERGEABLE", "CONFLICTING", or "UNKNOWN"
+            - merge_state_status: "CLEAN", "DIRTY", "UNSTABLE", etc.
+        """
+
 
 class GtKit(ABC):
     """Composite interface combining all GT kit operations.

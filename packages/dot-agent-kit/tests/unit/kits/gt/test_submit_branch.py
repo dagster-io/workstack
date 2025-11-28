@@ -1,7 +1,6 @@
 """Tests for submit_branch kit CLI command using fake ops."""
 
 import json
-from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -21,9 +20,6 @@ from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     pr_submit,
 )
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
-
-# Patch path for RealGitHub mock (patch where it's defined, not where it's imported)
-GITHUB_PATCH_PATH = "erk_shared.github.real.RealGitHub"
 
 
 @pytest.fixture
@@ -55,19 +51,6 @@ def extract_json_from_output(output: str) -> dict:
                 return json.loads(json_str)
 
     raise ValueError(f"No complete JSON found in output: {output}")
-
-
-@pytest.fixture(autouse=True)
-def mock_github() -> Generator[Mock]:
-    """Mock RealGitHub to prevent NotImplementedError from erk-shared stub."""
-    with patch(GITHUB_PATCH_PATH) as mock_github_class:
-        mock_github = mock_github_class.return_value
-        # Default: return no PR (allows tests to proceed with normal flow)
-        mock_pr_info = Mock()
-        mock_pr_info.pr_number = None
-        mock_pr_info.url = None
-        mock_github.get_pr_status.return_value = mock_pr_info
-        yield mock_github
 
 
 class TestBranchNameToTitle:
@@ -547,22 +530,15 @@ class TestPreAnalysisExecution:
 
     def test_pre_analysis_detects_pr_conflicts_from_github(self) -> None:
         """Test that PR conflicts are detected before any work is done."""
-        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="master")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+            .with_pr_conflicts(123)
+        )
 
-        # Mock GitHub to return CONFLICTING status
-        with patch(GITHUB_PATCH_PATH) as mock_github_class:
-            mock_github = mock_github_class.return_value
-            mock_pr_info = Mock()
-            mock_pr_info.pr_number = 123
-            mock_pr_info.url = "https://github.com/org/repo/pull/123"
-            mock_github.get_pr_status.return_value = mock_pr_info
-
-            mock_mergeability = Mock()
-            mock_mergeability.mergeable = "CONFLICTING"
-            mock_mergeability.merge_state_status = "DIRTY"
-            mock_github.get_pr_mergeability.return_value = mock_mergeability
-
-            result = execute_pre_analysis(ops)
+        result = execute_pre_analysis(ops)
 
         # Assert: Should return error, no commits made
         assert isinstance(result, PreAnalysisError)
@@ -570,27 +546,20 @@ class TestPreAnalysisExecution:
         assert "conflicts" in result.message.lower()
         assert result.details["pr_number"] == "123"
         assert result.details["parent_branch"] == "master"
+        assert result.details["detection_method"] == "github_api"
 
     def test_pre_analysis_proceeds_when_no_conflicts(self) -> None:
         """Test that workflow proceeds normally when no conflicts exist."""
-        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="master")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
 
-        # Mock GitHub to return MERGEABLE status
-        with patch(GITHUB_PATCH_PATH) as mock_github_class:
-            mock_github = mock_github_class.return_value
-            mock_pr_info = Mock()
-            mock_pr_info.pr_number = 123
-            mock_pr_info.url = "https://github.com/org/repo/pull/123"
-            mock_github.get_pr_status.return_value = mock_pr_info
+        result = execute_pre_analysis(ops)
 
-            mock_mergeability = Mock()
-            mock_mergeability.mergeable = "MERGEABLE"
-            mock_mergeability.merge_state_status = "CLEAN"
-            mock_github.get_pr_mergeability.return_value = mock_mergeability
-
-            result = execute_pre_analysis(ops)
-
-        # Assert: Should succeed
+        # Assert: Should succeed (PR is MERGEABLE by default)
         assert isinstance(result, PreAnalysisResult)
         assert result.success is True
 
@@ -600,15 +569,8 @@ class TestPreAnalysisExecution:
         # Configure fake to simulate conflict
         ops.git().simulate_conflict("master", "feature-branch")
 
-        # Mock GitHub to return no PR
-        with patch(GITHUB_PATCH_PATH) as mock_github_class:
-            mock_github = mock_github_class.return_value
-            mock_pr_info = Mock()
-            mock_pr_info.pr_number = None
-            mock_pr_info.url = None
-            mock_github.get_pr_status.return_value = mock_pr_info
-
-            result = execute_pre_analysis(ops)
+        # No PR configured - should fallback to git merge-tree
+        result = execute_pre_analysis(ops)
 
         # Assert: Should detect conflict via git merge-tree
         assert isinstance(result, PreAnalysisError)
@@ -617,22 +579,15 @@ class TestPreAnalysisExecution:
 
     def test_pre_analysis_proceeds_on_unknown_mergeability(self) -> None:
         """Test that UNKNOWN mergeability doesn't block workflow."""
-        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="master")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+            .with_pr_mergeability(123, "UNKNOWN", "UNKNOWN")
+        )
 
-        # Mock GitHub to return UNKNOWN status
-        with patch(GITHUB_PATCH_PATH) as mock_github_class:
-            mock_github = mock_github_class.return_value
-            mock_pr_info = Mock()
-            mock_pr_info.pr_number = 123
-            mock_pr_info.url = "https://github.com/org/repo/pull/123"
-            mock_github.get_pr_status.return_value = mock_pr_info
-
-            mock_mergeability = Mock()
-            mock_mergeability.mergeable = "UNKNOWN"
-            mock_mergeability.merge_state_status = "UNKNOWN"
-            mock_github.get_pr_mergeability.return_value = mock_mergeability
-
-            result = execute_pre_analysis(ops)
+        result = execute_pre_analysis(ops)
 
         # Assert: Should proceed with warning
         assert isinstance(result, PreAnalysisResult)
@@ -1372,7 +1327,7 @@ worktree_name: test-worktree
 class TestOrchestrateWorkflow:
     """Tests for orchestrate_submit_workflow function."""
 
-    @pytest.mark.skip(reason="Requires Claude CLI availability mock - needs validation layer refactor")
+    @pytest.mark.skip(reason="Requires Claude CLI mock - needs validation refactor")
     def test_orchestrate_success(self) -> None:
         """Test successful orchestration through all phases."""
         from unittest.mock import patch
@@ -1428,7 +1383,7 @@ class TestOrchestrateWorkflow:
         assert result.error_type == "no_parent"
         assert "Could not determine parent branch" in result.message
 
-    @pytest.mark.skip(reason="Requires Claude CLI availability mock - needs validation layer refactor")
+    @pytest.mark.skip(reason="Requires Claude CLI mock - needs validation refactor")
     def test_orchestrate_agent_invocation_error_fails_hard(self) -> None:
         """Test that AI failure causes hard failure (no fallback).
 
@@ -1458,7 +1413,7 @@ class TestOrchestrateWorkflow:
         assert result.error_type == "ai_generation_failed"
         assert "AI generation failed" in result.message
 
-    @pytest.mark.skip(reason="Requires Claude CLI availability mock - needs validation layer refactor")
+    @pytest.mark.skip(reason="Requires Claude CLI mock - needs validation refactor")
     def test_orchestrate_fails_hard_when_ai_fails(self) -> None:
         """Test that workflow fails when AI generation fails (no fallback).
 

@@ -434,10 +434,10 @@ jobs:
       - name: Trigger CI workflows
         if: steps.implement.outputs.implementation_success == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.ERK_QUEUE_GH_PAT }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
-          # Trigger CI workflows explicitly (push events from GITHUB_TOKEN don't trigger workflows)
+          # Trigger CI workflows using PAT (GITHUB_TOKEN doesn't have actions:write)
           gh workflow run test.yml --ref "$BRANCH_NAME"
           gh workflow run lint.yml --ref "$BRANCH_NAME"
           gh workflow run pyright.yml --ref "$BRANCH_NAME"

@@ -1,4 +1,4 @@
-"""Runs command implementation."""
+"""List workflow runs command."""
 
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_issue_state_emoji
@@ -7,9 +7,9 @@ from rich.console import Console
 from rich.table import Table
 
 from erk.cli.commands.plan.list_cmd import format_pr_cell, select_display_pr
+from erk.cli.commands.run.shared import extract_issue_number
 from erk.cli.constants import DISPATCH_WORKFLOW_NAME
 from erk.cli.core import discover_repo_context
-from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.display_utils import (
     format_submission_time,
@@ -18,38 +18,8 @@ from erk.core.display_utils import (
 )
 
 
-@click.group("runs", invoke_without_command=True)
-@click.option("--show-legacy", is_flag=True, help="Show all runs including legacy runs.")
-@click.pass_context
-def runs_cmd(click_ctx: click.Context, show_legacy: bool) -> None:
-    """View GitHub Actions workflow runs for plan implementations."""
-    if click_ctx.invoked_subcommand is None:
-        # Default behavior: show list view
-        _list_runs(click_ctx, show_legacy)
-
-
-def _extract_issue_number(display_title: str | None) -> int | None:
-    """Extract issue number from display_title format '123:abc456'.
-
-    Handles:
-    - New format: "123:abc456" → 123
-    - Old format: "Issue title [abc123]" → None (no colon at start)
-    - None or empty → None
-    """
-    if not display_title or ":" not in display_title:
-        return None
-    parts = display_title.split(":", 1)
-    # Validate that the first part is a number
-    first_part = parts[0].strip()
-    if not first_part.isdigit():
-        return None
-    return int(first_part)
-
-
-def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
+def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
     """List workflow runs in a run-centric table view."""
-    ctx: ErkContext = click_ctx.obj
-
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
@@ -63,7 +33,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
 
     # Filter out runs without plans unless --show-legacy flag is set
     if not show_all:
-        runs = [run for run in runs if _extract_issue_number(run.display_title) is not None]
+        runs = [run for run in runs if extract_issue_number(run.display_title) is not None]
         if not runs:
             user_output("No runs with plans found. Use --show-legacy to see all runs.")
             return
@@ -71,7 +41,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     # 2. Extract issue numbers from display_title (format: "123:abc456")
     issue_numbers: list[int] = []
     for run in runs:
-        issue_num = _extract_issue_number(run.display_title)
+        issue_num = extract_issue_number(run.display_title)
         if issue_num is not None:
             issue_numbers.append(issue_num)
 
@@ -83,7 +53,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     if not show_all:
         filtered_runs = []
         for run in runs:
-            issue_num = _extract_issue_number(run.display_title)
+            issue_num = extract_issue_number(run.display_title)
             if issue_num is None:
                 continue  # Already filtered, but defensive check
 
@@ -135,7 +105,7 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
             repo_name = parts[-3]
 
     for run in runs:
-        issue_num = _extract_issue_number(run.display_title)
+        issue_num = extract_issue_number(run.display_title)
 
         # Format run-id with link
         workflow_url = None
@@ -217,46 +187,9 @@ def _list_runs(click_ctx: click.Context, show_all: bool = False) -> None:
     console.print()  # Add blank line after table
 
 
-@runs_cmd.command()
-@click.argument("run_id", required=False)
-@click.pass_context
-def logs(click_ctx: click.Context, run_id: str | None) -> None:
-    """View logs for a workflow run.
-
-    If RUN_ID is not provided, shows logs for the most recent run
-    on the current branch.
-    """
-    ctx: ErkContext = click_ctx.obj
-
-    # Discover repository context
-    repo = discover_repo_context(ctx, ctx.cwd)
-
-    if run_id is None:
-        # Auto-detect: find most recent run for current branch
-        current_branch = Ensure.not_none(
-            ctx.git.get_current_branch(ctx.cwd), "Could not determine current branch"
-        )
-
-        runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml", limit=50)
-        branch_runs = [r for r in runs if r.branch == current_branch]
-
-        if not branch_runs:
-            user_output(
-                f"No workflow runs found for branch: {click.style(current_branch, fg='yellow')}"
-            )
-            raise SystemExit(1)
-
-        # Most recent is first (list_workflow_runs returns newest first)
-        run_id = branch_runs[0].run_id
-        user_output(
-            f"Showing logs for run {click.style(run_id, fg='cyan')} "
-            f"on branch {click.style(current_branch, fg='yellow')}\n"
-        )
-
-    try:
-        log_output = ctx.github.get_run_logs(repo.root, run_id)
-        # Direct output - logs go to stdout for piping
-        click.echo(log_output)
-    except RuntimeError as e:
-        click.echo(click.style("Error: ", fg="red") + str(e), err=True)
-        raise SystemExit(1) from None
+@click.command("list")
+@click.option("--show-legacy", is_flag=True, help="Show all runs including legacy runs.")
+@click.pass_obj
+def list_runs(ctx: ErkContext, show_legacy: bool) -> None:
+    """List GitHub Actions workflow runs for plan implementations."""
+    _list_runs(ctx, show_legacy)

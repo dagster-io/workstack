@@ -81,71 +81,23 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Extract Plan and Create GitHub Issue
+### Step 2: Save Plan to GitHub Issue
 
-Use the combined kit CLI command that extracts the plan and creates the issue in one step:
+@../../docs/erk/includes/planning/save-plan-to-issue.md
 
-```bash
-# Call the combined kit CLI command
-result=$(dot-agent run erk plan-save-to-issue --format json 2>&1)
-```
+**Enrichment status handling:**
 
-**Parse the result:**
+After successful issue creation, set the enrichment status message based on the `enriched` field from the response:
 
 ```bash
-# Check if command succeeded
-if echo "$result" | jq -e '.success' > /dev/null 2>&1; then
-    # SUCCESS - extract values
-    issue_number=$(echo "$result" | jq -r '.issue_number')
-    issue_url=$(echo "$result" | jq -r '.issue_url')
-    title=$(echo "$result" | jq -r '.title')
-    enriched=$(echo "$result" | jq -r '.enriched')
-
-    # Set enrichment status message
-    if [ "$enriched" = "true" ]; then
-        enrichment_status="Enriched"
-        enrichment_note="This plan includes semantic context (8 categories)"
-    else
-        enrichment_status="Raw"
-        enrichment_note="This plan has no enrichment. Use /erk:plan-save-enriched to add context."
-    fi
+if [ "$enriched" = "true" ]; then
+    enrichment_status="Enriched"
+    enrichment_note="This plan includes semantic context (8 categories)"
 else
-    # FAILURE - extract error message
-    error_msg=$(echo "$result" | jq -r '.error // "Unknown error"')
-    echo "❌ Error: $error_msg"
-    exit 1
+    enrichment_status="Raw"
+    enrichment_note="This plan has no enrichment. Use /erk:plan-save-enriched to add context."
 fi
 ```
-
-**Expected success output:**
-
-```json
-{
-  "success": true,
-  "issue_number": 123,
-  "issue_url": "https://github.com/owner/repo/issues/123",
-  "title": "Plan Title",
-  "enriched": false
-}
-```
-
-**Error handling:**
-
-The kit CLI returns JSON with error details on failure:
-
-```json
-{
-  "success": false,
-  "error": "No plan found in ~/.claude/plans/"
-}
-```
-
-Common error causes:
-
-- No plan in `~/.claude/plans/` directory
-- Repository has issues disabled
-- Network connectivity issue
-- GitHub API rate limit
 
 ### Step 3: Display Success Output
 

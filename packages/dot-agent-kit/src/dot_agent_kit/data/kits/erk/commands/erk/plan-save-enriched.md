@@ -105,41 +105,21 @@ You are executing the `/erk:plan-save-enriched` command. Follow these steps care
 
 ### Step 5: Save Enriched Plan to GitHub Issue
 
-Create a new GitHub issue with the enriched plan content:
+First, write the enriched plan back to the plans directory so the kit CLI can read it:
 
 ```bash
-# Write enriched plan to temp file
-temp_plan=$(mktemp)
-cat > "$temp_plan" <<'PLAN_EOF'
+# Find the latest plan file in ~/.claude/plans/
+plan_file=$(ls -t ~/.claude/plans/*.md 2>/dev/null | head -1)
+
+# Write enriched plan back to the same file
+cat > "$plan_file" <<'PLAN_EOF'
 [enriched plan content from agent]
 PLAN_EOF
-
-# Create GitHub issue
-gh issue create \
-  --title "[plan title from enriched plan]" \
-  --body-file "$temp_plan" \
-  --label "erk-plan"
-
-# Clean up
-rm "$temp_plan"
 ```
 
-**Extract the new issue number and URL from the output.**
+Then use the shared include to create the GitHub issue:
 
-**Error handling:**
-
-If issue creation fails:
-
-```
-❌ Error: Failed to create GitHub issue
-
-[gh error output]
-
-Common causes:
-- Repository has issues disabled
-- Network connectivity issue
-- GitHub API rate limit
-```
+@../../docs/erk/includes/planning/save-plan-to-issue.md
 
 ### Step 6: Display Success Summary
 

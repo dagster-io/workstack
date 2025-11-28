@@ -4,6 +4,7 @@ import click
 from erk_shared.output.output import user_output
 
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree, is_root_worktree
@@ -23,10 +24,9 @@ def current_wt(ctx: ErkContext) -> None:
 
     current_dir = ctx.cwd
     worktrees = ctx.git.list_worktrees(repo.root)
-    wt_info = find_current_worktree(worktrees, current_dir)
-
-    if wt_info is None:
-        raise SystemExit(1)
+    wt_info = Ensure.not_none(
+        find_current_worktree(worktrees, current_dir), "Not in an erk worktree"
+    )
 
     if is_root_worktree(wt_info.path, repo.root):
         user_output("root")

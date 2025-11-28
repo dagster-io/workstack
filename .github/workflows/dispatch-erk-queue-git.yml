@@ -434,9 +434,14 @@ jobs:
       - name: Trigger CI workflows
         if: steps.implement.outputs.implementation_success == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
-          # Push empty commit to trigger CI
-          git commit --allow-empty -m "Trigger CI workflows"
-          git push origin "$BRANCH_NAME"
-          echo "✅ CI workflows triggered"
+          # Trigger CI workflows explicitly (push events from GITHUB_TOKEN don't trigger workflows)
+          gh workflow run test.yml --ref "$BRANCH_NAME"
+          gh workflow run lint.yml --ref "$BRANCH_NAME"
+          gh workflow run pyright.yml --ref "$BRANCH_NAME"
+          gh workflow run prettier.yml --ref "$BRANCH_NAME"
+          gh workflow run check-sync.yml --ref "$BRANCH_NAME"
+          gh workflow run md-check.yml --ref "$BRANCH_NAME"
+          echo "✅ CI workflows triggered via workflow_dispatch"

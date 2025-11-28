@@ -561,9 +561,7 @@ def create_wt(
         raise SystemExit(1)
 
     # Validate --json and --script are mutually exclusive
-    if output_json and script:
-        user_output("Error: Cannot use both --json and --script")
-        raise SystemExit(1)
+    Ensure.invariant(not (output_json and script), "Cannot use both --json and --script")
 
     # Validate --keep-plan requires --from-plan
     if keep_plan and not from_plan:

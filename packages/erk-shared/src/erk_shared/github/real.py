@@ -58,8 +58,9 @@ class RealGitHub(GitHub):
         self, repo_root: Path, *, include_checks: bool
     ) -> dict[str, PullRequestInfo]:
         """Get PRs for all branches in the repository."""
+        json_fields = "number,state,url,headRefName,title,isDraft"
         result = _run_subprocess_with_timeout(
-            ["gh", "pr", "list", "--state", "all", "--json", "number,state,url,headRefName,title,isDraft"],
+            ["gh", "pr", "list", "--state", "all", "--json", json_fields],
             timeout=30,
             cwd=repo_root,
         )
@@ -142,9 +143,11 @@ class RealGitHub(GitHub):
         """Get PR mergeability status."""
         result = subprocess.run(
             [
-                "gh", "api",
+                "gh",
+                "api",
                 f"repos/{{owner}}/{{repo}}/pulls/{pr_number}",
-                "--jq", ".mergeable,.mergeable_state",
+                "--jq",
+                ".mergeable,.mergeable_state",
             ],
             capture_output=True,
             text=True,

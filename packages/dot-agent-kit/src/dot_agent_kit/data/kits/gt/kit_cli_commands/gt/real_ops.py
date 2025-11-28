@@ -6,10 +6,10 @@ erk-shared/integrations/gt/ for true canonicalization.
 """
 
 from erk_shared.integrations.gt import (
+    GitHubAdapter,
     RealGitGtKit,
-    RealGitHubGtKit,
     RealGraphiteGtKit,
     RealGtKit,
 )
 
-__all__ = ["RealGtKit", "RealGitGtKit", "RealGraphiteGtKit", "RealGitHubGtKit"]
+__all__ = ["RealGtKit", "RealGitGtKit", "RealGraphiteGtKit", "GitHubAdapter"]

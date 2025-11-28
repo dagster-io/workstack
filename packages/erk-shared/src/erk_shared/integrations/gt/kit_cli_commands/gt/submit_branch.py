@@ -590,25 +590,27 @@ Use the Read tool to load the diff file."""
 def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:
     """Run gt submit with descriptive progress markers.
 
-    Displays periodic progress updates during the long-running gt submit
-    operation to reassure users the process is still active.
+    Displays periodic progress updates during the submit operation.
+    This function should only be called after a separate restack phase.
+
+    Args:
+        ops: GtKit operations interface
     """
     start_time = time.time()
     result_holder: list[CommandResult] = []
 
     # Run submit in background thread
     def run_submit():
-        result_holder.append(ops.graphite().submit(publish=True, restack=True))
+        result_holder.append(ops.graphite().submit(publish=True, restack=False))
 
     thread = threading.Thread(target=run_submit, daemon=True)
     thread.start()
 
     # Progress markers: (threshold_seconds, description)
     progress_markers = [
-        (15, "Syncing with remote"),
-        (30, "Rebasing stack"),
-        (45, "Pushing branches"),
-        (60, "Finalizing"),
+        (10, "Pushing to remote"),
+        (20, "Creating PR"),
+        (30, "Finalizing"),
     ]
 
     marker_idx = 0
@@ -798,8 +800,46 @@ def _execute_submit_only(
     """
     branch_name = ops.git().get_current_branch() or "unknown"
 
-    # Submit branch
-    click.echo("  ↳ Running gt submit --restack (typically 60-90s)...", err=True)
+    # Phase 1: Restack the stack
+    click.echo("  ↳ Rebasing stack...", err=True)
+    restack_start = time.time()
+    restack_result = ops.graphite().restack()
+
+    # Check for restack errors (conflicts, etc.)
+    if not restack_result.success:
+        combined_output = restack_result.stdout + restack_result.stderr
+        combined_lower = combined_output.lower()
+
+        # Check for merge conflicts
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_conflict",
+                message="Merge conflicts detected during stack rebase",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": restack_result.stdout,
+                    "stderr": restack_result.stderr,
+                },
+            )
+
+        # Generic restack failure
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_failed",
+            message="Failed to restack branch",
+            details={
+                "branch_name": branch_name,
+                "stdout": restack_result.stdout,
+                "stderr": restack_result.stderr,
+            },
+        )
+
+    restack_elapsed = int(time.time() - restack_start)
+    click.echo(f"  ✓ Stack rebased ({restack_elapsed}s)", err=True)
+
+    # Phase 2: Submit to GitHub (with progress markers)
+    click.echo("  ↳ Pushing branches and creating PR...", err=True)
     result = _run_gt_submit_with_progress(ops)
 
     # Check for empty parent branch
@@ -965,9 +1005,47 @@ def execute_post_analysis(
         )
     click.echo("  ✓ Commit amended", err=True)
 
-    # Step 3: Submit branch
-    click.echo("  ↳ Running gt submit (this may take a moment)...", err=True)
-    result = ops.graphite().submit(publish=True, restack=True)
+    # Step 3a: Restack the stack
+    click.echo("  ↳ Rebasing stack...", err=True)
+    restack_start = time.time()
+    restack_result = ops.graphite().restack()
+
+    # Check for restack errors (conflicts, etc.)
+    if not restack_result.success:
+        combined_output = restack_result.stdout + restack_result.stderr
+        combined_lower = combined_output.lower()
+
+        # Check for merge conflicts
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_conflict",
+                message="Merge conflicts detected during stack rebase",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": restack_result.stdout,
+                    "stderr": restack_result.stderr,
+                },
+            )
+
+        # Generic restack failure
+        return PostAnalysisError(
+            success=False,
+            error_type="submit_failed",
+            message="Failed to restack branch",
+            details={
+                "branch_name": branch_name,
+                "stdout": restack_result.stdout,
+                "stderr": restack_result.stderr,
+            },
+        )
+
+    restack_elapsed = int(time.time() - restack_start)
+    click.echo(f"  ✓ Stack rebased ({restack_elapsed}s)", err=True)
+
+    # Step 3b: Submit to GitHub
+    click.echo("  ↳ Submitting to GitHub...", err=True)
+    result = ops.graphite().submit(publish=True, restack=False)
 
     # Check for empty parent branch (Graphite returns success but nothing submitted)
     # This MUST be checked even on success since gt returns exit code 0

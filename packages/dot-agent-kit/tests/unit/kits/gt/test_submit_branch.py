@@ -742,6 +742,53 @@ class TestPostAnalysisExecution:
         assert result.error_type == "submit_conflict"  # Not submit_diverged
         assert "Merge conflicts detected" in result.message
 
+    def test_post_analysis_restack_fails_with_conflict(self) -> None:
+        """Test that restack phase detects conflicts before submit phase."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_restack_failure(
+                stdout="",
+                stderr="error: merge conflict in src/main.py",
+            )
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "submit_conflict"
+        assert "Merge conflicts detected during stack rebase" in result.message
+        stderr = result.details["stderr"]
+        assert isinstance(stderr, str)
+        assert "conflict" in stderr.lower()
+
+    def test_post_analysis_restack_fails_generic(self) -> None:
+        """Test generic restack failure (not conflict-related)."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_restack_failure(
+                stdout="",
+                stderr="error: failed to restack for unknown reason",
+            )
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "submit_failed"
+        assert "Failed to restack branch" in result.message
+
     def test_post_analysis_submit_fails_diverged(self) -> None:
         """Test error when branch has diverged from remote."""
         ops = (

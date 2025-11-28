@@ -1,10 +1,10 @@
 """Extract plan from ~/.claude/plans/ and create GitHub issue in one operation.
 
 Usage:
-    dot-agent run erk plan-save-to-issue [--format json|display]
+    dot-agent run erk plan-save-to-issue [--format json|display] [--plan-file PATH]
 
 This command combines plan extraction and issue creation:
-1. Extract latest plan from ~/.claude/plans/
+1. Extract plan from specified file or latest from ~/.claude/plans/
 2. Create GitHub issue with plan content (schema v2 format)
 
 Output:
@@ -40,8 +40,14 @@ from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan
     default="json",
     help="Output format: json (default) or display (formatted text)",
 )
+@click.option(
+    "--plan-file",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="Path to specific plan file (default: most recent in ~/.claude/plans/)",
+)
 @click.pass_context
-def plan_save_to_issue(ctx: click.Context, output_format: str) -> None:
+def plan_save_to_issue(ctx: click.Context, output_format: str, plan_file: Path | None) -> None:
     """Extract plan from ~/.claude/plans/ and create GitHub issue.
 
     Combines plan extraction and issue creation in a single operation.
@@ -52,8 +58,11 @@ def plan_save_to_issue(ctx: click.Context, output_format: str) -> None:
     repo_root = require_repo_root(ctx)
     cwd = Path.cwd()
 
-    # Step 1: Extract latest plan from ~/.claude/plans/
-    plan = get_latest_plan(str(cwd), session_id=None)
+    # Step 1: Extract plan from specified file or latest from ~/.claude/plans/
+    if plan_file:
+        plan = plan_file.read_text(encoding="utf-8")
+    else:
+        plan = get_latest_plan(str(cwd), session_id=None)
 
     if not plan:
         if output_format == "display":

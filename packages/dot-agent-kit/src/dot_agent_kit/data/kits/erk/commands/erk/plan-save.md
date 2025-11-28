@@ -81,9 +81,46 @@ You are executing the `/erk:plan-save` command. Follow these steps carefully:
 
 @../../docs/erk/includes/planning/validate-prerequisites.md
 
-### Step 2: Save Plan to GitHub Issue
+### Step 2: Extract Plan Path from Context (if available)
+
+Check if the conversation context contains a plan file path. When plan mode is active, the system prompt contains:
+
+```
+Plan File Info: A plan file already exists at /path/to/plan-file.md
+```
+
+Look for this line in the conversation context and extract the plan file path.
+
+**Implementation:**
+
+1. Search the conversation context for the pattern `Plan File Info: A plan file already exists at `
+2. If found, extract the path that follows (everything after "at " until end of line)
+3. Store the extracted path for use in the next step
+
+**Example extraction:**
+
+```
+Input: "Plan File Info: A plan file already exists at /Users/schrockn/.claude/plans/purring-wiggling-biscuit.md"
+Extracted path: "/Users/schrockn/.claude/plans/purring-wiggling-biscuit.md"
+```
+
+### Step 3: Save Plan to GitHub Issue
 
 @../../docs/erk/includes/planning/save-plan-to-issue.md
+
+**Modified for plan path extraction:**
+
+If a plan path was extracted in Step 2, pass it to the kit CLI:
+
+```bash
+dot-agent run erk plan-save-to-issue --format json --plan-file <extracted-path>
+```
+
+Otherwise, call without the `--plan-file` option (fallback to latest plan):
+
+```bash
+dot-agent run erk plan-save-to-issue --format json
+```
 
 **Enrichment status handling:**
 
@@ -99,7 +136,7 @@ else
 fi
 ```
 
-### Step 3: Display Success Output
+### Step 4: Display Success Output
 
 Display the issue URL, enrichment status, and next steps:
 

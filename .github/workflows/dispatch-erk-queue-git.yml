@@ -387,16 +387,21 @@ jobs:
           git config user.name "$SUBMITTED_BY"
           git config user.email "$SUBMITTED_BY@users.noreply.github.com"
 
-          # Delete .erp/ and stage
-          git rm -rf .erp/
+          # Stage only implementation changes (NOT .erp/ deletion)
           git add -A
+          git reset HEAD .erp/  # Unstage .erp/ so it's not in the diff
 
-          # Submit with pure git - no Graphite needed
+          # Submit with pure git - AI sees only implementation changes
           claude --print \
             --output-format stream-json \
             --dangerously-skip-permissions \
             --verbose \
             "/git:pr-push Implement issue #$ISSUE_NUMBER"
+
+          # Now clean up .erp/ in a separate commit
+          git rm -rf .erp/
+          git commit -m "Remove .erp/ folder after implementation"
+          git push origin "$BRANCH_NAME"
 
       - name: Mark PR ready for review
         if: steps.implement.outputs.implementation_success == 'true'

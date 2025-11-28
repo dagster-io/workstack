@@ -47,6 +47,7 @@
 | Implement script mode for shell integration      | → [docs/agent/cli-script-mode.md](docs/agent/cli-script-mode.md)                       |
 | Use subprocess wrappers                          | → [docs/agent/subprocess-wrappers.md](docs/agent/subprocess-wrappers.md)               |
 | Create kit CLI commands                          | → [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                     |
+| Understand kit code architecture                 | → [docs/agent/kit-code-architecture.md](docs/agent/kit-code-architecture.md)           |
 | Delegate to agents from commands                 | → [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md)     |
 | Work with session logs (~/.claude/projects/)     | → [docs/agent/claude-code-session-layout.md](docs/agent/claude-code-session-layout.md) |
 | Create hooks                                     | → [docs/agent/hooks.md](docs/agent/hooks.md)                                           |

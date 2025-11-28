@@ -1,1 +1,0 @@
-../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/simple_submit.py

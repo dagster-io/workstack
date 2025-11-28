@@ -6,8 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
-
-from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisError,
     PostAnalysisResult,
     PreAnalysisError,
@@ -19,6 +18,7 @@ from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     orchestrate_submit_workflow,
     pr_submit,
 )
+
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 
@@ -130,7 +130,7 @@ worktree_name: test-worktree
 
         # Mock in_github_actions() to return True (simulating CI environment)
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.in_github_actions",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.in_github_actions",
             return_value=True,
         ):
             result = build_pr_metadata_section(impl_dir, pr_number=456)
@@ -198,7 +198,7 @@ worktree_name: test-worktree
 
         # Mock in_github_actions() to return False (simulating local submission)
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.in_github_actions",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.in_github_actions",
             return_value=False,
         ):
             result = build_pr_metadata_section(impl_dir, pr_number=456)
@@ -597,7 +597,7 @@ class TestPreAnalysisExecution:
 class TestPostAnalysisExecution:
     """Tests for post-analysis phase execution logic."""
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_post_analysis_creates_pr(self, mock_sleep: Mock) -> None:
         """Test successfully creating new PR."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
@@ -807,7 +807,7 @@ class TestPostAnalysisExecution:
         assert result.pr_number == 123
         assert "checkout command shows placeholder" in result.message
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_post_analysis_pr_info_delayed(self, mock_sleep: Mock) -> None:
         """Test that PR metadata update succeeds even when PR info is delayed."""
         ops = (
@@ -852,7 +852,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -897,7 +897,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -931,7 +931,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return temp directory without .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -972,7 +972,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -1035,7 +1035,7 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -1101,7 +1101,7 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -1154,8 +1154,10 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() and in_github_actions() for CI environment
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
-        in_ci_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        in_ci_path = (
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        )
         with (
             patch(patch_path) as mock_cwd,
             patch(in_ci_path, return_value=True),
@@ -1198,7 +1200,7 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -1238,8 +1240,10 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() and in_github_actions() for CI environment
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
-        in_ci_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        in_ci_path = (
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        )
         with (
             patch(patch_path) as mock_cwd,
             patch(in_ci_path, return_value=True),
@@ -1297,8 +1301,10 @@ worktree_name: test-worktree
         )
 
         # Mock Path.cwd() and in_github_actions() for local submission
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
-        in_ci_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        in_ci_path = (
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.in_github_actions"
+        )
         with (
             patch(patch_path) as mock_cwd,
             patch(in_ci_path, return_value=False),
@@ -1342,7 +1348,7 @@ class TestOrchestrateWorkflow:
 
         # Mock the agent invocation to return a commit message
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
         ) as mock_agent:
             mock_agent.return_value = "Add feature\n\nDetailed description of the feature"
 
@@ -1401,7 +1407,7 @@ class TestOrchestrateWorkflow:
 
         # Mock agent invocation to raise RuntimeError
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
         ) as mock_agent:
             mock_agent.side_effect = RuntimeError("Agent execution failed")
 
@@ -1431,7 +1437,7 @@ class TestOrchestrateWorkflow:
 
         # Mock agent invocation to raise RuntimeError
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent"
         ) as mock_agent:
             mock_agent.side_effect = RuntimeError("Agent execution failed")
 
@@ -1456,7 +1462,7 @@ class TestSubmitBranchCLI:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
         # Monkey patch execute_pre_analysis to use our fake ops
-        import erk.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
+        import erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch as submit_module
 
         original_execute = submit_module.execute_pre_analysis
 
@@ -1486,7 +1492,7 @@ class TestSubmitBranchCLI:
         )
 
         # Monkey patch execute_post_analysis to use our fake ops
-        import erk.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
+        import erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch as submit_module
 
         original_execute = submit_module.execute_post_analysis
 
@@ -1518,7 +1524,7 @@ class TestValidateClaudeAvailability:
 
     def test_claude_not_in_path(self) -> None:
         """Test when Claude CLI is not in PATH."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             _validate_claude_availability,
         )
 
@@ -1530,7 +1536,7 @@ class TestValidateClaudeAvailability:
 
     def test_claude_not_executable(self) -> None:
         """Test when Claude CLI exists but is not executable."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             _validate_claude_availability,
         )
 
@@ -1543,7 +1549,7 @@ class TestValidateClaudeAvailability:
 
     def test_claude_available(self) -> None:
         """Test when Claude CLI is available and executable."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             _validate_claude_availability,
         )
 
@@ -1559,7 +1565,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
     def test_creates_temp_file_with_diff(self, tmp_path: Path) -> None:
         """Test that agent creates temporary file with diff content."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             DiffContextResult,
             _invoke_commit_message_agent,
         )
@@ -1584,7 +1590,7 @@ class TestInvokeCommitMessageAgentTempFile:
             assert mock_run.called
             call_args = mock_run.call_args[0][0]
             assert "claude" in call_args
-            assert "--agent" in call_args
+            assert "--agents" in call_args
             assert "commit-message-generator" in call_args
 
             # Verify result
@@ -1594,7 +1600,7 @@ class TestInvokeCommitMessageAgentTempFile:
         """Test that temp file is cleaned up after successful invocation."""
         import tempfile
 
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             DiffContextResult,
             _invoke_commit_message_agent,
         )
@@ -1632,7 +1638,7 @@ class TestInvokeCommitMessageAgentTempFile:
         """Test that temp file is cleaned up even when agent fails."""
         import tempfile
 
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             DiffContextResult,
             _invoke_commit_message_agent,
         )
@@ -1671,7 +1677,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
     def test_raises_runtime_error_on_non_zero_exit(self, tmp_path: Path) -> None:
         """Test that RuntimeError is raised when agent returns non-zero exit code."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             DiffContextResult,
             _invoke_commit_message_agent,
         )
@@ -1695,7 +1701,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
     def test_raises_runtime_error_on_empty_output(self, tmp_path: Path) -> None:
         """Test that RuntimeError is raised when agent returns no output."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             DiffContextResult,
             _invoke_commit_message_agent,
         )
@@ -1721,10 +1727,10 @@ class TestInvokeCommitMessageAgentTempFile:
 class TestOrchestrateWorkflowClaudeValidation:
     """Tests for orchestrate_submit_workflow with Claude validation."""
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_fails_when_claude_not_available(self, mock_sleep: Mock) -> None:
         """Test that workflow fails when Claude CLI is not available."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             PostAnalysisError,
             orchestrate_submit_workflow,
         )
@@ -1738,7 +1744,7 @@ class TestOrchestrateWorkflowClaudeValidation:
 
         # Mock Claude validation to fail
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
             return_value=(False, "Claude CLI not found"),
         ):
             result = orchestrate_submit_workflow(ops)
@@ -1748,10 +1754,10 @@ class TestOrchestrateWorkflowClaudeValidation:
         assert result.error_type == "claude_not_available"
         assert "Claude CLI is not available" in result.message
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_fails_when_ai_generation_fails(self, mock_sleep: Mock) -> None:
         """Test that workflow fails when AI generation raises exception."""
-        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             PostAnalysisError,
             orchestrate_submit_workflow,
         )
@@ -1765,12 +1771,12 @@ class TestOrchestrateWorkflowClaudeValidation:
 
         # Mock Claude validation to succeed
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
             return_value=(True, ""),
         ):
             # Mock agent invocation to fail
             with patch(
-                "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent",
+                "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent",
                 side_effect=RuntimeError("Agent crashed"),
             ):
                 result = orchestrate_submit_workflow(ops)

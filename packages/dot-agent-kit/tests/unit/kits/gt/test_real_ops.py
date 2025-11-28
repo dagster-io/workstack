@@ -15,8 +15,8 @@ Test organization:
 import subprocess
 from unittest.mock import Mock, patch
 
-from erk.data.kits.gt.kit_cli_commands.gt.ops import CommandResult
-from erk.data.kits.gt.kit_cli_commands.gt.real_ops import (
+from erk_shared.integrations.gt import (
+    CommandResult,
     RealGitGtKit,
     RealGitHubGtKit,
     RealGraphiteGtKit,
@@ -27,7 +27,7 @@ from erk.data.kits.gt.kit_cli_commands.gt.real_ops import (
 class TestRealGitGtKitOps:
     """Unit tests for RealGitGtKit with mocked subprocess calls."""
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_get_current_branch(self, mock_run: Mock) -> None:
         """Test get_current_branch constructs command and parses output correctly."""
         mock_result = Mock()
@@ -46,7 +46,7 @@ class TestRealGitGtKitOps:
         # Verify output parsing
         assert branch_name == "main"
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_has_uncommitted_changes_clean(self, mock_run: Mock) -> None:
         """Test has_uncommitted_changes returns False when repo is clean."""
         mock_result = Mock()
@@ -65,7 +65,7 @@ class TestRealGitGtKitOps:
         # Verify return value
         assert result is False
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_has_uncommitted_changes_dirty(self, mock_run: Mock) -> None:
         """Test has_uncommitted_changes returns True when repo has changes."""
         mock_result = Mock()
@@ -79,7 +79,7 @@ class TestRealGitGtKitOps:
         # Verify return value
         assert result is True
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_add_all(self, mock_run: Mock) -> None:
         """Test add_all constructs command correctly."""
         mock_result = Mock()
@@ -97,7 +97,7 @@ class TestRealGitGtKitOps:
         # Verify return value
         assert result is True
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_commit(self, mock_run: Mock) -> None:
         """Test commit constructs command with message correctly."""
         mock_result = Mock()
@@ -115,7 +115,7 @@ class TestRealGitGtKitOps:
         # Verify return value
         assert result is True
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_amend_commit(self, mock_run: Mock) -> None:
         """Test amend_commit constructs command with message correctly."""
         mock_result = Mock()
@@ -133,7 +133,7 @@ class TestRealGitGtKitOps:
         # Verify return value
         assert result is True
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_count_commits_in_branch(self, mock_run: Mock) -> None:
         """Test count_commits_in_branch constructs command and parses count."""
         mock_result = Mock()
@@ -156,7 +156,7 @@ class TestRealGitGtKitOps:
 class TestRealGraphiteGtKitOps:
     """Unit tests for RealGraphiteGtKit with mocked subprocess calls."""
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_get_parent_branch(self, mock_run: Mock) -> None:
         """Test get_parent_branch constructs command and parses output."""
         mock_result = Mock()
@@ -175,7 +175,7 @@ class TestRealGraphiteGtKitOps:
         # Verify output parsing
         assert result == "main"
 
-    @patch("erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    @patch("erk_shared.integrations.gt.real.subprocess.run")
     def test_get_children_branches(self, mock_run: Mock) -> None:
         """Test get_children_branches constructs command and parses output."""
         mock_result = Mock()
@@ -202,7 +202,7 @@ class TestRealGraphiteGtKitOps:
         mock_result.stderr = ""
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGraphiteGtKit()
@@ -223,7 +223,7 @@ class TestRealGraphiteGtKitOps:
         # Test failure case
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGraphiteGtKit()
@@ -239,7 +239,7 @@ class TestRealGraphiteGtKitOps:
         mock_result.stderr = ""
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGraphiteGtKit()
@@ -265,7 +265,7 @@ class TestRealGraphiteGtKitOps:
 
         # Test with publish=True, restack=True
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGraphiteGtKit()
@@ -283,7 +283,7 @@ class TestRealGraphiteGtKitOps:
     def test_submit_timeout(self) -> None:
         """Test submit handles TimeoutExpired exception correctly."""
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd=["gt", "submit"], timeout=120),
         ):
             ops = RealGraphiteGtKit()
@@ -303,7 +303,7 @@ class TestRealGraphiteGtKitOps:
         mock_result.stderr = ""
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGraphiteGtKit()
@@ -327,7 +327,7 @@ class TestRealGraphiteGtKitOps:
         mock_result.stdout = ""
         mock_result.stderr = "Failed to restack"
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGraphiteGtKit()
@@ -341,7 +341,7 @@ class TestRealGraphiteGtKitOps:
         mock_result.returncode = 0
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGraphiteGtKit()
@@ -359,7 +359,7 @@ class TestRealGraphiteGtKitOps:
         # Test failure case
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGraphiteGtKit()
@@ -381,7 +381,7 @@ class TestRealGitHubGtKitOps:
         mock_result.stderr = ""
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGitHubGtKit()
@@ -409,7 +409,7 @@ class TestRealGitHubGtKitOps:
         # Test failure case (no PR found)
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGitHubGtKit()
@@ -419,7 +419,7 @@ class TestRealGitHubGtKitOps:
     def test_get_pr_info_timeout(self) -> None:
         """Test get_pr_info handles TimeoutExpired exception correctly."""
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd=["gh", "pr", "view"], timeout=10),
         ):
             ops = RealGitHubGtKit()
@@ -437,7 +437,7 @@ class TestRealGitHubGtKitOps:
         mock_result.stderr = ""
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGitHubGtKit()
@@ -465,7 +465,7 @@ class TestRealGitHubGtKitOps:
         # Test failure case (no PR found)
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGitHubGtKit()
@@ -478,7 +478,7 @@ class TestRealGitHubGtKitOps:
         mock_result.returncode = 0
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
+            "erk_shared.integrations.gt.real._run_subprocess_with_timeout",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGitHubGtKit()
@@ -500,7 +500,7 @@ class TestRealGitHubGtKitOps:
         # Test failure case
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
+            "erk_shared.integrations.gt.real._run_subprocess_with_timeout",
             return_value=mock_result,
         ):
             ops = RealGitHubGtKit()
@@ -510,7 +510,7 @@ class TestRealGitHubGtKitOps:
     def test_update_pr_metadata_timeout(self) -> None:
         """Test update_pr_metadata handles timeout correctly."""
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops._run_subprocess_with_timeout",
+            "erk_shared.integrations.gt.real._run_subprocess_with_timeout",
             return_value=None,  # Helper returns None on timeout
         ):
             ops = RealGitHubGtKit()
@@ -525,7 +525,7 @@ class TestRealGitHubGtKitOps:
         mock_result.returncode = 0
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
             ops = RealGitHubGtKit()
@@ -543,7 +543,7 @@ class TestRealGitHubGtKitOps:
         # Test failure case
         mock_result.returncode = 1
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            "erk_shared.integrations.gt.real.subprocess.run",
             return_value=mock_result,
         ):
             ops = RealGitHubGtKit()

@@ -1,26 +1,14 @@
-"""Shared prompts for gt kit CLI commands."""
+"""Re-export GT kit prompts from erk-shared.
 
-from pathlib import Path
+This module is a thin shim that re-exports prompts from their canonical
+location in erk-shared. All implementation has been moved to
+erk-shared/integrations/gt/ for true canonicalization.
+"""
 
+from erk_shared.integrations.gt.prompts import (
+    COMMIT_MESSAGE_SYSTEM_PROMPT,
+    MAX_DIFF_CHARS,
+    truncate_diff,
+)
 
-def _load_prompt(filename: str) -> str:
-    """Load prompt from file in the same directory as this module."""
-    prompt_path = Path(__file__).parent / filename
-    return prompt_path.read_text()
-
-
-COMMIT_MESSAGE_SYSTEM_PROMPT = _load_prompt("commit_message_prompt.txt")
-MAX_DIFF_CHARS = 100_000  # ~30K tokens
-
-
-def truncate_diff(diff: str, max_chars: int = MAX_DIFF_CHARS) -> tuple[str, bool]:
-    """Truncate diff if too large. Returns (diff, was_truncated)."""
-    if len(diff) <= max_chars:
-        return diff, False
-
-    keep = max_chars - 200
-    start = int(keep * 0.7)
-    end = keep - start
-
-    msg = f"\n\n[... TRUNCATED {len(diff) - keep:,} chars ...]\n\n"
-    return diff[:start] + msg + diff[-end:], True
+__all__ = ["COMMIT_MESSAGE_SYSTEM_PROMPT", "MAX_DIFF_CHARS", "truncate_diff"]

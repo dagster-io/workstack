@@ -61,6 +61,7 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
+
 from erk_shared.env import in_github_actions
 from erk_shared.impl_folder import (
     has_issue_reference,
@@ -68,9 +69,8 @@ from erk_shared.impl_folder import (
     read_plan_author,
     read_run_info,
 )
-
-from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
-from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
+from erk_shared.integrations.gt.abc import GtKit
+from erk_shared.integrations.gt.real import RealGtKit
 
 
 class SubmitResult(NamedTuple):
@@ -518,7 +518,7 @@ def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
     import os
     import tempfile
 
-    from erk.data.kits.gt.kit_cli_commands.gt.prompts import truncate_diff
+    from erk_shared.integrations.gt.prompts import truncate_diff
 
     # Truncate if needed
     diff_content, was_truncated = truncate_diff(diff_context.diff)
@@ -549,7 +549,7 @@ Use the Read tool to load the diff file."""
                 "--print",
                 "--output-format",
                 "text",
-                "--agent",
+                "--agents",
                 "commit-message-generator",  # Use the agent!
                 "--",
                 prompt,

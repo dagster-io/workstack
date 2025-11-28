@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
-from erk_shared.integrations.time.fake import FakeTime
-
-from erk.data.kits.gt.kit_cli_commands.gt.simple_submit import (
+from erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit import (
     complete_submission,
     execute_simple_submit,
     simple_submit,
 )
+from erk_shared.integrations.time.fake import FakeTime
+
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 
@@ -30,7 +30,7 @@ class TestExecuteSimpleSubmit:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
         # Mock Path.cwd() to return temp directory without .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)
@@ -51,7 +51,7 @@ class TestExecuteSimpleSubmit:
         )
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(description="WIP changes", ops=ops)
@@ -70,7 +70,7 @@ class TestExecuteSimpleSubmit:
         )
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)  # No description provided
@@ -89,7 +89,7 @@ class TestExecuteSimpleSubmit:
         )
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)
@@ -107,7 +107,7 @@ class TestExecuteSimpleSubmit:
         )
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)
@@ -124,7 +124,7 @@ class TestExecuteSimpleSubmit:
         ops.git()._state = replace(ops.git().get_state(), current_branch="")
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)
@@ -142,7 +142,7 @@ class TestExecuteSimpleSubmit:
         ops.graphite()._state = replace(gt_state, branch_parents={})
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
-        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
             result = execute_simple_submit(ops=ops)
@@ -451,7 +451,9 @@ class TestSimpleSubmitCLI:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
         # Monkey patch RealGtKit to use our fake ops
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(simple_submit, ["--prepare"])
 
@@ -468,7 +470,9 @@ class TestSimpleSubmitCLI:
             .with_uncommitted_files(["file.py"])
         )
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(
                 simple_submit,
@@ -488,7 +492,9 @@ class TestSimpleSubmitCLI:
             .with_pr(123, url="https://github.com/repo/pull/123")
         )
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(
                 simple_submit,
@@ -506,7 +512,9 @@ class TestSimpleSubmitCLI:
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1).with_pr(456)
         )
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(
                 simple_submit,
@@ -524,7 +532,9 @@ class TestSimpleSubmitCLI:
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(3).with_pr(123)
         )
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(
                 simple_submit,
@@ -564,7 +574,9 @@ class TestSimpleSubmitCLI:
 
         ops.git()._state = replace(ops.git().get_state(), current_branch="")
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(simple_submit, ["--prepare"])
 
@@ -577,7 +589,9 @@ class TestSimpleSubmitCLI:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
         # No commits, so amend will fail
 
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
+        with patch(
+            "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.RealGtKit"
+        ) as mock_kit:
             mock_kit.return_value = ops
             result = runner.invoke(
                 simple_submit,

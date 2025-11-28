@@ -66,11 +66,14 @@ def test_erk_kit_cli_commands_are_symlinks() -> None:
         )
 
 
-def test_gt_kit_cli_commands_are_symlinks() -> None:
-    """Test that gt kit CLI commands are symlinks to dot-agent-kit."""
+def test_gt_kit_cli_commands_are_shims() -> None:
+    """Test that gt kit CLI commands are shim files re-exporting from erk-shared.
+
+    After canonicalization, GT kit code lives in erk-shared and dot-agent-kit has
+    shim files that re-export from the canonical location.
+    """
     repo_root = Path(__file__).parent.parent.parent
-    src_kit_dir = repo_root / "src" / "erk" / "data" / "kits" / "gt" / "kit_cli_commands" / "gt"
-    pkg_kit_dir = (
+    dot_agent_kit_dir = (
         repo_root
         / "packages"
         / "dot-agent-kit"
@@ -82,33 +85,43 @@ def test_gt_kit_cli_commands_are_symlinks() -> None:
         / "kit_cli_commands"
         / "gt"
     )
+    erk_shared_dir = (
+        repo_root
+        / "packages"
+        / "erk-shared"
+        / "src"
+        / "erk_shared"
+        / "integrations"
+        / "gt"
+        / "kit_cli_commands"
+        / "gt"
+    )
 
-    # Files that should be symlinks (moved to dot-agent-kit)
-    symlinked_files = {
+    # Files that should be shims (canonical code in erk-shared)
+    shim_files = {
         "simple_submit.py",
+        "pr_update.py",
+        "submit_branch.py",
+        "land_branch.py",
     }
 
-    for filename in symlinked_files:
-        src_file = src_kit_dir / filename
+    for filename in shim_files:
+        shim_file = dot_agent_kit_dir / filename
 
-        # Should exist and be a symlink
-        assert src_file.exists(), (
-            f"{filename} should exist in src/erk/data/kits/gt/kit_cli_commands/gt/"
+        # Should exist and be a regular file (not symlink)
+        assert shim_file.exists(), f"{filename} should exist in dot-agent-kit kit_cli_commands/gt/"
+        assert not shim_file.is_symlink(), f"{filename} should be a shim file, not a symlink"
+
+        # Verify it's a shim by checking for re-export pattern
+        content = shim_file.read_text()
+        assert "from erk_shared.integrations.gt" in content, (
+            f"{filename} should be a shim re-exporting from erk-shared"
         )
-        assert src_file.is_symlink(), (
-            f"{filename} should be a symlink to packages/dot-agent-kit, but it's a regular file"
-        )
 
-        # Verify the symlink target exists
-        target = src_file.resolve()
-        assert target.exists(), f"{filename} is a symlink but its target doesn't exist: {target}"
-
-        # Verify the symlink points to the correct location
-        expected_target = pkg_kit_dir / filename
-        assert target == expected_target, (
-            f"{filename} symlink points to wrong location.\n"
-            f"Expected: {expected_target}\n"
-            f"Actual: {target}"
+        # Verify canonical version exists in erk-shared
+        canonical_file = erk_shared_dir / filename
+        assert canonical_file.exists(), (
+            f"Canonical {filename} should exist in erk-shared at {canonical_file}"
         )
 
 

@@ -15,14 +15,8 @@ import json
 import subprocess
 
 from erk_shared.github.parsing import parse_gh_auth_status_output
-
-from erk.data.kits.gt.kit_cli_commands.gt.ops import (
-    CommandResult,
-    GitGtKit,
-    GitHubGtKit,
-    GraphiteGtKit,
-    GtKit,
-)
+from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
+from erk_shared.integrations.gt.types import CommandResult
 
 
 def _run_subprocess_with_timeout(

@@ -669,7 +669,11 @@ def test_checkout_tracks_untracked_branch_with_graphite() -> None:
 
         # Checkout the untracked branch (non-script mode, confirm with 'y')
         result = runner.invoke(
-            cli, ["checkout", "feature-untracked"], obj=test_ctx, input="y\n", catch_exceptions=False
+            cli,
+            ["checkout", "feature-untracked"],
+            obj=test_ctx,
+            input="y\n",
+            catch_exceptions=False,
         )
 
         if result.exit_code != 0:
@@ -723,7 +727,11 @@ def test_checkout_skips_tracking_when_user_declines() -> None:
 
         # Checkout the untracked branch (non-script mode, decline with 'n')
         result = runner.invoke(
-            cli, ["checkout", "feature-untracked"], obj=test_ctx, input="n\n", catch_exceptions=False
+            cli,
+            ["checkout", "feature-untracked"],
+            obj=test_ctx,
+            input="n\n",
+            catch_exceptions=False,
         )
 
         if result.exit_code != 0:

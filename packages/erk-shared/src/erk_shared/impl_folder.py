@@ -236,27 +236,42 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
 def _generate_progress_content(steps: list[str]) -> str:
     """Generate progress.md content with YAML front matter and checkboxes.
 
+    The YAML frontmatter contains the source of truth (steps array with completion status),
+    while checkboxes are rendered output for human readability.
+
     Args:
         steps: List of step descriptions
 
     Returns:
-        Formatted progress markdown with front matter and unchecked boxes
+        Formatted progress markdown with front matter (including steps array) and checkboxes
     """
     if not steps:
         return "# Progress Tracking\n\nNo steps detected in plan.\n"
 
-    # Generate YAML front matter
-    total_steps = len(steps)
-    front_matter = f"---\ncompleted_steps: 0\ntotal_steps: {total_steps}\n---\n\n"
-
-    lines = [front_matter + "# Progress Tracking\n"]
-
+    # Build steps array for YAML
+    steps_yaml = []
     for step in steps:
-        # Create checkbox: - [ ] Step description
-        lines.append(f"- [ ] {step}")
+        steps_yaml.append({"text": step, "completed": False})
 
-    lines.append("")  # Trailing newline
-    return "\n".join(lines)
+    # Generate YAML front matter using frontmatter library
+    total_steps = len(steps)
+    metadata = {
+        "completed_steps": 0,
+        "total_steps": total_steps,
+        "steps": steps_yaml,
+    }
+
+    # Build markdown body with checkboxes (rendered from YAML)
+    body_lines = ["# Progress Tracking\n"]
+    for step in steps:
+        body_lines.append(f"- [ ] {step}")
+    body_lines.append("")  # Trailing newline
+
+    body = "\n".join(body_lines)
+
+    # Use frontmatter.dumps to create the full content
+    post = frontmatter.Post(body, **metadata)
+    return frontmatter.dumps(post)
 
 
 @dataclass(frozen=True)

@@ -112,48 +112,7 @@ Pay special attention to:
 - "DO NOT" items in Known Pitfalls - these prevent specific bugs
 - Rejected approaches in Complex Reasoning - these explain what doesn't work
 
-### Step 2.5: Understanding Progress.md Structure
-
-The `.impl/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
-
-**Front Matter Format:**
-
-```yaml
----
-completed_steps: N
-total_steps: M
----
-
-# Progress Tracking
-
-- [ ] 1. First step
-- [x] 2. Second step (completed)
-- [ ] 3. Third step
-```
-
-**Key Points:**
-
-- **Checkboxes are source of truth**: `- [ ]` (incomplete) and `- [x]` (complete)
-- **Front matter must stay synchronized**: The `completed_steps` field must match the count of checked boxes
-- **Progress emoji indicators**: Used by `erk status` to show: ⚪ (0%), 🟡 (1-99%), 🟢 (100%)
-- **Backward compatibility**: Older progress.md files may lack front matter - this is OK, just skip front matter updates for those files
-
-**When to Update Front Matter:**
-
-When marking a step complete, you MUST:
-
-1. Change the checkbox from `- [ ]` to `- [x]`
-2. IF the file starts with `---` (has front matter):
-   - Count the total number of checked boxes in the entire file
-   - Update the `completed_steps:` line with the new count
-   - DO NOT change the `total_steps:` line
-3. IF the file doesn't start with `---` (no front matter):
-   - Skip the front matter update entirely
-   - Just update the checkbox
-
-This keeps progress indicators accurate in real-time during plan execution.
-
-### Step 2.6: Check for GitHub Issue Reference
+### Step 2.5: Check for GitHub Issue Reference
 
 Progress tracking via GitHub comments is available if `.impl/issue.json` exists.
 The kit CLI commands handle all logic automatically - no manual setup required.
@@ -237,14 +196,15 @@ For each phase in the plan:
      - Consult `fake-driven-testing` skill references for patterns, workflows, and anti-patterns
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done:
-   - Edit `.impl/progress.md` to change checkbox from `- [ ]` to `- [x]`
-   - If front matter exists (file starts with `---`):
-     - Count total checked boxes in the entire file
-     - Edit the `completed_steps:` line in front matter with new count
-     - Do NOT change the `total_steps:` line
-   - If no front matter exists, skip the front matter update
-7. **Report progress**: what was done and what's next
-8. **Move to next phase**
+   ```bash
+   dot-agent run erk mark-step <step_number>
+   ```
+7. **Verify progress** (optional):
+   ```bash
+   dot-agent run erk get-progress
+   ```
+8. **Report progress**: what was done and what's next
+9. **Move to next phase**
 
 **IMPORTANT - Progress Tracking:**
 
@@ -257,53 +217,8 @@ The new `.impl/` folder structure separates concerns:
 When updating progress:
 
 - Only edit `.impl/progress.md` - never touch `.impl/plan.md`
-- Mark checkboxes as completed: `- [x]` instead of `- [ ]`
-- Simple find-replace operation: no risk of corrupting the plan
-- Progress format example:
-
-  ```markdown
-  # Progress Tracking
-
-  - [ ] 1. Create module
-  - [x] 2. Add tests
-  - [ ] 3. Update documentation
-  ```
-
-**Example progress.md update:**
-
-Before:
-
-```yaml
----
-completed_steps: 2
-total_steps: 5
----
-
-# Progress Tracking
-
-- [x] 1. Create module
-- [x] 2. Add tests
-- [ ] 3. Update documentation  ← marking this complete
-- [ ] 4. Add integration tests
-- [ ] 5. Update changelog
-```
-
-After:
-
-```yaml
----
-completed_steps: 3  ← incremented from 2 to 3
-total_steps: 5      ← unchanged
----
-
-# Progress Tracking
-
-- [x] 1. Create module
-- [x] 2. Add tests
-- [x] 3. Update documentation  ← marked complete
-- [ ] 4. Add integration tests
-- [ ] 5. Update changelog
-```
+- Use the `mark-step` kit CLI command to update progress
+- The command automatically updates YAML frontmatter and regenerates checkboxes
 
 ### Step 5: Follow Erk Coding Standards
 

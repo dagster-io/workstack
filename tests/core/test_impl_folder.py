@@ -317,6 +317,38 @@ def test_create_impl_folder_generates_frontmatter(tmp_path: Path) -> None:
     assert "---\n\n" in progress_content
 
 
+def test_create_impl_folder_generates_steps_array(tmp_path: Path) -> None:
+    """Test that creating a plan folder generates steps array in YAML frontmatter."""
+    plan_content = """# Test Plan
+
+1. First step
+2. Second step
+3. Third step
+"""
+    plan_folder = create_impl_folder(tmp_path, plan_content)
+    progress_file = plan_folder / "progress.md"
+    progress_content = progress_file.read_text(encoding="utf-8")
+
+    # Parse frontmatter to verify steps array
+    metadata = parse_progress_frontmatter(progress_content)
+    assert metadata is not None
+    assert "steps" in metadata
+    assert isinstance(metadata["steps"], list)
+    assert len(metadata["steps"]) == 3
+
+    # Verify each step has text and completed fields
+    for step in metadata["steps"]:
+        assert "text" in step
+        assert "completed" in step
+        assert isinstance(step["completed"], bool)
+        assert step["completed"] is False  # All start uncompleted
+
+    # Verify step texts
+    assert metadata["steps"][0]["text"] == "1. First step"
+    assert metadata["steps"][1]["text"] == "2. Second step"
+    assert metadata["steps"][2]["text"] == "3. Third step"
+
+
 def test_parse_progress_frontmatter_valid(tmp_path: Path) -> None:
     """Test parsing valid YAML front matter."""
     content = """---

@@ -48,7 +48,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
 
     The workflow will:
     - Create a branch from the trunk branch
-    - Create .erp/ folder with plan content
+    - Create .worker-impl/ folder with plan content
     - Create a draft PR
     - Run the implementation
 
@@ -147,7 +147,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
                 f"**Workflow run:** {workflow_url}\n\n"
                 f"The workflow will:\n"
                 f"- Create a branch from trunk\n"
-                f"- Create `.erp/` folder with plan content\n"
+                f"- Create `.worker-impl/` folder with plan content\n"
                 f"- Create a draft PR\n"
                 f"- Run the implementation"
             ),

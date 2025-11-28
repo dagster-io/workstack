@@ -1,5 +1,0 @@
-{
-  "number": 1421,
-  "url": "https://github.com/dagster-io/erk/issues/1421",
-  "title": "Plan: Convert error check in current_cmd.py to use Ensure"
-}

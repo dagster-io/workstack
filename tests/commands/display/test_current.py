@@ -105,7 +105,7 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
         result = runner.invoke(cli, ["wt", "current"], obj=test_ctx)
 
         assert result.exit_code == 1
-        assert result.output.strip() == ""
+        assert "Error: Not in an erk worktree" in result.output
 
 
 def test_current_works_from_subdirectory() -> None:
@@ -177,6 +177,7 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     result = runner.invoke(cli, ["wt", "current"], obj=ctx)
 
     assert result.exit_code == 1
+    # When not in a git repo, discovery fails before we check worktrees
     assert result.output.strip() == ""
 
 

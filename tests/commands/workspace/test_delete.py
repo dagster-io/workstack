@@ -256,3 +256,29 @@ def test_delete_with_delete_stack_handles_gt_not_found() -> None:
         assert_cli_error(result, 1)
         assert "gt" in output_lower
         assert "install" in output_lower or "brew" in output_lower
+
+
+def test_delete_with_delete_stack_requires_graphite() -> None:
+    """Test that --delete-stack requires use_graphite to be enabled."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_name = env.cwd.name
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-branch"
+
+        # Build context with use_graphite=False (default)
+        test_ctx = build_workspace_test_context(env, existing_paths={wt})
+
+        # Execute: Run delete with --delete-stack when graphite is disabled
+        result = runner.invoke(
+            cli,
+            ["wt", "delete", "test-branch", "--delete-stack", "-f"],
+            obj=test_ctx,
+        )
+
+        # Assert: Command should fail with appropriate error
+        assert_cli_error(
+            result,
+            1,
+            "--delete-stack requires Graphite to be enabled",
+            "erk config set use_graphite true",
+        )

@@ -505,36 +505,38 @@ def _validate_claude_availability() -> tuple[bool, str]:
     return True, ""
 
 
-def _is_valid_commit_message(output: str) -> bool:
-    """Check if output looks like a valid commit message.
+ERK_COMMIT_MESSAGE_MARKER = "<!-- erk-generated commit message -->"
 
-    Detects invalid outputs like permission requests or error messages
-    that may be returned when the agent lacks proper permissions.
+
+def _is_valid_commit_message(output: str) -> bool:
+    """Check if output contains the erk-generated commit message marker.
+
+    The commit-message-generator agent is required to append a specific marker
+    to all generated commit messages. This provides deterministic validation
+    that the output is actually a generated commit message rather than an
+    error message or permission request.
 
     Args:
         output: The text to validate
 
     Returns:
-        True if the output looks like a valid commit message
+        True if the output contains the erk commit message marker
     """
-    if len(output) < 20:
-        return False
+    return ERK_COMMIT_MESSAGE_MARKER in output
 
-    first_line = output.split("\n")[0].strip()
 
-    # First line should not be a question
-    if first_line.endswith("?"):
-        return False
+def _strip_commit_message_marker(output: str) -> str:
+    """Remove the erk commit message marker from the output.
 
-    # First line should not end with colon (indicates incomplete thought/list intro)
-    if first_line.endswith(":"):
-        return False
+    Args:
+        output: The commit message with marker
 
-    # First line should be reasonably short (commit title)
-    if len(first_line) > 200:
-        return False
-
-    return True
+    Returns:
+        The commit message with the marker line removed
+    """
+    lines = output.split("\n")
+    filtered_lines = [line for line in lines if line.strip() != ERK_COMMIT_MESSAGE_MARKER]
+    return "\n".join(filtered_lines).strip()
 
 
 def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
@@ -611,9 +613,9 @@ Use the Read tool to load the diff file."""
         output = result.stdout.strip()
         click.echo(f"   Stdout length: {len(output)} chars", err=True)
 
-        # Validate output looks like a commit message
+        # Validate output contains the erk marker
         if not _is_valid_commit_message(output):
-            click.echo("   ⚠️  Output does not look like a valid commit message", err=True)
+            click.echo("   ⚠️  Output missing erk commit message marker", err=True)
             click.echo(f"   First 100 chars: {output[:100]!r}", err=True)
             raise RuntimeError(
                 "Claude agent did not return a valid commit message. "
@@ -621,7 +623,8 @@ Use the Read tool to load the diff file."""
                 "Fix: Ensure 'Read(/tmp/*)' is in ~/.claude/settings.json permissions.allow array"
             )
 
-        return output
+        # Strip the marker before returning
+        return _strip_commit_message_marker(output)
 
     finally:
         # Clean up temp file

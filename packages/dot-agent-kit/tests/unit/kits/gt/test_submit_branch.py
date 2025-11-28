@@ -7,12 +7,14 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+    ERK_COMMIT_MESSAGE_MARKER,
     PostAnalysisError,
     PostAnalysisResult,
     PreAnalysisError,
     PreAnalysisResult,
     _branch_name_to_title,
     _is_valid_commit_message,
+    _strip_commit_message_marker,
     build_pr_metadata_section,
     execute_post_analysis,
     execute_pre_analysis,
@@ -81,44 +83,29 @@ class TestBranchNameToTitle:
 class TestIsValidCommitMessage:
     """Tests for _is_valid_commit_message() function.
 
-    This function validates that Claude's output looks like a commit message
-    rather than a permission request or error message.
+    This function validates that the output contains the erk-generated commit
+    message marker, providing deterministic validation.
     """
 
-    def test_valid_simple_commit_message(self) -> None:
-        """Test that a simple valid commit message is accepted."""
-        assert _is_valid_commit_message("Add user authentication feature")
-
-    def test_valid_commit_with_body(self) -> None:
-        """Test that a commit message with body is accepted."""
-        message = "Add user authentication feature\n\nThis implements OAuth2 flow."
+    def test_valid_message_with_marker(self) -> None:
+        """Test that a message with the marker is accepted."""
+        message = f"Add user authentication feature\n\n{ERK_COMMIT_MESSAGE_MARKER}"
         assert _is_valid_commit_message(message)
 
-    def test_valid_conventional_commit(self) -> None:
-        """Test that conventional commit format is accepted."""
-        assert _is_valid_commit_message("feat: add login functionality")
-        assert _is_valid_commit_message("fix: resolve null pointer exception")
-        assert _is_valid_commit_message("docs: update README with examples")
+    def test_valid_message_with_marker_in_middle(self) -> None:
+        """Test that marker in middle of message is accepted."""
+        message = f"Title\n\nBody text\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\nMore text"
+        assert _is_valid_commit_message(message)
 
-    def test_rejects_too_short_output(self) -> None:
-        """Test that output shorter than 20 chars is rejected."""
-        assert not _is_valid_commit_message("Fix bug")  # 7 chars
-        assert not _is_valid_commit_message("")  # 0 chars
-        assert not _is_valid_commit_message("a" * 19)  # 19 chars
+    def test_rejects_message_without_marker(self) -> None:
+        """Test that a message without the marker is rejected."""
+        assert not _is_valid_commit_message("Add user authentication feature")
+        assert not _is_valid_commit_message("feat: add login functionality")
+        assert not _is_valid_commit_message("")
 
-    def test_accepts_exactly_20_chars(self) -> None:
-        """Test that output of exactly 20 chars is accepted."""
-        assert _is_valid_commit_message("a" * 20)
-
-    def test_rejects_question_as_first_line(self) -> None:
-        """Test that a question as first line is rejected (permission request pattern)."""
-        # This matches the pattern from PR #1478 where Claude asked for permission
-        assert not _is_valid_commit_message("Could you grant me permission to read that file?")
-        assert not _is_valid_commit_message("I need permission to read that file. Could you help?")
-
-    def test_rejects_permission_request_text(self) -> None:
-        """Test that the actual permission request text from PR #1478 is rejected."""
-        # This is a sanitized version of the actual output that caused PR #1478
+    def test_rejects_permission_request_without_marker(self) -> None:
+        """Test that permission requests (without marker) are rejected."""
+        # This is the pattern from PR #1478 where Claude asked for permission
         permission_request = (
             "I need permission to read that file. "
             "Could you either:\n"
@@ -127,32 +114,45 @@ class TestIsValidCommitMessage:
         )
         assert not _is_valid_commit_message(permission_request)
 
-    def test_rejects_very_long_first_line(self) -> None:
-        """Test that a first line over 200 chars is rejected (not a commit title)."""
-        long_first_line = "a" * 201
-        assert not _is_valid_commit_message(long_first_line)
+    def test_marker_constant_value(self) -> None:
+        """Test that the marker constant has the expected value."""
+        assert ERK_COMMIT_MESSAGE_MARKER == "<!-- erk-generated commit message -->"
 
-    def test_accepts_first_line_at_200_chars(self) -> None:
-        """Test that a first line of exactly 200 chars is accepted."""
-        first_line = "a" * 200
-        assert _is_valid_commit_message(first_line)
 
-    def test_long_body_is_fine(self) -> None:
-        """Test that a long body after a valid title is fine."""
-        message = "Fix authentication bug\n\n" + ("Long description. " * 100)
-        assert _is_valid_commit_message(message)
+class TestStripCommitMessageMarker:
+    """Tests for _strip_commit_message_marker() function."""
 
-    def test_rejects_empty_first_line_question_second(self) -> None:
-        """Test handling of empty first line followed by question."""
-        # Edge case: empty first line should fail due to short total length
-        assert not _is_valid_commit_message("\nCould you help?")
+    def test_strips_marker_at_end(self) -> None:
+        """Test that marker at end of message is stripped."""
+        message = f"Add feature\n\nBody text\n\n{ERK_COMMIT_MESSAGE_MARKER}"
+        result = _strip_commit_message_marker(message)
+        assert result == "Add feature\n\nBody text"
 
-    def test_whitespace_handling(self) -> None:
-        """Test that whitespace is handled properly in first line check."""
-        # First line with trailing spaces should still work
-        assert _is_valid_commit_message("Add feature                           ")
-        # First line that's mostly spaces - should fail due to short content
-        assert not _is_valid_commit_message("   ")
+    def test_strips_marker_on_own_line(self) -> None:
+        """Test that marker on its own line is stripped."""
+        message = f"Title\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\nBody"
+        result = _strip_commit_message_marker(message)
+        # Marker line removed, empty lines before/after preserved
+        assert result == "Title\n\n\nBody"
+
+    def test_preserves_content_without_marker(self) -> None:
+        """Test that content without marker is preserved."""
+        message = "Title\n\nBody text"
+        result = _strip_commit_message_marker(message)
+        assert result == "Title\n\nBody text"
+
+    def test_strips_trailing_whitespace(self) -> None:
+        """Test that trailing whitespace after stripping is removed."""
+        message = f"Title\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\n"
+        result = _strip_commit_message_marker(message)
+        assert result == "Title"
+
+    def test_handles_marker_with_surrounding_whitespace(self) -> None:
+        """Test that marker with surrounding whitespace on line is stripped."""
+        message = f"Title\n\n  {ERK_COMMIT_MESSAGE_MARKER}  \n\nBody"
+        result = _strip_commit_message_marker(message)
+        # Marker line (with whitespace) removed, empty lines preserved
+        assert result == "Title\n\n\nBody"
 
 
 class TestBuildPRMetadataSection:
@@ -1705,7 +1705,9 @@ class TestInvokeCommitMessageAgentTempFile:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "Test commit message\n\nTest description"
+        mock_result.stdout = (
+            f"Test commit message\n\nTest description\n\n{ERK_COMMIT_MESSAGE_MARKER}"
+        )
         mock_result.stderr = ""
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
@@ -1718,7 +1720,7 @@ class TestInvokeCommitMessageAgentTempFile:
             assert "--agents" in call_args
             assert "commit-message-generator" in call_args
 
-            # Verify result
+            # Verify result (marker is stripped)
             assert result == "Test commit message\n\nTest description"
 
     def test_cleans_up_temp_file_on_success(self, tmp_path: Path) -> None:
@@ -1740,7 +1742,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "Add feature for testing cleanup"  # Must be 20+ chars
+        mock_result.stdout = f"Add feature for testing cleanup\n\n{ERK_COMMIT_MESSAGE_MARKER}"
         mock_result.stderr = ""
 
         temp_files_created = []

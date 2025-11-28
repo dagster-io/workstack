@@ -15,6 +15,9 @@ from pathlib import Path
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
 
+# Date suffix format for plan-derived worktree names: -YY-MM-DD-HHMM
+WORKTREE_DATE_SUFFIX_FORMAT = "%y-%m-%d-%H%M"
+
 
 def sanitize_worktree_name(name: str) -> str:
     """Sanitize a worktree name for use as a directory name.
@@ -303,29 +306,29 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
 
 
 def ensure_unique_worktree_name_with_date(base_name: str, worktrees_dir: Path, git_ops) -> str:
-    """Ensure unique worktree name with date suffix and smart versioning.
+    """Ensure unique worktree name with datetime suffix and smart versioning.
 
-    Adds date suffix in format -YY-MM-DD to the base name.
-    If a worktree with that name exists, increments numeric suffix starting at 2 AFTER the date.
+    Adds datetime suffix in format -YY-MM-DD-HHMM to the base name.
+    If a worktree with that name exists, increments numeric suffix starting at 2 AFTER the datetime.
     Uses LBYL pattern: checks via git_ops.path_exists() before operations.
 
     This function is used for plan-derived worktrees where multiple worktrees may be
-    created from the same plan, requiring date-based disambiguation.
+    created from the same plan, requiring datetime-based disambiguation.
 
     Args:
-        base_name: Sanitized worktree base name (without date suffix)
+        base_name: Sanitized worktree base name (without datetime suffix)
         worktrees_dir: Directory containing worktrees
         git_ops: Git operations interface for checking path existence
 
     Returns:
-        Guaranteed unique worktree name with date suffix
+        Guaranteed unique worktree name with datetime suffix
 
     Examples:
-        First time: "my-feature" → "my-feature-25-11-08"
-        Duplicate: "my-feature" → "my-feature-25-11-08-2"
-        Next day: "my-feature" → "my-feature-25-11-09"
+        First time: "my-feature" → "my-feature-25-11-08-1430"
+        Duplicate: "my-feature" → "my-feature-25-11-08-1430-2"
+        Next minute: "my-feature" → "my-feature-25-11-08-1431"
     """
-    date_suffix = datetime.now().strftime("%y-%m-%d")
+    date_suffix = datetime.now().strftime(WORKTREE_DATE_SUFFIX_FORMAT)
     candidate_name = f"{base_name}-{date_suffix}"
 
     # Check if the base candidate exists

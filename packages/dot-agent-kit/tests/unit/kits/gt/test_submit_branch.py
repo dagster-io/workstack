@@ -12,6 +12,7 @@ from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
     PreAnalysisError,
     PreAnalysisResult,
     _branch_name_to_title,
+    _is_valid_commit_message,
     build_pr_metadata_section,
     execute_post_analysis,
     execute_pre_analysis,
@@ -75,6 +76,83 @@ class TestBranchNameToTitle:
     def test_capitalizes_first_letter(self) -> None:
         """Test that only the first letter is capitalized."""
         assert _branch_name_to_title("UPPERCASE-BRANCH") == "Uppercase branch"
+
+
+class TestIsValidCommitMessage:
+    """Tests for _is_valid_commit_message() function.
+
+    This function validates that Claude's output looks like a commit message
+    rather than a permission request or error message.
+    """
+
+    def test_valid_simple_commit_message(self) -> None:
+        """Test that a simple valid commit message is accepted."""
+        assert _is_valid_commit_message("Add user authentication feature")
+
+    def test_valid_commit_with_body(self) -> None:
+        """Test that a commit message with body is accepted."""
+        message = "Add user authentication feature\n\nThis implements OAuth2 flow."
+        assert _is_valid_commit_message(message)
+
+    def test_valid_conventional_commit(self) -> None:
+        """Test that conventional commit format is accepted."""
+        assert _is_valid_commit_message("feat: add login functionality")
+        assert _is_valid_commit_message("fix: resolve null pointer exception")
+        assert _is_valid_commit_message("docs: update README with examples")
+
+    def test_rejects_too_short_output(self) -> None:
+        """Test that output shorter than 20 chars is rejected."""
+        assert not _is_valid_commit_message("Fix bug")  # 7 chars
+        assert not _is_valid_commit_message("")  # 0 chars
+        assert not _is_valid_commit_message("a" * 19)  # 19 chars
+
+    def test_accepts_exactly_20_chars(self) -> None:
+        """Test that output of exactly 20 chars is accepted."""
+        assert _is_valid_commit_message("a" * 20)
+
+    def test_rejects_question_as_first_line(self) -> None:
+        """Test that a question as first line is rejected (permission request pattern)."""
+        # This matches the pattern from PR #1478 where Claude asked for permission
+        assert not _is_valid_commit_message("Could you grant me permission to read that file?")
+        assert not _is_valid_commit_message("I need permission to read that file. Could you help?")
+
+    def test_rejects_permission_request_text(self) -> None:
+        """Test that the actual permission request text from PR #1478 is rejected."""
+        # This is a sanitized version of the actual output that caused PR #1478
+        permission_request = (
+            "I need permission to read that file. "
+            "Could you either:\n"
+            "1. Grant me permission to read files from `/tmp/`\n"
+            "2. Or share the diff content directly?"
+        )
+        assert not _is_valid_commit_message(permission_request)
+
+    def test_rejects_very_long_first_line(self) -> None:
+        """Test that a first line over 200 chars is rejected (not a commit title)."""
+        long_first_line = "a" * 201
+        assert not _is_valid_commit_message(long_first_line)
+
+    def test_accepts_first_line_at_200_chars(self) -> None:
+        """Test that a first line of exactly 200 chars is accepted."""
+        first_line = "a" * 200
+        assert _is_valid_commit_message(first_line)
+
+    def test_long_body_is_fine(self) -> None:
+        """Test that a long body after a valid title is fine."""
+        message = "Fix authentication bug\n\n" + ("Long description. " * 100)
+        assert _is_valid_commit_message(message)
+
+    def test_rejects_empty_first_line_question_second(self) -> None:
+        """Test handling of empty first line followed by question."""
+        # Edge case: empty first line should fail due to short total length
+        assert not _is_valid_commit_message("\nCould you help?")
+
+    def test_whitespace_handling(self) -> None:
+        """Test that whitespace is handled properly in first line check."""
+        # First line with trailing spaces should still work
+        assert _is_valid_commit_message("Add feature                           ")
+        # First line that's mostly spaces - should fail due to short content
+        assert not _is_valid_commit_message("   ")
 
 
 class TestBuildPRMetadataSection:
@@ -1662,7 +1740,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "Test commit"
+        mock_result.stdout = "Add feature for testing cleanup"  # Must be 20+ chars
         mock_result.stderr = ""
 
         temp_files_created = []
@@ -1768,6 +1846,63 @@ class TestInvokeCommitMessageAgentTempFile:
 
         with patch("subprocess.run", return_value=mock_result):
             with pytest.raises(RuntimeError, match="Agent returned no output"):
+                _invoke_commit_message_agent(diff_context)
+
+    def test_raises_runtime_error_on_invalid_commit_message(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when agent returns invalid commit message.
+
+        This catches the case where Claude returns a permission request instead of
+        a commit message (the bug that caused PR #1478).
+        """
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        # Simulate Claude asking for permission instead of generating commit message
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = (
+            "I need permission to read that file. Could you either:\n"
+            "1. Grant me permission to read files from `/tmp/`\n"
+            "2. Or share the diff content directly?"
+        )
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="did not return a valid commit message"):
+                _invoke_commit_message_agent(diff_context)
+
+    def test_raises_runtime_error_on_question_first_line(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when first line is a question."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Could you grant me permission to read /tmp/file.diff?"
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="did not return a valid commit message"):
                 _invoke_commit_message_agent(diff_context)
 
 

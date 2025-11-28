@@ -505,6 +505,38 @@ def _validate_claude_availability() -> tuple[bool, str]:
     return True, ""
 
 
+def _is_valid_commit_message(output: str) -> bool:
+    """Check if output looks like a valid commit message.
+
+    Detects invalid outputs like permission requests or error messages
+    that may be returned when the agent lacks proper permissions.
+
+    Args:
+        output: The text to validate
+
+    Returns:
+        True if the output looks like a valid commit message
+    """
+    if len(output) < 20:
+        return False
+
+    first_line = output.split("\n")[0].strip()
+
+    # First line should not be a question
+    if first_line.endswith("?"):
+        return False
+
+    # First line should not end with colon (indicates incomplete thought/list intro)
+    if first_line.endswith(":"):
+        return False
+
+    # First line should be reasonably short (commit title)
+    if len(first_line) > 200:
+        return False
+
+    return True
+
+
 def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
     """Invoke commit-message-generator agent with diff file.
 
@@ -576,8 +608,20 @@ Use the Read tool to load the diff file."""
             click.echo("   Stdout length: 0 (no output generated)", err=True)
             raise RuntimeError("Agent returned no output")
 
-        click.echo(f"   Stdout length: {len(result.stdout)} chars", err=True)
-        return result.stdout.strip()
+        output = result.stdout.strip()
+        click.echo(f"   Stdout length: {len(output)} chars", err=True)
+
+        # Validate output looks like a commit message
+        if not _is_valid_commit_message(output):
+            click.echo("   ⚠️  Output does not look like a valid commit message", err=True)
+            click.echo(f"   First 100 chars: {output[:100]!r}", err=True)
+            raise RuntimeError(
+                "Claude agent did not return a valid commit message. "
+                "This may indicate a permission issue reading the diff file.\n\n"
+                "Fix: Ensure 'Read(/tmp/*)' is in ~/.claude/settings.json permissions.allow array"
+            )
+
+        return output
 
     finally:
         # Clean up temp file

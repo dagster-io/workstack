@@ -50,8 +50,8 @@ from typing import Literal
 
 import click
 
-from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
-from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
+from erk_shared.integrations.gt.abc import GtKit
+from erk_shared.integrations.gt.real import RealGtKit
 
 ErrorType = Literal[
     "parent_not_trunk",

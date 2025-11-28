@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
-
-from erk.data.kits.gt.kit_cli_commands.gt.pr_update import (
+from erk_shared.integrations.gt.kit_cli_commands.gt.pr_update import (
     execute_update_pr,
     pr_update,
 )
+
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 
@@ -168,7 +168,7 @@ class TestPrUpdateCLI:
         )
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.pr_update.RealGtKit",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.pr_update.RealGtKit",
             return_value=ops,
         ):
             result = runner.invoke(pr_update)
@@ -188,7 +188,7 @@ class TestPrUpdateCLI:
         )
 
         with patch(
-            "erk.data.kits.gt.kit_cli_commands.gt.pr_update.RealGtKit",
+            "erk_shared.integrations.gt.kit_cli_commands.gt.pr_update.RealGtKit",
             return_value=ops,
         ):
             result = runner.invoke(pr_update)

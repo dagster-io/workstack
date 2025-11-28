@@ -13,13 +13,8 @@ Design:
 
 from dataclasses import dataclass, field, replace
 
-from erk_shared.integrations.gt import (
-    CommandResult,
-    GitGtKit,
-    GitHubGtKit,
-    GraphiteGtKit,
-    GtKit,
-)
+from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
+from erk_shared.integrations.gt.types import CommandResult
 
 
 @dataclass(frozen=True)

@@ -195,12 +195,14 @@ name = "erk-shared"
 version = "0.1.0"
 source = { editable = "packages/erk-shared" }
 dependencies = [
+    { name = "click" },
     { name = "python-frontmatter" },
     { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.1.7" },
     { name = "python-frontmatter", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]

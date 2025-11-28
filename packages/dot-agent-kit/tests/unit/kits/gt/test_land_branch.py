@@ -4,12 +4,12 @@ from dataclasses import replace
 
 import pytest
 from click.testing import CliRunner
-
-from erk.data.kits.gt.kit_cli_commands.gt.land_branch import (
+from erk_shared.integrations.gt.kit_cli_commands.gt.land_branch import (
     LandBranchError,
     LandBranchSuccess,
     execute_land_branch,
 )
+
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 

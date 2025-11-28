@@ -11,7 +11,6 @@ from erk_bot_server.context import ServerContext
 from erk_bot_server.models.session import Session
 from erk_bot_server.services.session_service import SessionService
 
-
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
@@ -97,9 +96,7 @@ async def list_sessions(
 ) -> SessionListResponse:
     """List all sessions."""
     sessions = await service.list_sessions()
-    return SessionListResponse(
-        sessions=[SessionResponse.from_session(s) for s in sessions]
-    )
+    return SessionListResponse(sessions=[SessionResponse.from_session(s) for s in sessions])
 
 
 @router.get("/{session_id}", response_model=SessionResponse)

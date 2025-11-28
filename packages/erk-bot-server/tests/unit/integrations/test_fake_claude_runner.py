@@ -1,8 +1,8 @@
 """Tests for FakeClaudeRunner implementation."""
 
+import attrs
 import pytest
-
-from erk_bot_server.integrations.claude_runner.fake import FakeClaudeRunner, ExecuteCall
+from erk_bot_server.integrations.claude_runner.fake import ExecuteCall, FakeClaudeRunner
 from erk_bot_server.models.session import StreamEvent
 
 
@@ -14,9 +14,7 @@ class TestFakeClaudeRunner:
         """Provide a fresh FakeClaudeRunner for each test."""
         return FakeClaudeRunner()
 
-    async def test_execute_returns_default_response(
-        self, runner: FakeClaudeRunner
-    ) -> None:
+    async def test_execute_returns_default_response(self, runner: FakeClaudeRunner) -> None:
         """Executing without configured response returns default."""
         events: list[StreamEvent] = []
         async for event in runner.execute_message(
@@ -110,13 +108,9 @@ class TestFakeClaudeRunner:
 
     async def test_multiple_executions_tracked(self, runner: FakeClaudeRunner) -> None:
         """Multiple executions are all tracked."""
-        async for _ in runner.execute_message(
-            "s1", "msg1", "/repo1", 100
-        ):
+        async for _ in runner.execute_message("s1", "msg1", "/repo1", 100):
             pass
-        async for _ in runner.execute_message(
-            "s2", "msg2", "/repo2", 200
-        ):
+        async for _ in runner.execute_message("s2", "msg2", "/repo2", 200):
             pass
 
         assert len(runner.execute_calls) == 2
@@ -125,9 +119,7 @@ class TestFakeClaudeRunner:
 
     async def test_execute_calls_returns_copy(self, runner: FakeClaudeRunner) -> None:
         """The execute_calls property returns a copy."""
-        async for _ in runner.execute_message(
-            "s1", "msg", "/repo", 100
-        ):
+        async for _ in runner.execute_message("s1", "msg", "/repo", 100):
             pass
 
         calls_copy = runner.execute_calls
@@ -148,7 +140,7 @@ class TestExecuteCall:
             timeout_seconds=100,
         )
 
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(attrs.FrozenInstanceError):
             call.session_id = "new-id"  # type: ignore[misc]
 
     def test_execute_call_fields(self) -> None:

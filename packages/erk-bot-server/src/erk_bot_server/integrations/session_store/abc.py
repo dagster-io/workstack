@@ -14,9 +14,7 @@ class SessionStore(ABC):
     """
 
     @abstractmethod
-    async def create_session(
-        self, external_id: str | None, working_dir: str
-    ) -> Session:
+    async def create_session(self, external_id: str | None, working_dir: str) -> Session:
         """Create a new session.
 
         Args:

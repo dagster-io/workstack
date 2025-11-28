@@ -40,9 +40,7 @@ class FakeSessionStore(SessionStore):
         """Get current sessions for test assertions."""
         return self._sessions.copy()
 
-    async def create_session(
-        self, external_id: str | None, working_dir: str
-    ) -> Session:
+    async def create_session(self, external_id: str | None, working_dir: str) -> Session:
         """Create a new session in memory."""
         session_id = str(uuid.uuid4())
         session = Session(

@@ -1,13 +1,12 @@
 """Integration tests for FastAPI routes."""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from erk_bot_server.context import ServerContext
 from erk_bot_server.integrations.claude_runner.fake import FakeClaudeRunner
 from erk_bot_server.integrations.session_store.fake import FakeSessionStore
 from erk_bot_server.main import create_app
 from erk_bot_server.models.session import StreamEvent
+from httpx import ASGITransport, AsyncClient
 
 
 class TestSessionRoutes:
@@ -24,9 +23,7 @@ class TestSessionRoutes:
         return FakeClaudeRunner()
 
     @pytest.fixture
-    def context(
-        self, fake_store: FakeSessionStore, fake_runner: FakeClaudeRunner
-    ) -> ServerContext:
+    def context(self, fake_store: FakeSessionStore, fake_runner: FakeClaudeRunner) -> ServerContext:
         """Provide a ServerContext for testing."""
         return ServerContext(session_store=fake_store, claude_runner=fake_runner)
 
@@ -153,9 +150,7 @@ class TestMessageRoute:
         )
 
     @pytest.fixture
-    def context(
-        self, fake_store: FakeSessionStore, fake_runner: FakeClaudeRunner
-    ) -> ServerContext:
+    def context(self, fake_store: FakeSessionStore, fake_runner: FakeClaudeRunner) -> ServerContext:
         """Provide a ServerContext for testing."""
         return ServerContext(session_store=fake_store, claude_runner=fake_runner)
 
@@ -204,9 +199,7 @@ class TestMessageRoute:
         assert call.message == "Help me with something"
         assert call.working_directory == "/test/repo"
 
-    async def test_send_message_to_unknown_session(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_send_message_to_unknown_session(self, client: AsyncClient) -> None:
         """POST /api/sessions/{id}/messages returns error for unknown session."""
         response = await client.post(
             "/api/sessions/unknown-id/messages",

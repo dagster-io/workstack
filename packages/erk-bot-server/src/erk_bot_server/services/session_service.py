@@ -19,9 +19,7 @@ class SessionService:
     session_store: SessionStore
     claude_runner: ClaudeRunner
 
-    async def create_session(
-        self, external_id: str | None, working_directory: str
-    ) -> Session:
+    async def create_session(self, external_id: str | None, working_directory: str) -> Session:
         """Create a new session.
 
         Args:

@@ -1,8 +1,8 @@
 """Pytest fixtures for erk-bot-server tests."""
 
-import pytest
 from datetime import datetime
 
+import pytest
 from erk_bot_server.context import ServerContext
 from erk_bot_server.integrations.claude_runner.fake import FakeClaudeRunner
 from erk_bot_server.integrations.session_store.fake import FakeSessionStore

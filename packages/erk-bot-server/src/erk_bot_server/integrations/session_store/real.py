@@ -68,9 +68,7 @@ class RealSessionStore(SessionStore):
             "message_count": str(session.message_count),
         }
 
-    async def create_session(
-        self, external_id: str | None, working_dir: str
-    ) -> Session:
+    async def create_session(self, external_id: str | None, working_dir: str) -> Session:
         """Create a new session in Redis."""
         if self._redis is None:
             raise RuntimeError("Not connected to Redis")

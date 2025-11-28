@@ -1,8 +1,6 @@
 """Tests for SessionService business logic."""
 
 import pytest
-from datetime import datetime
-
 from erk_bot_server.integrations.claude_runner.fake import FakeClaudeRunner
 from erk_bot_server.integrations.session_store.fake import FakeSessionStore
 from erk_bot_server.models.session import Session, StreamEvent
@@ -20,9 +18,7 @@ class TestSessionServiceCreate:
             claude_runner=FakeClaudeRunner(),
         )
 
-    async def test_create_session_returns_session(
-        self, service: SessionService
-    ) -> None:
+    async def test_create_session_returns_session(self, service: SessionService) -> None:
         """Creating a session returns a Session object."""
         result = await service.create_session(None, "/repo")
 
@@ -30,9 +26,7 @@ class TestSessionServiceCreate:
         assert result.working_directory == "/repo"
         assert result.status == "active"
 
-    async def test_create_session_with_external_id(
-        self, service: SessionService
-    ) -> None:
+    async def test_create_session_with_external_id(self, service: SessionService) -> None:
         """Creating a session with external ID stores it."""
         result = await service.create_session("slack-123", "/repo")
 
@@ -50,17 +44,13 @@ class TestSessionServiceGet:
             claude_runner=FakeClaudeRunner(),
         )
 
-    async def test_get_session_returns_none_for_unknown(
-        self, service: SessionService
-    ) -> None:
+    async def test_get_session_returns_none_for_unknown(self, service: SessionService) -> None:
         """Getting unknown session returns None."""
         result = await service.get_session("unknown-id")
 
         assert result is None
 
-    async def test_get_session_returns_created_session(
-        self, service: SessionService
-    ) -> None:
+    async def test_get_session_returns_created_session(self, service: SessionService) -> None:
         """Getting session returns the created session."""
         created = await service.create_session(None, "/repo")
 
@@ -80,17 +70,13 @@ class TestSessionServiceList:
             claude_runner=FakeClaudeRunner(),
         )
 
-    async def test_list_sessions_empty_initially(
-        self, service: SessionService
-    ) -> None:
+    async def test_list_sessions_empty_initially(self, service: SessionService) -> None:
         """Listing sessions returns empty list initially."""
         result = await service.list_sessions()
 
         assert result == []
 
-    async def test_list_sessions_returns_all(
-        self, service: SessionService
-    ) -> None:
+    async def test_list_sessions_returns_all(self, service: SessionService) -> None:
         """Listing sessions returns all sessions."""
         session1 = await service.create_session(None, "/repo1")
         session2 = await service.create_session(None, "/repo2")
@@ -113,17 +99,13 @@ class TestSessionServiceDelete:
             claude_runner=FakeClaudeRunner(),
         )
 
-    async def test_delete_unknown_returns_false(
-        self, service: SessionService
-    ) -> None:
+    async def test_delete_unknown_returns_false(self, service: SessionService) -> None:
         """Deleting unknown session returns False."""
         result = await service.delete_session("unknown-id")
 
         assert result is False
 
-    async def test_delete_session_removes_it(
-        self, service: SessionService
-    ) -> None:
+    async def test_delete_session_removes_it(self, service: SessionService) -> None:
         """Deleting a session removes it."""
         session = await service.create_session(None, "/repo")
 
@@ -187,10 +169,12 @@ class TestSessionServiceSendMessage:
     async def test_send_message_updates_status_on_success(self) -> None:
         """Successful message updates status to active."""
         store = FakeSessionStore()
-        runner = FakeClaudeRunner(default_response=[
-            StreamEvent("text", {"content": "Hi"}),
-            StreamEvent("done", {"success": True}),
-        ])
+        runner = FakeClaudeRunner(
+            default_response=[
+                StreamEvent("text", {"content": "Hi"}),
+                StreamEvent("done", {"success": True}),
+            ]
+        )
         service = SessionService(session_store=store, claude_runner=runner)
 
         session = await service.create_session(None, "/repo")
@@ -206,10 +190,12 @@ class TestSessionServiceSendMessage:
     async def test_send_message_updates_status_on_failure(self) -> None:
         """Failed message updates status to error."""
         store = FakeSessionStore()
-        runner = FakeClaudeRunner(default_response=[
-            StreamEvent("text", {"content": "Hi"}),
-            StreamEvent("done", {"success": False}),
-        ])
+        runner = FakeClaudeRunner(
+            default_response=[
+                StreamEvent("text", {"content": "Hi"}),
+                StreamEvent("done", {"success": False}),
+            ]
+        )
         service = SessionService(session_store=store, claude_runner=runner)
 
         session = await service.create_session(None, "/repo")
@@ -224,9 +210,11 @@ class TestSessionServiceSendMessage:
     async def test_send_message_updates_status_on_error_event(self) -> None:
         """Error event updates status to error."""
         store = FakeSessionStore()
-        runner = FakeClaudeRunner(default_response=[
-            StreamEvent("error", {"message": "Something went wrong"}),
-        ])
+        runner = FakeClaudeRunner(
+            default_response=[
+                StreamEvent("error", {"message": "Something went wrong"}),
+            ]
+        )
         service = SessionService(session_store=store, claude_runner=runner)
 
         session = await service.create_session(None, "/repo")
@@ -270,20 +258,14 @@ class TestSessionServiceGetOrCreate:
             claude_runner=FakeClaudeRunner(),
         )
 
-    async def test_creates_new_session_if_not_exists(
-        self, service: SessionService
-    ) -> None:
+    async def test_creates_new_session_if_not_exists(self, service: SessionService) -> None:
         """Creates new session if external ID not found."""
-        result = await service.get_or_create_session_by_external_id(
-            "slack-new", "/new/repo"
-        )
+        result = await service.get_or_create_session_by_external_id("slack-new", "/new/repo")
 
         assert result.external_id == "slack-new"
         assert result.working_directory == "/new/repo"
 
-    async def test_returns_existing_session_if_exists(
-        self, service: SessionService
-    ) -> None:
+    async def test_returns_existing_session_if_exists(self, service: SessionService) -> None:
         """Returns existing session if external ID found."""
         # Create first session
         first = await service.create_session("slack-existing", "/first/repo")
@@ -300,12 +282,8 @@ class TestSessionServiceGetOrCreate:
         self, service: SessionService
     ) -> None:
         """Different external IDs create different sessions."""
-        session1 = await service.get_or_create_session_by_external_id(
-            "slack-1", "/repo"
-        )
-        session2 = await service.get_or_create_session_by_external_id(
-            "slack-2", "/repo"
-        )
+        session1 = await service.get_or_create_session_by_external_id("slack-1", "/repo")
+        session2 = await service.get_or_create_session_by_external_id("slack-2", "/repo")
 
         assert session1.session_id != session2.session_id
         assert session1.external_id == "slack-1"

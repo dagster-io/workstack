@@ -26,10 +26,13 @@ class RealClaudeRunner(ClaudeRunner):
         """
         cmd = [
             "claude",
-            "--resume", session_id,
+            "--resume",
+            session_id,
             "--print",
-            "--output-format", "stream-json",
-            "--permission-mode", "acceptEdits",
+            "--output-format",
+            "stream-json",
+            "--permission-mode",
+            "acceptEdits",
             message,
         ]
 
@@ -62,7 +65,7 @@ class RealClaudeRunner(ClaudeRunner):
                 {"success": process.returncode == 0},
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             process.kill()
             yield StreamEvent(
                 "error",

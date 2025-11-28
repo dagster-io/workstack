@@ -90,6 +90,21 @@ kit_cli_commands:
   - name: post-pr-comment
     path: kit_cli_commands/erk/post_pr_comment.py
     description: Post PR link comment to GitHub issue after PR publication
+  - name: mark-step
+    path: kit_cli_commands/erk/mark_step.py
+    description: Mark a step as completed or incomplete in progress.md
+  - name: get-progress
+    path: kit_cli_commands/erk/get_progress.py
+    description: Query progress information from progress.md frontmatter
+  - name: get-pr-metadata
+    path: kit_cli_commands/erk/get_pr_metadata.py
+    description: Get PR metadata section for PR body with issue link and author
+  - name: extract-latest-plan
+    path: kit_cli_commands/erk/extract_latest_plan.py
+    description: Extract the latest plan from Claude session files
+  - name: create-issue-from-session
+    path: kit_cli_commands/erk/create_issue_from_session.py
+    description: Extract plan from Claude session and create GitHub issue
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

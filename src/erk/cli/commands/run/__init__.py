@@ -1,0 +1,17 @@
+"""Run management commands."""
+
+import click
+
+from erk.cli.commands.run.list_cmd import list_runs
+from erk.cli.commands.run.logs_cmd import logs_run
+
+
+@click.group("run")
+def run_group() -> None:
+    """View GitHub Actions workflow runs for plan implementations."""
+    pass
+
+
+# Register subcommands
+run_group.add_command(list_runs)
+run_group.add_command(logs_run)

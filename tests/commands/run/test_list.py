@@ -1,10 +1,9 @@
-"""CLI tests for erk runs command.
+"""CLI tests for erk run list command.
 
-This file focuses on CLI-specific concerns for the runs command:
+This file focuses on CLI-specific concerns for the list runs command:
 - Command execution and exit codes
 - Output formatting and display (status indicators, Rich table)
 - Run-centric view with plan/PR linkage
-- display_title parsing for issue number extraction
 
 The integration layer (list_workflow_runs) is tested in:
 - tests/unit/fakes/test_fake_github.py - Fake infrastructure tests
@@ -22,62 +21,14 @@ from erk_shared.github.issues.fake import FakeGitHubIssues
 from erk_shared.github.issues.types import IssueInfo
 from erk_shared.github.types import PullRequestInfo, WorkflowRun
 
-from erk.cli.commands.runs import _extract_issue_number, runs_cmd
+from erk.cli.commands.run.list_cmd import list_runs
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
 from tests.fakes.context import create_test_context
 
-# ============================================================================
-# Unit tests for _extract_issue_number helper
-# ============================================================================
 
-
-def test_extract_issue_number_new_format() -> None:
-    """Test parsing new format: '123:abc456' → 123."""
-    assert _extract_issue_number("123:abc456") == 123
-    assert _extract_issue_number("1:x") == 1
-    assert _extract_issue_number("999:distinct-id-here") == 999
-
-
-def test_extract_issue_number_old_format_returns_none() -> None:
-    """Test old format: 'Issue title [abc123]' → None."""
-    # Old format has title first, then distinct_id in brackets
-    assert _extract_issue_number("Add user authentication [abc123]") is None
-    assert _extract_issue_number("Fix bug in parser [xyz789]") is None
-
-
-def test_extract_issue_number_with_colon_in_title_returns_none() -> None:
-    """Test titles with colons but non-numeric prefix → None."""
-    # These look like they have colons but the prefix isn't a number
-    assert _extract_issue_number("Feature: Add caching [abc]") is None
-    assert _extract_issue_number("Bug fix: memory leak [xyz]") is None
-
-
-def test_extract_issue_number_none_or_empty() -> None:
-    """Test None or empty string → None."""
-    assert _extract_issue_number(None) is None
-    assert _extract_issue_number("") is None
-
-
-def test_extract_issue_number_no_colon() -> None:
-    """Test string without colon → None."""
-    assert _extract_issue_number("no colon here") is None
-    assert _extract_issue_number("12345") is None
-
-
-def test_extract_issue_number_whitespace() -> None:
-    """Test handling of whitespace."""
-    assert _extract_issue_number(" 123:abc") == 123
-    assert _extract_issue_number("123 :abc") == 123
-
-
-# ============================================================================
-# CLI tests for runs command
-# ============================================================================
-
-
-def test_runs_cmd_empty_state(tmp_path: Path) -> None:
-    """Test runs command displays message when no runs found."""
+def test_list_runs_empty_state(tmp_path: Path) -> None:
+    """Test list command displays message when no runs found."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -93,15 +44,15 @@ def test_runs_cmd_empty_state(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
     assert "No workflow runs found" in result.output
 
 
-def test_runs_cmd_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
-    """Test runs command displays single successful run with plan linkage."""
+def test_list_runs_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
+    """Test list command displays single successful run with plan linkage."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -146,7 +97,7 @@ def test_runs_cmd_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -160,8 +111,8 @@ def test_runs_cmd_single_success_run_with_issue_linkage(tmp_path: Path) -> None:
     assert "Success" in result.output or "✅" in result.output
 
 
-def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
-    """Test runs command displays multiple runs with different statuses."""
+def test_list_runs_multiple_runs_different_statuses(tmp_path: Path) -> None:
+    """Test list command displays multiple runs with different statuses."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -244,7 +195,7 @@ def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -258,8 +209,8 @@ def test_runs_cmd_multiple_runs_different_statuses(tmp_path: Path) -> None:
     assert "#144" in result.output
 
 
-def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
-    """Test runs command handles runs without valid issue linkage (old format).
+def test_list_runs_run_without_issue_linkage(tmp_path: Path) -> None:
+    """Test list command handles runs without valid issue linkage (old format).
 
     By default, runs without issue linkage should be filtered out.
     Use --show-legacy flag to see them.
@@ -293,7 +244,7 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act - With --show-legacy flag to see legacy runs
-    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, ["--show-legacy"], obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -304,7 +255,7 @@ def test_runs_cmd_run_without_issue_linkage(tmp_path: Path) -> None:
     assert "X" in result.output
 
 
-def test_runs_cmd_default_filters_out_runs_without_plans(tmp_path: Path) -> None:
+def test_list_runs_default_filters_out_runs_without_plans(tmp_path: Path) -> None:
     """By default, filter out runs without plan linkage (legacy format)."""
     # Arrange
     repo_root = tmp_path / "repo"
@@ -359,7 +310,7 @@ def test_runs_cmd_default_filters_out_runs_without_plans(tmp_path: Path) -> None
     runner = CliRunner()
 
     # Act - Default behavior (without --all)
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -371,7 +322,7 @@ def test_runs_cmd_default_filters_out_runs_without_plans(tmp_path: Path) -> None
     assert "Add feature" not in result.output
 
 
-def test_runs_cmd_with_show_legacy_flag_shows_all_runs(tmp_path: Path) -> None:
+def test_list_runs_with_show_legacy_flag_shows_all_runs(tmp_path: Path) -> None:
     """With --show-legacy flag, show all runs including legacy format."""
     # Arrange
     repo_root = tmp_path / "repo"
@@ -426,7 +377,7 @@ def test_runs_cmd_with_show_legacy_flag_shows_all_runs(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act - With --show-legacy flag
-    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, ["--show-legacy"], obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -439,8 +390,8 @@ def test_runs_cmd_with_show_legacy_flag_shows_all_runs(tmp_path: Path) -> None:
     assert "X" in result.output
 
 
-def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:
-    """Test runs command displays PR information when linked."""
+def test_list_runs_with_pr_linkage(tmp_path: Path) -> None:
+    """Test list command displays PR information when linked."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -501,7 +452,7 @@ def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -511,8 +462,8 @@ def test_runs_cmd_with_pr_linkage(tmp_path: Path) -> None:
     assert "✅" in result.output
 
 
-def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
-    """Test runs command displays queued status correctly."""
+def test_list_runs_handles_queued_status(tmp_path: Path) -> None:
+    """Test list command displays queued status correctly."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -556,7 +507,7 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -564,8 +515,8 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
     assert "Queued" in result.output or "⧗" in result.output
 
 
-def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
-    """Test runs command displays cancelled status correctly."""
+def test_list_runs_handles_cancelled_status(tmp_path: Path) -> None:
+    """Test list command displays cancelled status correctly."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -609,7 +560,7 @@ def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -617,8 +568,8 @@ def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
     assert "Cancelled" in result.output or "⛔" in result.output
 
 
-def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
-    """Test runs command truncates titles longer than 50 characters."""
+def test_list_runs_truncates_long_titles(tmp_path: Path) -> None:
+    """Test list command truncates titles longer than 50 characters."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -667,7 +618,7 @@ def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -679,7 +630,7 @@ def test_runs_cmd_truncates_long_titles(tmp_path: Path) -> None:
     assert "This is a very long" in result.output
 
 
-def test_runs_cmd_filters_missing_issue_data(tmp_path: Path) -> None:
+def test_list_runs_filters_missing_issue_data(tmp_path: Path) -> None:
     """Runs with missing/empty issue data are filtered by default."""
     # Arrange
     repo_root = tmp_path / "repo"
@@ -755,7 +706,7 @@ def test_runs_cmd_filters_missing_issue_data(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act - Default behavior (without --show-legacy)
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert - Only run 123 should appear
     assert result.exit_code == 0
@@ -764,11 +715,13 @@ def test_runs_cmd_filters_missing_issue_data(tmp_path: Path) -> None:
     # Runs 456 and 789 should be filtered out
     assert "456" not in result.output
     assert "789" not in result.output
-    assert "999" not in result.output
-    assert "143" not in result.output
+    # Issue #999 and #143 should not be in the output
+    # (use #-prefixed form to avoid false positives from timestamps)
+    assert "#999" not in result.output
+    assert "#143" not in result.output
 
 
-def test_runs_cmd_displays_issue_state(tmp_path: Path) -> None:
+def test_list_runs_displays_issue_state(tmp_path: Path) -> None:
     """Issue state is displayed with emoji."""
     # Arrange
     repo_root = tmp_path / "repo"
@@ -832,7 +785,7 @@ def test_runs_cmd_displays_issue_state(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -842,7 +795,7 @@ def test_runs_cmd_displays_issue_state(tmp_path: Path) -> None:
     assert "🔴" in result.output
 
 
-def test_runs_cmd_legacy_runs_show_x_for_state(tmp_path: Path) -> None:
+def test_list_runs_legacy_runs_show_x_for_state(tmp_path: Path) -> None:
     """Legacy runs show X in state column with --show-legacy."""
     # Arrange
     repo_root = tmp_path / "repo"
@@ -873,7 +826,7 @@ def test_runs_cmd_legacy_runs_show_x_for_state(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act - With --show-legacy flag
-    result = runner.invoke(runs_cmd, ["--show-legacy"], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, ["--show-legacy"], obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -883,144 +836,8 @@ def test_runs_cmd_legacy_runs_show_x_for_state(tmp_path: Path) -> None:
     assert "X" in result.output
 
 
-# ============================================================================
-# Tests for logs subcommand (unchanged from original)
-# ============================================================================
-
-
-def test_runs_logs_explicit_run_id(tmp_path: Path) -> None:
-    """Test viewing logs with explicit run ID."""
-    # Arrange
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    git_ops = FakeGit(
-        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
-        current_branches={repo_root: "main"},
-        git_common_dirs={repo_root: repo_root / ".git"},
-    )
-    github_ops = FakeGitHub(run_logs={"12345": "Step 1: Setup\nStep 2: Tests\n"})
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
-
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(runs_cmd, ["logs", "12345"], obj=ctx, catch_exceptions=False)
-
-    # Assert
-    assert result.exit_code == 0
-    assert "Step 1: Setup" in result.output
-    assert "Step 2: Tests" in result.output
-
-
-def test_runs_logs_auto_detect(tmp_path: Path) -> None:
-    """Test auto-detecting most recent run for current branch."""
-    # Arrange
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    git_ops = FakeGit(
-        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="feature-x")]},
-        current_branches={repo_root: "feature-x"},
-        git_common_dirs={repo_root: repo_root / ".git"},
-    )
-    workflow_runs = [
-        WorkflowRun(
-            run_id="111",
-            status="completed",
-            conclusion="success",
-            branch="main",
-            head_sha="abc",
-        ),
-        WorkflowRun(
-            run_id="222",
-            status="completed",
-            conclusion="success",
-            branch="feature-x",
-            head_sha="def",
-        ),
-    ]
-    github_ops = FakeGitHub(
-        workflow_runs=workflow_runs, run_logs={"222": "Logs for feature-x run\n"}
-    )
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
-
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(runs_cmd, ["logs"], obj=ctx, catch_exceptions=False)
-
-    # Assert
-    assert result.exit_code == 0
-    assert "Showing logs for run 222" in result.output
-    assert "Logs for feature-x run" in result.output
-
-
-def test_runs_logs_run_not_found(tmp_path: Path) -> None:
-    """Test error handling when run doesn't exist."""
-    # Arrange
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    git_ops = FakeGit(
-        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
-        current_branches={repo_root: "main"},
-        git_common_dirs={repo_root: repo_root / ".git"},
-    )
-    github_ops = FakeGitHub(run_logs={})  # No logs configured
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
-
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(runs_cmd, ["logs", "99999"], obj=ctx, catch_exceptions=False)
-
-    # Assert
-    assert result.exit_code == 1
-    assert "Error:" in result.output
-    assert "99999" in result.output
-
-
-def test_runs_logs_no_runs_for_branch(tmp_path: Path) -> None:
-    """Test auto-detect when no runs exist for current branch."""
-    # Arrange
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    git_ops = FakeGit(
-        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="feature-y")]},
-        current_branches={repo_root: "feature-y"},
-        git_common_dirs={repo_root: repo_root / ".git"},
-    )
-    workflow_runs = [
-        WorkflowRun(
-            run_id="111",
-            status="completed",
-            conclusion="success",
-            branch="main",
-            head_sha="abc",
-        ),
-    ]
-    github_ops = FakeGitHub(workflow_runs=workflow_runs)
-    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
-
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(runs_cmd, ["logs"], obj=ctx, catch_exceptions=False)
-
-    # Assert
-    assert result.exit_code == 1
-    assert "No workflow runs found for branch: feature-y" in result.output
-
-
-# ============================================================================
-# Tests for submission time column
-# ============================================================================
-
-
-def test_runs_cmd_displays_submission_time(tmp_path: Path) -> None:
-    """Test runs command displays submission time in local timezone."""
+def test_list_runs_displays_submission_time(tmp_path: Path) -> None:
+    """Test list command displays submission time in local timezone."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -1066,7 +883,7 @@ def test_runs_cmd_displays_submission_time(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0
@@ -1078,8 +895,8 @@ def test_runs_cmd_displays_submission_time(tmp_path: Path) -> None:
     assert "submitted" in result.output
 
 
-def test_runs_cmd_handles_missing_timestamp(tmp_path: Path) -> None:
-    """Test runs command handles missing created_at gracefully."""
+def test_list_runs_handles_missing_timestamp(tmp_path: Path) -> None:
+    """Test list command handles missing created_at gracefully."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -1123,7 +940,7 @@ def test_runs_cmd_handles_missing_timestamp(tmp_path: Path) -> None:
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(runs_cmd, obj=ctx, catch_exceptions=False)
+    result = runner.invoke(list_runs, obj=ctx, catch_exceptions=False)
 
     # Assert
     assert result.exit_code == 0

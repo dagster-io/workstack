@@ -33,7 +33,7 @@ class GroupedCommandGroup(click.Group):
 
         # Define command organization
         core_navigation = ["checkout", "co", "up", "down"]
-        command_groups = ["wt", "plan", "stack", "runs", "admin", "config", "completion"]
+        command_groups = ["wt", "plan", "stack", "run", "admin", "config", "completion"]
         top_level_plans = ["list", "ls", "implement", "submit"]
         initialization = ["init"]
 

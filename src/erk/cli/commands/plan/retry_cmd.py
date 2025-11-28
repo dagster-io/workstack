@@ -19,6 +19,7 @@ from erk.cli.constants import (
     ERK_PLAN_LABEL,
 )
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
@@ -72,13 +73,8 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         raise SystemExit(1) from e
 
     # Validate issue state (LBYL pattern)
-    if issue.state != "OPEN":
-        user_output(click.style("Error: ", fg="red") + "Cannot retry closed plan")
-        raise SystemExit(1)
-
-    if ERK_PLAN_LABEL not in issue.labels:
-        user_output(click.style("Error: ", fg="red") + "Issue is not an erk plan")
-        raise SystemExit(1)
+    Ensure.invariant(issue.state == "OPEN", "Cannot retry closed plan")
+    Ensure.invariant(ERK_PLAN_LABEL in issue.labels, "Issue is not an erk plan")
 
     # Calculate retry count by parsing all comments
     try:

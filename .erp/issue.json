@@ -1,5 +1,0 @@
-{
-  "number": 1413,
-  "url": "https://github.com/dagster-io/erk/issues/1413",
-  "title": "Refactor Manual Error Checking to Use  Ensure gh_authenticated Abstraction"
-}

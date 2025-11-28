@@ -129,12 +129,11 @@ def _delete_worktree(
     branches_to_delete: list[str] = []
     if delete_stack:
         use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
-        if not use_graphite:
-            user_output(
-                "Error: --delete-stack requires Graphite to be enabled. "
-                "Run 'erk config set use_graphite true'",
-            )
-            raise SystemExit(1)
+        Ensure.invariant(
+            use_graphite,
+            "--delete-stack requires Graphite to be enabled. "
+            "Run 'erk config set use_graphite true'",
+        )
 
         # Get the branches in the stack before deleting the worktree
         worktrees = ctx.git.list_worktrees(repo.root)

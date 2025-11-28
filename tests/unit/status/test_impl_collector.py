@@ -68,6 +68,8 @@ def test_plan_collector_with_issue_reference(tmp_path: Path) -> None:
 
 def test_plan_collector_issue_reference_with_progress(tmp_path: Path) -> None:
     """Test collector includes both progress and issue information."""
+    import frontmatter
+
     # Create plan folder
     plan_content = "# Test Plan\n\n1. Step one\n2. Step two\n3. Step three"
     plan_folder = create_impl_folder(tmp_path, plan_content)
@@ -75,12 +77,28 @@ def test_plan_collector_issue_reference_with_progress(tmp_path: Path) -> None:
     # Save issue reference
     save_issue_reference(plan_folder, 123, "https://github.com/test/repo/issues/123")
 
-    # Mark one step complete
+    # Mark one step complete using frontmatter library
     progress_file = plan_folder / "progress.md"
     content = progress_file.read_text(encoding="utf-8")
-    content = content.replace("- [ ] 1. Step one", "- [x] 1. Step one")
-    content = content.replace("completed_steps: 0", "completed_steps: 1")
-    progress_file.write_text(content, encoding="utf-8")
+
+    # Parse frontmatter
+    post = frontmatter.loads(content)
+
+    # Update the steps array
+    post.metadata["steps"][0]["completed"] = True
+    post.metadata["completed_steps"] = 1
+
+    # Regenerate checkboxes in body
+    body_lines = ["# Progress Tracking\n"]
+    for step in post.metadata["steps"]:
+        checkbox = "[x]" if step["completed"] else "[ ]"
+        body_lines.append(f"- {checkbox} {step['text']}")
+    body_lines.append("")
+    post.content = "\n".join(body_lines)
+
+    # Write back
+    updated_content = frontmatter.dumps(post)
+    progress_file.write_text(updated_content, encoding="utf-8")
 
     git = FakeGit()
     ctx = ErkContext.minimal(git, tmp_path)

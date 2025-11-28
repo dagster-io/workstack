@@ -381,7 +381,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
         run: |
+          # Configure git author
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "$SUBMITTED_BY@users.noreply.github.com"
+
           # Delete .erp/ and stage
           git rm -rf .erp/
           git add -A
@@ -443,7 +448,12 @@ jobs:
         if: steps.implement.outputs.implementation_success == 'true'
         env:
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
         run: |
+          # Configure git author
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "$SUBMITTED_BY@users.noreply.github.com"
+
           # Push empty commit to trigger CI via push event
           # Using PAT from checkout step allows triggering other workflows
           git commit --allow-empty -m "Trigger CI workflows"

@@ -213,3 +213,38 @@ class DryRunGit(Git):
         """No-op for fetching PR ref in dry-run mode."""
         # Do nothing - prevents actual fetch execution
         pass
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    def add_all(self, cwd: Path) -> bool:
+        """No-op for git add in dry-run mode."""
+        user_output("[DRY RUN] Would run: git add .")
+        return True
+
+    def commit(self, cwd: Path, message: str) -> bool:
+        """No-op for git commit in dry-run mode."""
+        user_output(f"[DRY RUN] Would run: git commit -m {message!r}")
+        return True
+
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """No-op for git commit --amend in dry-run mode."""
+        user_output(f"[DRY RUN] Would run: git commit --amend -m {message!r}")
+        return True
+
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits (read-only, delegates to wrapped)."""
+        return self._wrapped.count_commits_in_branch(cwd, parent_branch)
+
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get repository root (read-only, delegates to wrapped)."""
+        return self._wrapped.get_repository_root(cwd)
+
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get diff to parent (read-only, delegates to wrapped)."""
+        return self._wrapped.get_diff_to_parent(cwd, parent_branch)
+
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check merge conflicts (read-only, delegates to wrapped)."""
+        return self._wrapped.check_merge_conflicts(cwd, base_branch, head_branch)

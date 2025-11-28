@@ -14,7 +14,7 @@ from erk_shared.integrations.graphite.parsing import (
     parse_graphite_pr_info,
     read_graphite_json_file,
 )
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 from erk_shared.output.output import user_output
 from erk_shared.subprocess_utils import run_subprocess_with_context
 
@@ -322,3 +322,77 @@ class RealGraphite(Graphite):
                 break
 
         return (True, username, repo_info)
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Run gt restack and capture the result."""
+        result = subprocess.run(
+            ["gt", "restack", "--no-interactive"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
+
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Run gt squash to consolidate commits."""
+        result = subprocess.run(
+            ["gt", "squash", "--no-interactive"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
+
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Run gt submit to create or update PR."""
+        args = ["gt", "submit", "--no-edit", "--no-interactive"]
+
+        if publish:
+            args.append("--publish")
+
+        if restack:
+            args.append("--restack")
+
+        try:
+            result = subprocess.run(
+                args,
+                cwd=repo_root,
+                timeout=120,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return CommandResult(
+                success=False,
+                stdout="",
+                stderr=(
+                    "gt submit timed out after 120 seconds. "
+                    "Check network connectivity and try again."
+                ),
+            )
+
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
+
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Navigate to child branch using gt up."""
+        result = subprocess.run(
+            ["gt", "up"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0

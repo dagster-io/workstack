@@ -604,3 +604,41 @@ class FakeGit(Git):
         """Fetch a PR ref into a local branch (tracks mutation)."""
         # Track similar to fetch_branch but with PR ref format
         self._fetched_branches.append((remote, f"pull/{pr_number}/head"))
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    def add_all(self, cwd: Path) -> bool:
+        """Stage all changes (always succeeds in fake)."""
+        return True
+
+    def commit(self, cwd: Path, message: str) -> bool:
+        """Create a commit (always succeeds in fake)."""
+        return True
+
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """Amend commit (always succeeds in fake)."""
+        return True
+
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits in current branch.
+
+        Returns 1 by default for testing. Override via constructor if needed.
+        """
+        return 1
+
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get repository root.
+
+        Returns cwd as string for fake. Real implementation uses git rev-parse.
+        """
+        return str(cwd)
+
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get diff to parent branch (returns empty string in fake)."""
+        return ""
+
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check for merge conflicts (returns False in fake, meaning no conflicts)."""
+        return False

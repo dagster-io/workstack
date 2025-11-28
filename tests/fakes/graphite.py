@@ -9,7 +9,7 @@ from pathlib import Path
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.integrations.graphite.abc import Graphite
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 
 
 class FakeGraphite(Graphite):
@@ -164,3 +164,31 @@ class FakeGraphite(Graphite):
         This property is for test assertions only.
         """
         return self._submit_branch_calls
+
+    def restack(self, repo_root: Path, *, no_interactive: bool, quiet: bool) -> None:
+        """Fake restack operation (no-op)."""
+        pass
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return authenticated status for tests."""
+        return (True, "test-user", "owner/repo")
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Fake restack_with_result operation (returns success by default)."""
+        return CommandResult(success=True, stdout="Restacked", stderr="")
+
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Fake squash_commits operation (returns success by default)."""
+        return CommandResult(success=True, stdout="Squashed commits", stderr="")
+
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Fake submit operation (returns success by default)."""
+        return CommandResult(success=True, stdout="Submitted PR", stderr="")
+
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Fake navigate_to_child operation (returns True by default)."""
+        return True

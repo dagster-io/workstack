@@ -4,6 +4,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
+from erk_shared.naming import WORKTREE_DATE_SUFFIX_FORMAT
 
 from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
@@ -12,6 +13,11 @@ from erk.core.config_store import FakeConfigStore, GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_isolated_fs_env
+
+
+def _get_current_date_suffix() -> str:
+    """Get the current date suffix for plan-derived worktrees."""
+    return datetime.now().strftime(WORKTREE_DATE_SUFFIX_FORMAT)
 
 
 def test_create_with_plan_file() -> None:
@@ -44,8 +50,8 @@ def test_create_with_plan_file() -> None:
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # --plan flag adds date suffix in format -YY-MM-DD
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        # --plan flag adds date suffix in format -YY-MM-DD-HHMM
+        date_suffix = _get_current_date_suffix()
         expected_name = f"add-auth-feature-{date_suffix}"
 
         # Verify worktree was created with sanitized name and date suffix
@@ -96,8 +102,8 @@ def test_create_with_plan_name_sanitization() -> None:
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # --plan flag adds date suffix in format -YY-MM-DD
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        # --plan flag adds date suffix in format -YY-MM-DD-HHMM
+        date_suffix = _get_current_date_suffix()
         expected_name = f"my-cool-file-{date_suffix}"
 
         # Verify worktree name is lowercase with hyphens, "plan" removed, and date suffix added

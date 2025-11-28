@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from erk_shared.naming import (
+    WORKTREE_DATE_SUFFIX_FORMAT,
     default_branch_for_worktree,
     ensure_unique_worktree_name,
     extract_trailing_number,
@@ -10,6 +11,11 @@ from erk_shared.naming import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
+
+
+def _get_current_date_suffix() -> str:
+    """Get the current date suffix for plan-derived worktrees."""
+    return datetime.now().strftime(WORKTREE_DATE_SUFFIX_FORMAT)
 
 
 @pytest.mark.parametrize(
@@ -178,7 +184,7 @@ def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
     result = ensure_unique_worktree_name("my-feature", repo_dir, git_ops)
 
     # Should have datetime suffix in format -YY-MM-DD-HHMM
-    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
+    date_suffix = _get_current_date_suffix()
     assert result == f"my-feature-{date_suffix}"
     assert not (repo_dir / result).exists()
 
@@ -190,7 +196,7 @@ def test_ensure_unique_worktree_name_duplicate_same_minute(tmp_path: Path) -> No
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
-    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
+    date_suffix = _get_current_date_suffix()
     existing_name = f"my-feature-{date_suffix}"
     (repo_dir / existing_name).mkdir()
 
@@ -209,7 +215,7 @@ def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
-    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
+    date_suffix = _get_current_date_suffix()
     (repo_dir / f"my-feature-{date_suffix}").mkdir()
     (repo_dir / f"my-feature-{date_suffix}-2").mkdir()
     (repo_dir / f"my-feature-{date_suffix}-3").mkdir()
@@ -228,7 +234,7 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     repo_dir.mkdir()
 
     git_ops = RealGit()
-    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
+    date_suffix = _get_current_date_suffix()
     result = ensure_unique_worktree_name("fix-v3", repo_dir, git_ops)
 
     # Base name has number, should preserve it in datetime-suffixed name

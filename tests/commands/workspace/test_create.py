@@ -1,16 +1,23 @@
 """Tests for the create command."""
 
 import json
+from datetime import datetime
 
 from click.testing import CliRunner
 from erk_shared.git.abc import WorktreeInfo
 from erk_shared.integrations.graphite.fake import FakeGraphite
+from erk_shared.naming import WORKTREE_DATE_SUFFIX_FORMAT
 
 from erk.cli.cli import cli
 from erk.cli.config import LoadedConfig
 from erk.core.git.fake import FakeGit
 from erk.core.repo_discovery import RepoContext
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
+
+
+def _get_current_date_suffix() -> str:
+    """Get the current date suffix for plan-derived worktrees."""
+    return datetime.now().strftime(WORKTREE_DATE_SUFFIX_FORMAT)
 
 
 def test_create_basic_worktree() -> None:
@@ -97,9 +104,7 @@ def test_create_with_plan_file() -> None:
 
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
         wt_path = repo_dir / "worktrees" / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Impl folder should be created with plan.md and progress.md
@@ -137,9 +142,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         # Test multiple plan file examples
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
 
         test_cases = [
             ("devclikit-extraction-plan.md", "devclikit-extraction"),
@@ -757,9 +760,7 @@ def test_create_with_keep_plan_flag() -> None:
 
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
         wt_path = repo_dir / "worktrees" / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Impl folder should be created with plan.md and progress.md
@@ -1180,9 +1181,7 @@ def test_create_with_json_and_plan_file() -> None:
         # Verify JSON output includes plan file
         output_data = json.loads(result.output)
         # Name is derived from "test-feature-plan.md" -> "test-feature" with date suffix
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
         expected_name = f"test-feature-{date_suffix}"
         assert output_data["worktree_name"] == expected_name
         wt_path = repo_dir / "worktrees" / expected_name
@@ -1318,9 +1317,7 @@ def test_create_with_stay_and_plan() -> None:
 
         assert result.exit_code == 0, result.output
         # Verify worktree was created with date suffix
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
         wt_path = repo_dir / "worktrees" / f"test-feature-{date_suffix}"
         assert wt_path.exists()
         # Impl folder should be created
@@ -1411,9 +1408,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         assert result1.exit_code == 0, result1.output
 
         # Check that first worktree has date suffix
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        date_suffix = _get_current_date_suffix()
         expected_name1 = f"my-feature-{date_suffix}"
         wt_path1 = repo_dir / "worktrees" / expected_name1
         assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
@@ -1510,10 +1505,8 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             f"Worktree name: expected >31 chars, got {len(actual_worktree_name)}"
         )
 
-        # Worktree name should end with date suffix (-YY-MM-DD)
-        from datetime import datetime
-
-        date_suffix = datetime.now().strftime("%y-%m-%d")
+        # Worktree name should end with date suffix (-YY-MM-DD-HHMM)
+        date_suffix = _get_current_date_suffix()
         assert actual_worktree_name.endswith(date_suffix), (
             f"Worktree name should end with '{date_suffix}', got: {actual_worktree_name}"
         )

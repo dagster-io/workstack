@@ -15,6 +15,9 @@ from pathlib import Path
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
 
+# Date suffix format for plan-derived worktree names: -YY-MM-DD-HHMM
+WORKTREE_DATE_SUFFIX_FORMAT = "%y-%m-%d-%H%M"
+
 
 def sanitize_worktree_name(name: str) -> str:
     """Sanitize a worktree name for use as a directory name.
@@ -325,7 +328,7 @@ def ensure_unique_worktree_name_with_date(base_name: str, worktrees_dir: Path, g
         Duplicate: "my-feature" → "my-feature-25-11-08-1430-2"
         Next minute: "my-feature" → "my-feature-25-11-08-1431"
     """
-    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
+    date_suffix = datetime.now().strftime(WORKTREE_DATE_SUFFIX_FORMAT)
     candidate_name = f"{base_name}-{date_suffix}"
 
     # Check if the base candidate exists

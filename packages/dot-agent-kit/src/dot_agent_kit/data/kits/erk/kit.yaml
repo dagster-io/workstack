@@ -36,6 +36,9 @@ kit_cli_commands:
   - name: preprocess-session
     path: kit_cli_commands/erk/preprocess_session.py
     description: Compress JSONL session logs to XML format, auto-discovering agent logs for comprehensive preprocessing
+  - name: session-get-plan
+    path: kit_cli_commands/erk/session_get_plan.py
+    description: Extract plan file name from Claude Code session
   - name: comment-worktree-creation
     path: kit_cli_commands/erk/comment_worktree_creation.py
     description: Post GitHub comment documenting worktree creation

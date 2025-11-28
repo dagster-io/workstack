@@ -4,7 +4,6 @@ This module provides shared utilities for managing .impl/ folder structures:
 - plan.md: Immutable implementation plan
 - progress.md: Mutable progress tracking with step checkboxes
 - issue.json: GitHub issue reference (optional)
-- .worker-impl/: Implementation workspace for remote AI worker
 
 These utilities are used by both erk (for local operations) and dot-agent-kit
 (for kit CLI commands).
@@ -12,7 +11,6 @@ These utilities are used by both erk (for local operations) and dot-agent-kit
 
 import json
 import re
-import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -233,58 +231,6 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
         updated_content = new_front_matter + content
 
     progress_file.write_text(updated_content, encoding="utf-8")
-
-
-def copy_impl_to_worker_impl(worktree_path: Path) -> Path:
-    """Copy .impl/ folder to .worker-impl/ folder.
-
-    Args:
-        worktree_path: Path to worktree directory
-
-    Returns:
-        Path to created .worker-impl/ directory
-
-    Raises:
-        FileNotFoundError: If .impl/ folder doesn't exist
-        FileExistsError: If .worker-impl/ folder already exists
-    """
-    impl_folder = worktree_path / ".impl"
-    worker_impl_folder = worktree_path / ".worker-impl"
-
-    if not impl_folder.exists():
-        raise FileNotFoundError(f"No .impl/ folder found at {worktree_path}")
-
-    if worker_impl_folder.exists():
-        raise FileExistsError(f".worker-impl/ folder already exists at {worktree_path}")
-
-    shutil.copytree(impl_folder, worker_impl_folder)
-    return worker_impl_folder
-
-
-def get_worker_impl_path(worktree_path: Path) -> Path | None:
-    """Get path to .worker-impl/ folder if it exists.
-
-    Args:
-        worktree_path: Path to worktree directory
-
-    Returns:
-        Path to .worker-impl/ folder if exists, None otherwise
-    """
-    worker_impl_folder = worktree_path / ".worker-impl"
-    if worker_impl_folder.exists() and worker_impl_folder.is_dir():
-        return worker_impl_folder
-    return None
-
-
-def remove_worker_impl_folder(worktree_path: Path) -> None:
-    """Remove .worker-impl/ folder if it exists.
-
-    Args:
-        worktree_path: Path to worktree directory
-    """
-    worker_impl_folder = worktree_path / ".worker-impl"
-    if worker_impl_folder.exists():
-        shutil.rmtree(worker_impl_folder)
 
 
 def _generate_progress_content(steps: list[str]) -> str:

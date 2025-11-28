@@ -1427,11 +1427,11 @@ class TestOrchestrateWorkflow:
         assert result.error_type == "no_parent"
         assert "Could not determine parent branch" in result.message
 
-    def test_orchestrate_agent_invocation_error_continues(self) -> None:
-        """Test that AI failure doesn't block PR submission.
+    def test_orchestrate_agent_invocation_error_fails_hard(self) -> None:
+        """Test that AI failure causes hard failure (no fallback).
 
-        With the submit-first approach, AI failure only affects PR metadata,
-        not the submission itself. The workflow continues without AI content.
+        The workflow now requires Claude to be available and working.
+        If AI generation fails, the entire workflow fails.
         """
         from unittest.mock import patch
 
@@ -1450,19 +1450,17 @@ class TestOrchestrateWorkflow:
 
             result = orchestrate_submit_workflow(ops)
 
-        # AI failure doesn't block submission - returns success
-        assert isinstance(result, PostAnalysisResult)
-        assert result.success is True
-        assert result.pr_number == 123
-        # Title defaults to "PR submitted" when AI fails
-        assert result.pr_title == "PR submitted"
+        # AI failure now causes hard failure
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "ai_generation_failed"
+        assert "AI generation failed" in result.message
 
-    def test_orchestrate_updates_pr_metadata_when_ai_fails(self) -> None:
-        """Test that PR metadata is updated with fallback title when AI fails.
+    def test_orchestrate_fails_hard_when_ai_fails(self) -> None:
+        """Test that workflow fails when AI generation fails (no fallback).
 
-        This verifies the bug fix: PR metadata should always be updated,
-        even when AI generation fails. The title falls back to a readable
-        version of the branch name.
+        The workflow now requires Claude AI to work. If AI generation fails,
+        the entire workflow returns an error instead of continuing with fallback.
         """
         from unittest.mock import patch
 
@@ -1481,19 +1479,15 @@ class TestOrchestrateWorkflow:
 
             result = orchestrate_submit_workflow(ops)
 
-        # Submission succeeds
-        assert isinstance(result, PostAnalysisResult)
-        assert result.success is True
+        # Workflow fails instead of continuing with fallback
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "ai_generation_failed"
 
-        # Verify PR metadata was updated via fake's state
+        # Verify PR metadata was NOT updated since workflow failed
         github_state = ops.github().get_state()
-        # PR 123 should have its title and body updated
-        assert 123 in github_state.pr_titles, "PR metadata should be updated even when AI fails"
-        # The actual title sent to GitHub uses branch-name-derived fallback
-        assert github_state.pr_titles[123] == "Fix workflow temp file"
-        # Body should be set (metadata section, even if AI body is empty)
-        assert 123 in github_state.pr_bodies
-        assert github_state.pr_bodies[123] is not None
+        # PR 123 should NOT have been updated
+        assert 123 not in github_state.pr_titles
 
 
 class TestSubmitBranchCLI:
@@ -1559,3 +1553,271 @@ class TestSubmitBranchCLI:
             assert output["pr_number"] == 123
         finally:
             submit_module.execute_post_analysis = original_execute
+
+
+class TestValidateClaudeAvailability:
+    """Tests for _validate_claude_availability() function."""
+
+    def test_claude_not_in_path(self) -> None:
+        """Test when Claude CLI is not in PATH."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            _validate_claude_availability,
+        )
+
+        with patch("shutil.which", return_value=None):
+            available, error_msg = _validate_claude_availability()
+            assert available is False
+            assert "Claude CLI not found in PATH" in error_msg
+            assert "https://claude.ai/download" in error_msg
+
+    def test_claude_not_executable(self) -> None:
+        """Test when Claude CLI exists but is not executable."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            _validate_claude_availability,
+        )
+
+        with patch("shutil.which", return_value="/usr/local/bin/claude"):
+            with patch("os.access", return_value=False):
+                available, error_msg = _validate_claude_availability()
+                assert available is False
+                assert "not executable" in error_msg
+                assert "/usr/local/bin/claude" in error_msg
+
+    def test_claude_available(self) -> None:
+        """Test when Claude CLI is available and executable."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            _validate_claude_availability,
+        )
+
+        with patch("shutil.which", return_value="/usr/local/bin/claude"):
+            with patch("os.access", return_value=True):
+                available, error_msg = _validate_claude_availability()
+                assert available is True
+                assert error_msg == ""
+
+
+class TestInvokeCommitMessageAgentTempFile:
+    """Tests for _invoke_commit_message_agent() with temp file approach."""
+
+    def test_creates_temp_file_with_diff(self, tmp_path: Path) -> None:
+        """Test that agent creates temporary file with diff content."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="diff --git a/test.py b/test.py\n+new line",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Test commit message\n\nTest description"
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            result = _invoke_commit_message_agent(diff_context)
+
+            # Verify subprocess was called with agent
+            assert mock_run.called
+            call_args = mock_run.call_args[0][0]
+            assert "claude" in call_args
+            assert "--agent" in call_args
+            assert "commit-message-generator" in call_args
+
+            # Verify result
+            assert result == "Test commit message\n\nTest description"
+
+    def test_cleans_up_temp_file_on_success(self, tmp_path: Path) -> None:
+        """Test that temp file is cleaned up after successful invocation."""
+        import tempfile
+
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Test commit"
+        mock_result.stderr = ""
+
+        temp_files_created = []
+        original_tempfile = tempfile.NamedTemporaryFile
+
+        def mock_tempfile(*args, **kwargs):
+            f = original_tempfile(*args, **kwargs)
+            temp_files_created.append(f.name)
+            return f
+
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("tempfile.NamedTemporaryFile", side_effect=mock_tempfile):
+                _invoke_commit_message_agent(diff_context)
+
+        # Verify temp file was cleaned up
+        for temp_file in temp_files_created:
+            assert not Path(temp_file).exists()
+
+    def test_cleans_up_temp_file_on_error(self, tmp_path: Path) -> None:
+        """Test that temp file is cleaned up even when agent fails."""
+        import tempfile
+
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "Agent failed"
+
+        temp_files_created = []
+        original_tempfile = tempfile.NamedTemporaryFile
+
+        def mock_tempfile(*args, **kwargs):
+            f = original_tempfile(*args, **kwargs)
+            temp_files_created.append(f.name)
+            return f
+
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("tempfile.NamedTemporaryFile", side_effect=mock_tempfile):
+                try:
+                    _invoke_commit_message_agent(diff_context)
+                except RuntimeError:
+                    pass  # Expected
+
+        # Verify temp file was cleaned up
+        for temp_file in temp_files_created:
+            assert not Path(temp_file).exists()
+
+    def test_raises_runtime_error_on_non_zero_exit(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when agent returns non-zero exit code."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "Claude agent failed"
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="Agent failed"):
+                _invoke_commit_message_agent(diff_context)
+
+    def test_raises_runtime_error_on_empty_output(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when agent returns no output."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="Agent returned no output"):
+                _invoke_commit_message_agent(diff_context)
+
+
+class TestOrchestrateWorkflowClaudeValidation:
+    """Tests for orchestrate_submit_workflow with Claude validation."""
+
+    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_fails_when_claude_not_available(self, mock_sleep: Mock) -> None:
+        """Test that workflow fails when Claude CLI is not available."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            PostAnalysisError,
+            orchestrate_submit_workflow,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        # Mock Claude validation to fail
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
+            return_value=(False, "Claude CLI not found"),
+        ):
+            result = orchestrate_submit_workflow(ops)
+
+        # Assert: Should return error instead of continuing
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "claude_not_available"
+        assert "Claude CLI is not available" in result.message
+
+    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_fails_when_ai_generation_fails(self, mock_sleep: Mock) -> None:
+        """Test that workflow fails when AI generation raises exception."""
+        from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+            PostAnalysisError,
+            orchestrate_submit_workflow,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        # Mock Claude validation to succeed
+        with patch(
+            "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._validate_claude_availability",
+            return_value=(True, ""),
+        ):
+            # Mock agent invocation to fail
+            with patch(
+                "erk.data.kits.gt.kit_cli_commands.gt.submit_branch._invoke_commit_message_agent",
+                side_effect=RuntimeError("Agent crashed"),
+            ):
+                result = orchestrate_submit_workflow(ops)
+
+        # Assert: Should return error instead of continuing
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "ai_generation_failed"
+        assert "AI generation failed" in result.message

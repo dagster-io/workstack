@@ -40,6 +40,8 @@ Error Types:
     - submit_diverged: Branch has diverged from remote
     - submit_empty_parent: Stack contains empty parent branch (already merged)
     - pr_update_failed: Failed to update PR metadata
+    - claude_not_available: Claude CLI is not available or not executable
+    - ai_generation_failed: AI commit message generation failed
 
 Examples:
     $ dot-agent run gt submit-pr pre-analysis
@@ -99,6 +101,8 @@ PostAnalysisErrorType = Literal[
     "submit_conflict",
     "submit_empty_parent",
     "pr_update_failed",
+    "claude_not_available",
+    "ai_generation_failed",
 ]
 
 
@@ -498,8 +502,32 @@ def build_pr_metadata_section(
     return "\n".join(metadata_parts)
 
 
+def _validate_claude_availability() -> tuple[bool, str]:
+    """Check if Claude CLI is available and executable.
+
+    Returns:
+        (is_available, error_message) tuple
+    """
+    import os
+    import shutil
+
+    claude_path = shutil.which("claude")
+    if claude_path is None:
+        return False, (
+            "Claude CLI not found in PATH.\n"
+            "Install from: https://claude.ai/download\n"
+            "Or ensure ~/.local/bin is in PATH"
+        )
+
+    # Verify it's executable
+    if not os.access(claude_path, os.X_OK):
+        return False, f"Claude CLI found at {claude_path} but not executable"
+
+    return True, ""
+
+
 def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
-    """Invoke Claude directly to generate commit message from diff.
+    """Invoke commit-message-generator agent with diff file.
 
     Args:
         diff_context: Diff and repository context
@@ -508,61 +536,76 @@ def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
         Generated commit message text
 
     Raises:
-        RuntimeError: If Claude invocation fails
+        RuntimeError: If agent invocation fails
     """
-    from erk.data.kits.gt.kit_cli_commands.gt.prompts import (
-        COMMIT_MESSAGE_SYSTEM_PROMPT,
-        truncate_diff,
-    )
+    import os
+    import tempfile
+
+    from erk.data.kits.gt.kit_cli_commands.gt.prompts import truncate_diff
 
     # Truncate if needed
     diff_content, was_truncated = truncate_diff(diff_context.diff)
 
-    truncation_note = ""
-    if was_truncated:
-        truncation_note = "\n**NOTE**: Diff truncated. Focus on visible changes.\n"
+    # Save diff to temporary file for agent to read
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
+    ) as f:
+        diff_path = f.name
+        f.write(diff_content)
 
-    # Build prompt with inline diff
-    prompt = f"""Generate commit message for this diff.
+    try:
+        # Build prompt for agent
+        truncation_note = "**NOTE**: Diff truncated for size.\n" if was_truncated else ""
+        prompt = f"""Analyze the git diff and generate a commit message.
 
-Repository: {diff_context.repo_root}
-Branch: {diff_context.current_branch} (parent: {diff_context.parent_branch})
-{truncation_note}
-```diff
-{diff_content}
-```
+{truncation_note}Diff file: {diff_path}
+Repository root: {diff_context.repo_root}
+Current branch: {diff_context.current_branch}
+Parent branch: {diff_context.parent_branch}
 
-Return ONLY the commit message. First line = PR title, rest = PR body."""
+Use the Read tool to load the diff file."""
 
-    # Direct Claude invocation - no Task delegation
-    result = subprocess.run(
-        [
-            "claude",
-            "--print",
-            "--output-format",
-            "text",
-            "--model",
-            "haiku",
-            "--tools",
-            "",  # No tools needed
-            "--append-system-prompt",
-            COMMIT_MESSAGE_SYSTEM_PROMPT,
-            "--",
-            prompt,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        cwd=diff_context.repo_root,
-    )
+        # Invoke commit-message-generator agent
+        result = subprocess.run(
+            [
+                "claude",
+                "--print",
+                "--output-format",
+                "text",
+                "--agent",
+                "commit-message-generator",  # Use the agent!
+                "--",
+                prompt,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,  # Add explicit timeout
+            cwd=diff_context.repo_root,
+        )
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Claude failed: {result.stderr or 'Unknown error'}")
+        # Log diagnostics
+        click.echo(f"   Claude exit code: {result.returncode}", err=True)
+        if result.returncode != 0:
+            click.echo(
+                f"   Stderr: {result.stderr[:200] if result.stderr else '(empty)'}",
+                err=True,
+            )
+            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
 
-    if not result.stdout.strip():
-        raise RuntimeError("Claude returned no output")
+        if not result.stdout.strip():
+            click.echo("   Stdout length: 0 (no output generated)", err=True)
+            raise RuntimeError("Agent returned no output")
 
-    return result.stdout.strip()
+        click.echo(f"   Stdout length: {len(result.stdout)} chars", err=True)
+        return result.stdout.strip()
+
+    finally:
+        # Clean up temp file
+        try:
+            os.unlink(diff_path)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 def orchestrate_submit_workflow(
@@ -619,11 +662,23 @@ def orchestrate_submit_workflow(
     if pr_diff:
         click.echo("✓ PR diff retrieved", err=True)
 
-    # Step 4: Generate PR title/body via AI (only if we have diff)
+    # Step 4: Validate Claude CLI availability and generate PR title/body via AI
     pr_title: str | None = None
     pr_body: str | None = None
 
     if pr_diff:
+        click.echo("🔍 Checking Claude CLI availability...", err=True)
+        available, error_msg = _validate_claude_availability()
+        if not available:
+            click.echo(f"❌ {error_msg}", err=True)
+            return PostAnalysisError(
+                success=False,
+                error_type="claude_not_available",
+                message="Claude CLI is not available",
+                details={"error": error_msg},
+            )
+
+        click.echo("✓ Claude CLI available", err=True)
         click.echo("🤖 Generating PR description via AI...", err=True)
         try:
             repo_root = ops.git().get_repository_root()
@@ -642,9 +697,33 @@ def orchestrate_submit_workflow(
             pr_title = lines[0]
             pr_body = lines[1].lstrip() if len(lines) > 1 else ""
             click.echo("✓ PR description generated", err=True)
-        except RuntimeError as e:
-            click.echo(f"⚠️  AI generation failed: {e}", err=True)
-            # Continue without AI-generated content
+        except Exception as e:
+            # Classify error type for better diagnostics
+            error_type = type(e).__name__
+
+            if isinstance(e, FileNotFoundError):
+                diagnostic = "Claude CLI not found in PATH"
+                suggestion = "Install Claude CLI: https://claude.ai/download"
+            elif isinstance(e, PermissionError):
+                diagnostic = "Claude CLI not executable"
+                suggestion = "Check file permissions for claude binary"
+            elif isinstance(e, subprocess.TimeoutExpired):
+                diagnostic = "Claude invocation timed out"
+                suggestion = "Check network connectivity or try again"
+            else:
+                diagnostic = str(e)
+                suggestion = "Check session logs for details"
+
+            click.echo(f"❌ AI generation failed: {error_type}", err=True)
+            click.echo(f"   Diagnostic: {diagnostic}", err=True)
+            click.echo(f"   Suggestion: {suggestion}", err=True)
+
+            return PostAnalysisError(
+                success=False,
+                error_type="ai_generation_failed",
+                message=f"AI generation failed: {error_type}",
+                details={"error": diagnostic, "suggestion": suggestion},
+            )
 
     # Step 5: Update PR metadata (always - use AI content or fallback)
     cwd = Path.cwd()

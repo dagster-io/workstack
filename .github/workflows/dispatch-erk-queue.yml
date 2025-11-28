@@ -422,7 +422,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ github.token }}
+          token: ${{ secrets.ERK_QUEUE_GH_PAT }}
           ref: ${{ needs.setup.outputs.branch_name }}
           fetch-depth: 0
 
@@ -616,14 +616,10 @@ jobs:
       - name: Trigger CI workflows
         if: steps.implement.outputs.implementation_success == 'true'
         env:
-          GH_TOKEN: ${{ secrets.ERK_QUEUE_GH_PAT }}
           BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
-          # Trigger CI workflows using PAT (GITHUB_TOKEN doesn't have actions:write)
-          gh workflow run test.yml --ref "$BRANCH_NAME"
-          gh workflow run lint.yml --ref "$BRANCH_NAME"
-          gh workflow run pyright.yml --ref "$BRANCH_NAME"
-          gh workflow run prettier.yml --ref "$BRANCH_NAME"
-          gh workflow run check-sync.yml --ref "$BRANCH_NAME"
-          gh workflow run md-check.yml --ref "$BRANCH_NAME"
-          echo "✅ CI workflows triggered via workflow_dispatch"
+          # Push empty commit to trigger CI via push event
+          # Using PAT from checkout step allows triggering other workflows
+          git commit --allow-empty -m "Trigger CI workflows"
+          git push origin "$BRANCH_NAME"
+          echo "✅ CI workflows triggered via push event"

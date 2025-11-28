@@ -303,59 +303,36 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
         )
 
     # Step 2.5: Check for merge conflicts EARLY
-    # First try GitHub API if PR exists (most accurate)
-    # TODO: Move full GitHub implementations to erk-shared
-    # Currently using erk-shared stub which raises NotImplementedError at runtime.
-    # This is the correct architectural solution but requires refactoring to move
-    # the complete RealGitHub implementation from erk.core.github.real.
-    # Until then, PR status/mergeability checks will fail if actually invoked.
-    try:
-        from erk_shared.github.real import RealGitHub
+    # First try GitHub API if PR exists (most accurate), then fallback to local git merge-tree
+    pr_number, pr_url = ops.github().get_pr_status(branch_name)
 
-        github = RealGitHub()
-        repo_root = Path(ops.git().get_repository_root())
-        pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
+    if pr_number is not None:
+        # PR exists - check mergeability
+        mergeable, merge_state = ops.github().get_pr_mergeability(pr_number)
 
-        if pr_info.pr_number is not None:
-            # PR exists - check mergeability
-            mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
+        if mergeable == "CONFLICTING":
+            return PreAnalysisError(
+                success=False,
+                error_type="pr_has_conflicts",
+                message=f"PR #{pr_number} has merge conflicts with {parent_branch}",
+                details={
+                    "branch_name": branch_name,
+                    "pr_number": str(pr_number),
+                    "parent_branch": parent_branch,
+                    "merge_state": merge_state,
+                    "detection_method": "github_api",
+                },
+            )
 
-            if mergeability and mergeability.mergeable == "CONFLICTING":
-                return PreAnalysisError(
-                    success=False,
-                    error_type="pr_has_conflicts",
-                    message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
-                    details={
-                        "branch_name": branch_name,
-                        "pr_number": str(pr_info.pr_number),
-                        "parent_branch": parent_branch,
-                        "merge_state": mergeability.merge_state_status,
-                    },
-                )
+        # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
+        if mergeable == "UNKNOWN":
+            print(
+                "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
+                file=sys.stderr,
+            )
 
-            # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
-            if mergeability and mergeability.mergeable == "UNKNOWN":
-                print(
-                    "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
-                    file=sys.stderr,
-                )
-
-        else:
-            # No PR yet - fallback to local git merge-tree check
-            if ops.git().check_merge_conflicts(parent_branch, branch_name):
-                return PreAnalysisError(
-                    success=False,
-                    error_type="pr_has_conflicts",
-                    message=f"Branch has local merge conflicts with {parent_branch}",
-                    details={
-                        "branch_name": branch_name,
-                        "parent_branch": parent_branch,
-                        "detection_method": "git_merge_tree",
-                    },
-                )
-    except (NotImplementedError, TypeError):
-        # RealGitHub from erk-shared is a stub - skip GitHub-based conflict checking
-        # Fall back to local git merge-tree check only
+    else:
+        # No PR yet - fallback to local git merge-tree check
         if ops.git().check_merge_conflicts(parent_branch, branch_name):
             return PreAnalysisError(
                 success=False,

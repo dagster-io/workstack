@@ -65,6 +65,7 @@ class GitHubState:
     pr_titles: dict[int, str] = field(default_factory=dict)
     pr_bodies: dict[int, str] = field(default_factory=dict)
     pr_diffs: dict[int, str] = field(default_factory=dict)
+    pr_mergeability: dict[int, tuple[str, str]] = field(default_factory=dict)
     merge_success: bool = True
     pr_update_success: bool = True
     pr_delay_attempts_until_visible: int = 0
@@ -345,6 +346,20 @@ class FakeGitHubGtKitOps(GitHubGtKit):
             "+new"
         )
 
+    def get_pr_status(self, branch: str) -> tuple[int | None, str | None]:
+        """Get PR number and URL for branch from fake state."""
+        if branch not in self._state.pr_numbers:
+            return (None, None)
+
+        pr_number = self._state.pr_numbers[branch]
+        pr_url = self._state.pr_urls.get(branch, f"https://github.com/repo/pull/{pr_number}")
+        return (pr_number, pr_url)
+
+    def get_pr_mergeability(self, pr_number: int) -> tuple[str, str]:
+        """Get PR mergeability status from fake state."""
+        # Default: MERGEABLE/CLEAN unless configured otherwise
+        return self._state.pr_mergeability.get(pr_number, ("MERGEABLE", "CLEAN"))
+
 
 class FakeGtKitOps(GtKit):
     """Fake composite operations for testing.
@@ -620,4 +635,42 @@ class FakeGtKitOps(GtKit):
             auth_username=None,
             auth_hostname=None,
         )
+        return self
+
+    def with_pr_conflicts(self, pr_number: int) -> "FakeGtKitOps":
+        """Configure PR to have merge conflicts.
+
+        Args:
+            pr_number: PR number to configure as conflicting
+
+        Returns:
+            Self for chaining
+        """
+        gh_state = self._github.get_state()
+        new_mergeability = {
+            **gh_state.pr_mergeability,
+            pr_number: ("CONFLICTING", "DIRTY"),
+        }
+        self._github._state = replace(gh_state, pr_mergeability=new_mergeability)
+        return self
+
+    def with_pr_mergeability(
+        self, pr_number: int, mergeable: str, merge_state: str
+    ) -> "FakeGtKitOps":
+        """Configure PR mergeability status.
+
+        Args:
+            pr_number: PR number to configure
+            mergeable: Mergeability status ("MERGEABLE", "CONFLICTING", "UNKNOWN")
+            merge_state: Merge state status ("CLEAN", "DIRTY", "UNSTABLE", etc.)
+
+        Returns:
+            Self for chaining
+        """
+        gh_state = self._github.get_state()
+        new_mergeability = {
+            **gh_state.pr_mergeability,
+            pr_number: (mergeable, merge_state),
+        }
+        self._github._state = replace(gh_state, pr_mergeability=new_mergeability)
         return self

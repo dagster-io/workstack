@@ -459,6 +459,52 @@ class RealGitHubGtKit(GitHubGtKit):
         )
         return result.stdout
 
+    def get_pr_status(self, branch: str) -> tuple[int | None, str | None]:
+        """Get PR number and URL using gh CLI."""
+        result = subprocess.run(
+            ["gh", "pr", "list", "--head", branch, "--json", "number,url"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return (None, None)
+
+        data = json.loads(result.stdout)
+        if not data:
+            return (None, None)
+
+        pr = data[0]
+        return (pr["number"], pr["url"])
+
+    def get_pr_mergeability(self, pr_number: int) -> tuple[str, str]:
+        """Get PR mergeability using gh API."""
+        result = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"repos/{{owner}}/{{repo}}/pulls/{pr_number}",
+                "--jq",
+                ".mergeable,.mergeable_state",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return ("UNKNOWN", "UNKNOWN")
+
+        lines = result.stdout.strip().split("\n")
+        mergeable = lines[0] if len(lines) > 0 else "null"
+        merge_state = lines[1] if len(lines) > 1 else "unknown"
+
+        # Convert to GitHub GraphQL enum format
+        if mergeable == "true":
+            return ("MERGEABLE", merge_state.upper())
+        if mergeable == "false":
+            return ("CONFLICTING", merge_state.upper())
+        return ("UNKNOWN", "UNKNOWN")
+
 
 class RealGtKit(GtKit):
     """Real composite operations implementation.

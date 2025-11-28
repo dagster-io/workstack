@@ -55,6 +55,7 @@ Examples:
 import json
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -71,6 +72,7 @@ from erk_shared.impl_folder import (
 )
 from erk_shared.integrations.gt.abc import GtKit
 from erk_shared.integrations.gt.real import RealGtKit
+from erk_shared.integrations.gt.types import CommandResult
 
 
 class SubmitResult(NamedTuple):
@@ -585,6 +587,52 @@ Use the Read tool to load the diff file."""
             pass  # Ignore cleanup errors
 
 
+def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:
+    """Run gt submit with descriptive progress markers.
+
+    Displays periodic progress updates during the long-running gt submit
+    operation to reassure users the process is still active.
+    """
+    start_time = time.time()
+    result_holder: list[CommandResult] = []
+
+    # Run submit in background thread
+    def run_submit():
+        result_holder.append(ops.graphite().submit(publish=True, restack=True))
+
+    thread = threading.Thread(target=run_submit, daemon=True)
+    thread.start()
+
+    # Progress markers: (threshold_seconds, description)
+    progress_markers = [
+        (15, "Syncing with remote"),
+        (30, "Rebasing stack"),
+        (45, "Pushing branches"),
+        (60, "Finalizing"),
+    ]
+
+    marker_idx = 0
+
+    # Monitor progress and show markers
+    while thread.is_alive():
+        elapsed = time.time() - start_time
+
+        # Show next marker if threshold reached
+        if marker_idx < len(progress_markers):
+            threshold, description = progress_markers[marker_idx]
+            if elapsed >= threshold:
+                click.echo(
+                    click.style(f"  ... [{int(elapsed)}s] {description}", dim=True),
+                    err=True,
+                )
+                marker_idx += 1
+
+        # Check every second
+        thread.join(timeout=1.0)
+
+    return result_holder[0]
+
+
 def orchestrate_submit_workflow(
     ops: GtKit | None = None,
 ) -> PostAnalysisResult | PostAnalysisError | PreAnalysisError:
@@ -621,10 +669,12 @@ def orchestrate_submit_workflow(
 
     # Step 2: Submit branch FIRST (with existing commit message)
     click.echo("🚀 Submitting PR...", err=True)
+    submit_start = time.time()
     submit_result = _execute_submit_only(ops)
     if isinstance(submit_result, PostAnalysisError):
         return submit_result
-    click.echo("✓ Branch submitted", err=True)
+    submit_elapsed = int(time.time() - submit_start)
+    click.echo(f"✓ Branch submitted ({submit_elapsed}s)", err=True)
 
     pr_number, pr_url, graphite_url, branch_name = submit_result
 
@@ -749,8 +799,8 @@ def _execute_submit_only(
     branch_name = ops.git().get_current_branch() or "unknown"
 
     # Submit branch
-    click.echo("  ↳ Running gt submit (this may take a moment)...", err=True)
-    result = ops.graphite().submit(publish=True, restack=True)
+    click.echo("  ↳ Running gt submit --restack (typically 60-90s)...", err=True)
+    result = _run_gt_submit_with_progress(ops)
 
     # Check for empty parent branch
     combined_output = result.stdout + result.stderr

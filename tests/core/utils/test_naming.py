@@ -168,7 +168,7 @@ def test_extract_trailing_number(
 
 
 def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
-    """Test first-time worktree creation gets only date suffix."""
+    """Test first-time worktree creation gets only datetime suffix."""
     from erk_shared.git.real import RealGit
 
     repo_dir = tmp_path / "erks"
@@ -177,20 +177,20 @@ def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
     git_ops = RealGit()
     result = ensure_unique_worktree_name("my-feature", repo_dir, git_ops)
 
-    # Should have date suffix in format -YY-MM-DD
-    date_suffix = datetime.now().strftime("%y-%m-%d")
+    # Should have datetime suffix in format -YY-MM-DD-HHMM
+    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
     assert result == f"my-feature-{date_suffix}"
     assert not (repo_dir / result).exists()
 
 
-def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
-    """Test duplicate worktree on same day adds -2 after date suffix."""
+def test_ensure_unique_worktree_name_duplicate_same_minute(tmp_path: Path) -> None:
+    """Test duplicate worktree in same minute adds -2 after datetime suffix."""
     from erk_shared.git.real import RealGit
 
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
-    date_suffix = datetime.now().strftime("%y-%m-%d")
+    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
     existing_name = f"my-feature-{date_suffix}"
     (repo_dir / existing_name).mkdir()
 
@@ -209,7 +209,7 @@ def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
-    date_suffix = datetime.now().strftime("%y-%m-%d")
+    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
     (repo_dir / f"my-feature-{date_suffix}").mkdir()
     (repo_dir / f"my-feature-{date_suffix}-2").mkdir()
     (repo_dir / f"my-feature-{date_suffix}-3").mkdir()
@@ -228,10 +228,10 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     repo_dir.mkdir()
 
     git_ops = RealGit()
-    date_suffix = datetime.now().strftime("%y-%m-%d")
+    date_suffix = datetime.now().strftime("%y-%m-%d-%H%M")
     result = ensure_unique_worktree_name("fix-v3", repo_dir, git_ops)
 
-    # Base name has number, should preserve it in date-suffixed name
+    # Base name has number, should preserve it in datetime-suffixed name
     assert result == f"fix-v3-{date_suffix}"
 
     # Create it and try again
@@ -265,8 +265,8 @@ def test_sanitize_branch_component_matches_worktree_length() -> None:
     assert len(branch) == 31
 
 
-def test_very_long_title_truncates_to_40_chars_total() -> None:
-    """Regression test: 99-char title should truncate to max 40 chars total with date suffix.
+def test_very_long_title_truncates_to_45_chars_total() -> None:
+    """Regression test: 99-char title should truncate to max 45 chars total with datetime suffix.
 
     This tests the bug fix where `erk implement` created excessively long branch names.
     Example: "refactor erk implement command to support interactive and
@@ -284,10 +284,10 @@ def test_very_long_title_truncates_to_40_chars_total() -> None:
     base_name = sanitize_worktree_name(long_title)
     assert len(base_name) <= 31
 
-    # With date suffix (-YY-MM-DD = 9 chars including hyphen), total should be <= 40 chars
-    date_suffix = "25-11-23"
+    # With datetime suffix (-YY-MM-DD-HHMM = 14 chars including hyphen), total should be <= 45 chars
+    date_suffix = "25-11-23-1430"
     name_with_date = f"{base_name}-{date_suffix}"
-    assert len(name_with_date) <= 40
+    assert len(name_with_date) <= 45
 
     # Verify the base name is correctly truncated (30 chars after rstrip of trailing hyphen)
     assert base_name == "refactor-erk-implement-command"

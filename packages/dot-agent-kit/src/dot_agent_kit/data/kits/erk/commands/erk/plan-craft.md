@@ -77,11 +77,25 @@ Validate prerequisites:
 - Verify git repository: `git rev-parse --is-inside-work-tree`
 - Verify GitHub CLI: `gh auth status`
 
-Save the plan to GitHub:
+**Extract the plan file path from the Plan Mode system message.** Look for text like:
+
+```
+You should create your plan at /path/to/plan.md
+```
+
+or
+
+```
+A plan file already exists at /path/to/plan.md
+```
+
+Save the plan to GitHub using the explicit path:
 
 ```bash
-result=$(dot-agent run erk plan-save-to-issue --format json 2>&1)
+result=$(dot-agent run erk plan-save-to-issue --format json --plan-file <PLAN_FILE_PATH> 2>&1)
 ```
+
+Where `<PLAN_FILE_PATH>` is the path extracted above.
 
 Parse the result and display:
 

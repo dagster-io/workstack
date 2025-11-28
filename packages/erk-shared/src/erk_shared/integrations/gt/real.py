@@ -11,11 +11,9 @@ Design:
 - RealGtKitOps composes all three real implementations
 """
 
-import json
 import subprocess
 
-from erk_shared.github.abc import GitHub
-from erk_shared.github.parsing import parse_gh_auth_status_output
+from erk_shared.github.real import RealGitHub
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
 from erk_shared.integrations.gt.github_adapter import GitHubAdapter
 from erk_shared.integrations.gt.types import CommandResult
@@ -337,192 +335,17 @@ class RealGraphiteGtKit(GraphiteGtKit):
         return (True, username, repo_info)
 
 
-class RealGitHubGtKit(GitHubGtKit):
-    """Real GitHub operations using subprocess."""
-
-    def get_pr_info(self) -> tuple[int, str] | None:
-        """Get PR number and URL using gh pr view."""
-        result = _run_subprocess_with_timeout(
-            ["gh", "pr", "view", "--json", "number,url"],
-            timeout=10,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result is None or result.returncode != 0:
-            return None
-
-        data = json.loads(result.stdout)
-        return (data["number"], data["url"])
-
-    def get_pr_state(self) -> tuple[int, str] | None:
-        """Get PR number and state using gh pr view."""
-        result = _run_subprocess_with_timeout(
-            ["gh", "pr", "view", "--json", "state,number"],
-            timeout=10,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result is None or result.returncode != 0:
-            return None
-
-        data = json.loads(result.stdout)
-        return (data["number"], data["state"])
-
-    def update_pr_metadata(self, title: str, body: str) -> bool:
-        """Update PR title and body using gh pr edit."""
-        result = _run_subprocess_with_timeout(
-            ["gh", "pr", "edit", "--title", title, "--body", body],
-            timeout=30,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result is None:
-            return False
-
-        return result.returncode == 0
-
-    def mark_pr_ready(self) -> bool:
-        """Mark PR as ready for review using gh pr ready."""
-        result = subprocess.run(
-            ["gh", "pr", "ready"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.returncode == 0
-
-    def merge_pr(self) -> bool:
-        """Merge the PR using squash merge with gh pr merge."""
-        result = subprocess.run(
-            ["gh", "pr", "merge", "-s"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.returncode == 0
-
-    def get_graphite_pr_url(self, pr_number: int) -> str | None:
-        """Get Graphite PR URL using gh repo view."""
-        result = _run_subprocess_with_timeout(
-            ["gh", "repo", "view", "--json", "owner,name"],
-            timeout=10,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result is None or result.returncode != 0:
-            return None
-
-        data = json.loads(result.stdout)
-        owner = data["owner"]["login"]
-        repo = data["name"]
-
-        return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
-
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Check GitHub CLI authentication status.
-
-        Runs `gh auth status` and parses the output to determine authentication status.
-        """
-        result = subprocess.run(
-            ["gh", "auth", "status"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        # gh auth status returns non-zero if not authenticated
-        if result.returncode != 0:
-            return (False, None, None)
-
-        output = result.stdout + result.stderr
-        return parse_gh_auth_status_output(output)
-
-    def get_pr_diff(self, pr_number: int) -> str:
-        """Get the diff for a PR using gh pr diff."""
-        result = subprocess.run(
-            ["gh", "pr", "diff", str(pr_number)],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout
-
-    def get_pr_status(self, branch: str) -> tuple[int | None, str | None]:
-        """Get PR number and URL using gh CLI."""
-        result = subprocess.run(
-            ["gh", "pr", "list", "--head", branch, "--json", "number,url"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            return (None, None)
-
-        data = json.loads(result.stdout)
-        if not data:
-            return (None, None)
-
-        pr = data[0]
-        return (pr["number"], pr["url"])
-
-    def get_pr_mergeability(self, pr_number: int) -> tuple[str, str]:
-        """Get PR mergeability using gh API."""
-        result = subprocess.run(
-            [
-                "gh",
-                "api",
-                f"repos/{{owner}}/{{repo}}/pulls/{pr_number}",
-                "--jq",
-                ".mergeable,.mergeable_state",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            return ("UNKNOWN", "UNKNOWN")
-
-        lines = result.stdout.strip().split("\n")
-        mergeable = lines[0] if len(lines) > 0 else "null"
-        merge_state = lines[1] if len(lines) > 1 else "unknown"
-
-        # Convert to GitHub GraphQL enum format
-        if mergeable == "true":
-            return ("MERGEABLE", merge_state.upper())
-        if mergeable == "false":
-            return ("CONFLICTING", merge_state.upper())
-        return ("UNKNOWN", "UNKNOWN")
-
-
 class RealGtKit(GtKit):
     """Real composite operations implementation.
 
     Combines real git, Graphite, and GitHub operations for production use.
     """
 
-    def __init__(self, github: GitHub | None = None) -> None:
-        """Initialize real operations instances.
-
-        Args:
-            github: Optional GitHub ABC implementation for dependency injection.
-                   If provided, uses GitHubAdapter to wrap it for GitHubGtKit interface.
-                   If None, uses RealGitHubGtKit for backward compatibility.
-        """
+    def __init__(self) -> None:
+        """Initialize real operations instances."""
         self._git = RealGitGtKit()
         self._graphite = RealGraphiteGtKit()
-
-        if github is None:
-            self._github: GitHubGtKit = RealGitHubGtKit()
-        else:
-            self._github = GitHubAdapter(github, self._git)
+        self._github = GitHubAdapter(RealGitHub(), self._git)
 
     def git(self) -> GitGtKit:
         """Get the git operations interface."""

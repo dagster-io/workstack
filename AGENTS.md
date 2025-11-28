@@ -13,6 +13,8 @@
 
 **CRITICAL: NEVER use raw `pip install`. Always use `uv` for package management.**
 
+**CRITICAL: NEVER commit directly to `master`. Always create a feature branch first.**
+
 **Load these skills FIRST:**
 
 - **Python code** → `dignified-python-313` skill (LBYL, modern types, ABC interfaces)

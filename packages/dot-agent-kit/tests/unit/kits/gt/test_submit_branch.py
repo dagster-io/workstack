@@ -7,11 +7,14 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+    ERK_COMMIT_MESSAGE_MARKER,
     PostAnalysisError,
     PostAnalysisResult,
     PreAnalysisError,
     PreAnalysisResult,
     _branch_name_to_title,
+    _is_valid_commit_message,
+    _strip_commit_message_marker,
     build_pr_metadata_section,
     execute_post_analysis,
     execute_pre_analysis,
@@ -75,6 +78,81 @@ class TestBranchNameToTitle:
     def test_capitalizes_first_letter(self) -> None:
         """Test that only the first letter is capitalized."""
         assert _branch_name_to_title("UPPERCASE-BRANCH") == "Uppercase branch"
+
+
+class TestIsValidCommitMessage:
+    """Tests for _is_valid_commit_message() function.
+
+    This function validates that the output contains the erk-generated commit
+    message marker, providing deterministic validation.
+    """
+
+    def test_valid_message_with_marker(self) -> None:
+        """Test that a message with the marker is accepted."""
+        message = f"Add user authentication feature\n\n{ERK_COMMIT_MESSAGE_MARKER}"
+        assert _is_valid_commit_message(message)
+
+    def test_valid_message_with_marker_in_middle(self) -> None:
+        """Test that marker in middle of message is accepted."""
+        message = f"Title\n\nBody text\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\nMore text"
+        assert _is_valid_commit_message(message)
+
+    def test_rejects_message_without_marker(self) -> None:
+        """Test that a message without the marker is rejected."""
+        assert not _is_valid_commit_message("Add user authentication feature")
+        assert not _is_valid_commit_message("feat: add login functionality")
+        assert not _is_valid_commit_message("")
+
+    def test_rejects_permission_request_without_marker(self) -> None:
+        """Test that permission requests (without marker) are rejected."""
+        # This is the pattern from PR #1478 where Claude asked for permission
+        permission_request = (
+            "I need permission to read that file. "
+            "Could you either:\n"
+            "1. Grant me permission to read files from `/tmp/`\n"
+            "2. Or share the diff content directly?"
+        )
+        assert not _is_valid_commit_message(permission_request)
+
+    def test_marker_constant_value(self) -> None:
+        """Test that the marker constant has the expected value."""
+        assert ERK_COMMIT_MESSAGE_MARKER == "<!-- erk-generated commit message -->"
+
+
+class TestStripCommitMessageMarker:
+    """Tests for _strip_commit_message_marker() function."""
+
+    def test_strips_marker_at_end(self) -> None:
+        """Test that marker at end of message is stripped."""
+        message = f"Add feature\n\nBody text\n\n{ERK_COMMIT_MESSAGE_MARKER}"
+        result = _strip_commit_message_marker(message)
+        assert result == "Add feature\n\nBody text"
+
+    def test_strips_marker_on_own_line(self) -> None:
+        """Test that marker on its own line is stripped."""
+        message = f"Title\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\nBody"
+        result = _strip_commit_message_marker(message)
+        # Marker line removed, empty lines before/after preserved
+        assert result == "Title\n\n\nBody"
+
+    def test_preserves_content_without_marker(self) -> None:
+        """Test that content without marker is preserved."""
+        message = "Title\n\nBody text"
+        result = _strip_commit_message_marker(message)
+        assert result == "Title\n\nBody text"
+
+    def test_strips_trailing_whitespace(self) -> None:
+        """Test that trailing whitespace after stripping is removed."""
+        message = f"Title\n\n{ERK_COMMIT_MESSAGE_MARKER}\n\n"
+        result = _strip_commit_message_marker(message)
+        assert result == "Title"
+
+    def test_handles_marker_with_surrounding_whitespace(self) -> None:
+        """Test that marker with surrounding whitespace on line is stripped."""
+        message = f"Title\n\n  {ERK_COMMIT_MESSAGE_MARKER}  \n\nBody"
+        result = _strip_commit_message_marker(message)
+        # Marker line (with whitespace) removed, empty lines preserved
+        assert result == "Title\n\n\nBody"
 
 
 class TestBuildPRMetadataSection:
@@ -1627,7 +1705,9 @@ class TestInvokeCommitMessageAgentTempFile:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "Test commit message\n\nTest description"
+        mock_result.stdout = (
+            f"Test commit message\n\nTest description\n\n{ERK_COMMIT_MESSAGE_MARKER}"
+        )
         mock_result.stderr = ""
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
@@ -1640,7 +1720,7 @@ class TestInvokeCommitMessageAgentTempFile:
             assert "--agents" in call_args
             assert "commit-message-generator" in call_args
 
-            # Verify result
+            # Verify result (marker is stripped)
             assert result == "Test commit message\n\nTest description"
 
     def test_cleans_up_temp_file_on_success(self, tmp_path: Path) -> None:
@@ -1662,7 +1742,7 @@ class TestInvokeCommitMessageAgentTempFile:
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = "Test commit"
+        mock_result.stdout = f"Add feature for testing cleanup\n\n{ERK_COMMIT_MESSAGE_MARKER}"
         mock_result.stderr = ""
 
         temp_files_created = []
@@ -1769,6 +1849,256 @@ class TestInvokeCommitMessageAgentTempFile:
         with patch("subprocess.run", return_value=mock_result):
             with pytest.raises(RuntimeError, match="Agent returned no output"):
                 _invoke_commit_message_agent(diff_context)
+
+    def test_raises_runtime_error_on_invalid_commit_message(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when agent returns invalid commit message.
+
+        This catches the case where Claude returns a permission request instead of
+        a commit message (the bug that caused PR #1478).
+        """
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        # Simulate Claude asking for permission instead of generating commit message
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = (
+            "I need permission to read that file. Could you either:\n"
+            "1. Grant me permission to read files from `/tmp/`\n"
+            "2. Or share the diff content directly?"
+        )
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="did not return a valid commit message"):
+                _invoke_commit_message_agent(diff_context)
+
+    def test_raises_runtime_error_on_question_first_line(self, tmp_path: Path) -> None:
+        """Test that RuntimeError is raised when first line is a question."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            DiffContextResult,
+            _invoke_commit_message_agent,
+        )
+
+        diff_context = DiffContextResult(
+            success=True,
+            repo_root=str(tmp_path),
+            current_branch="feature",
+            parent_branch="main",
+            diff="test diff",
+        )
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Could you grant me permission to read /tmp/file.diff?"
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="did not return a valid commit message"):
+                _invoke_commit_message_agent(diff_context)
+
+
+class TestExecutePreflight:
+    """Tests for execute_preflight() function."""
+
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_preflight_success(self, mock_sleep: Mock) -> None:
+        """Test successful preflight execution."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PreflightResult,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PreflightResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.pr_url == "https://github.com/org/repo/pull/123"
+        assert result.branch_name == "feature-branch"
+        assert result.diff_file.startswith("/tmp/")
+        assert result.diff_file.endswith(".diff")
+        assert result.current_branch == "feature-branch"
+        assert result.parent_branch == "main"
+
+        # Clean up temp file
+        import os
+
+        if os.path.exists(result.diff_file):
+            os.unlink(result.diff_file)
+
+    def test_preflight_pre_analysis_error(self) -> None:
+        """Test preflight returns error when pre-analysis fails."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PreAnalysisError,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_gt_unauthenticated()
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "gt_not_authenticated"
+
+    @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_preflight_submit_error(self, mock_sleep: Mock) -> None:
+        """Test preflight returns error when submit fails."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            PostAnalysisError,
+            execute_preflight,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_submit_failure(stdout="", stderr="submit failed")
+        )
+
+        result = execute_preflight(ops)
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "submit_failed"
+
+
+class TestExecuteFinalize:
+    """Tests for execute_finalize() function."""
+
+    def test_finalize_success(self) -> None:
+        """Test successful finalize execution."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_finalize(
+            pr_number=123,
+            pr_title="Add new feature",
+            pr_body="This adds a great new feature",
+            diff_file=None,
+            ops=ops,
+        )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.pr_title == "Add new feature"
+        assert result.branch_name == "feature-branch"
+
+        # Verify PR was updated
+        github_state = ops.github().get_state()
+        assert github_state.pr_titles[123] == "Add new feature"
+        assert "This adds a great new feature" in github_state.pr_bodies[123]
+
+    def test_finalize_cleans_up_diff_file(self, tmp_path: Path) -> None:
+        """Test that finalize cleans up the temp diff file."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        # Create a temp diff file
+        diff_file = tmp_path / "test.diff"
+        diff_file.write_text("test diff content", encoding="utf-8")
+        assert diff_file.exists()
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        result = execute_finalize(
+            pr_number=123,
+            pr_title="Add feature",
+            pr_body="Description",
+            diff_file=str(diff_file),
+            ops=ops,
+        )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        # Diff file should be cleaned up
+        assert not diff_file.exists()
+
+    def test_finalize_with_issue_reference(self, tmp_path: Path) -> None:
+        """Test finalize includes metadata when issue reference exists."""
+        from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
+            FinalizeResult,
+            execute_finalize,
+        )
+
+        # Create .impl/issue.json
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 456, "issue_url": "https://github.com/repo/issues/456", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}',
+            encoding="utf-8",
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/org/repo/pull/123")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_finalize(
+                pr_number=123,
+                pr_title="Add feature",
+                pr_body="Description",
+                diff_file=None,
+                ops=ops,
+            )
+
+        assert isinstance(result, FinalizeResult)
+        assert result.success is True
+        assert result.issue_number == 456
+
+        # Verify PR body includes metadata
+        github_state = ops.github().get_state()
+        pr_body = github_state.pr_bodies[123]
+        assert "- **Plan:** [#456](https://github.com/repo/issues/456)" in pr_body
+        assert "Closes #456" in pr_body
+        assert "Description" in pr_body
 
 
 class TestOrchestrateWorkflowClaudeValidation:

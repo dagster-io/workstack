@@ -228,7 +228,7 @@ class RealGraphiteGtKit(GraphiteGtKit):
     def squash_commits(self) -> CommandResult:
         """Run gt squash to consolidate commits."""
         result = subprocess.run(
-            ["gt", "squash", "--no-interactive"],
+            ["gt", "squash", "--no-edit", "--no-interactive"],
             capture_output=True,
             text=True,
             check=False,

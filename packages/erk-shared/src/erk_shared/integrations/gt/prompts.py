@@ -11,7 +11,7 @@ def _load_prompt(filename: str) -> str:
 
 COMMIT_MESSAGE_SYSTEM_PROMPT = _load_prompt("commit_message_prompt.txt")
 
-MAX_DIFF_CHARS = 100_000  # ~30K tokens
+MAX_DIFF_CHARS = 1_000_000  # ~300K tokens - supports very large PRs
 
 
 def truncate_diff(diff: str, max_chars: int = MAX_DIFF_CHARS) -> tuple[str, bool]:

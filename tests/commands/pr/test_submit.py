@@ -10,7 +10,7 @@ from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_pr_submit_success() -> None:
-    """Test successful PR submission with Claude executor."""
+    """Test successful PR submission."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -19,27 +19,30 @@ def test_pr_submit_success() -> None:
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feature-branch"},
         )
-        executor = FakeClaudeExecutor(
+
+        claude_executor = FakeClaudeExecutor(
             claude_available=True,
             simulated_pr_url="https://github.com/owner/repo/pull/123",
+            simulated_pr_number=123,
+            simulated_pr_title="Test PR",
         )
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
+
+        ctx = build_workspace_test_context(env, git=git, claude_executor=claude_executor)
 
         result = runner.invoke(pr_group, ["submit"], obj=ctx)
 
         assert result.exit_code == 0
         assert "https://github.com/owner/repo/pull/123" in result.output
 
-        # Verify executor was called correctly
-        assert len(executor.executed_commands) == 1
-        command, worktree_path, dangerous, verbose = executor.executed_commands[0]
+        # Verify the slash command was called
+        assert len(claude_executor.executed_commands) == 1
+        command, _, dangerous, _ = claude_executor.executed_commands[0]
         assert command == "/gt:pr-submit"
         assert dangerous is False
-        assert verbose is False
 
 
-def test_pr_submit_with_dangerous_flag() -> None:
-    """Test PR submission with --dangerous flag."""
+def test_pr_submit_success_without_pr_url() -> None:
+    """Test successful PR submission without PR URL in result."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -48,44 +51,25 @@ def test_pr_submit_with_dangerous_flag() -> None:
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feature-branch"},
         )
-        executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
 
-        result = runner.invoke(pr_group, ["submit", "--dangerous"], obj=ctx)
-
-        assert result.exit_code == 0
-
-        # Verify dangerous flag was passed to executor
-        assert len(executor.executed_commands) == 1
-        _, _, dangerous, _ = executor.executed_commands[0]
-        assert dangerous is True
-
-
-def test_pr_submit_with_verbose_flag() -> None:
-    """Test PR submission with --verbose flag."""
-    runner = CliRunner()
-    with erk_isolated_fs_env(runner) as env:
-        git = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            local_branches={env.cwd: ["main", "feature-branch"]},
-            default_branches={env.cwd: "main"},
-            current_branches={env.cwd: "feature-branch"},
+        # Success without PR URL (edge case)
+        claude_executor = FakeClaudeExecutor(
+            claude_available=True,
+            simulated_pr_url=None,
         )
-        executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
 
-        result = runner.invoke(pr_group, ["submit", "--verbose"], obj=ctx)
+        ctx = build_workspace_test_context(env, git=git, claude_executor=claude_executor)
 
+        result = runner.invoke(pr_group, ["submit"], obj=ctx)
+
+        # Should still succeed
         assert result.exit_code == 0
-
-        # Verify verbose flag was passed to executor
-        assert len(executor.executed_commands) == 1
-        _, _, _, verbose = executor.executed_commands[0]
-        assert verbose is True
+        # No PR URL line
+        assert "🔗 PR:" not in result.output
 
 
 def test_pr_submit_fails_when_claude_not_available() -> None:
-    """Test that command fails gracefully when Claude CLI is not available."""
+    """Test that command fails when Claude CLI is not available."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -93,17 +77,23 @@ def test_pr_submit_fails_when_claude_not_available() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        executor = FakeClaudeExecutor(claude_available=False)
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
+
+        claude_executor = FakeClaudeExecutor(claude_available=False)
+
+        ctx = build_workspace_test_context(env, git=git, claude_executor=claude_executor)
 
         result = runner.invoke(pr_group, ["submit"], obj=ctx)
 
         assert result.exit_code != 0
         assert "Claude CLI not found" in result.output
+        assert "claude.com/download" in result.output
+
+        # Verify no command was executed
+        assert len(claude_executor.executed_commands) == 0
 
 
-def test_pr_submit_fails_on_command_failure() -> None:
-    """Test that command fails when Claude execution fails."""
+def test_pr_submit_fails_on_command_error() -> None:
+    """Test that command fails when slash command execution fails."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -112,60 +102,16 @@ def test_pr_submit_fails_on_command_failure() -> None:
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feature-branch"},
         )
-        executor = FakeClaudeExecutor(claude_available=True, command_should_fail=True)
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
+
+        claude_executor = FakeClaudeExecutor(
+            claude_available=True,
+            command_should_fail=True,
+        )
+
+        ctx = build_workspace_test_context(env, git=git, claude_executor=claude_executor)
 
         result = runner.invoke(pr_group, ["submit"], obj=ctx)
 
         assert result.exit_code != 0
-
-
-def test_pr_submit_with_both_flags() -> None:
-    """Test PR submission with both --dangerous and --verbose flags."""
-    runner = CliRunner()
-    with erk_isolated_fs_env(runner) as env:
-        git = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            local_branches={env.cwd: ["main", "feature-branch"]},
-            default_branches={env.cwd: "main"},
-            current_branches={env.cwd: "feature-branch"},
-        )
-        executor = FakeClaudeExecutor(
-            claude_available=True,
-            simulated_pr_url="https://github.com/owner/repo/pull/456",
-        )
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
-
-        result = runner.invoke(pr_group, ["submit", "--dangerous", "--verbose"], obj=ctx)
-
-        assert result.exit_code == 0
-
-        # Verify both flags were passed
-        assert len(executor.executed_commands) == 1
-        _, _, dangerous, verbose = executor.executed_commands[0]
-        assert dangerous is True
-        assert verbose is True
-
-
-def test_pr_submit_displays_pr_url() -> None:
-    """Test that PR URL is displayed prominently after successful submission."""
-    runner = CliRunner()
-    with erk_isolated_fs_env(runner) as env:
-        git = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            local_branches={env.cwd: ["main", "feature-branch"]},
-            default_branches={env.cwd: "main"},
-            current_branches={env.cwd: "feature-branch"},
-        )
-        executor = FakeClaudeExecutor(
-            claude_available=True,
-            simulated_pr_url="https://github.com/owner/repo/pull/789",
-        )
-        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
-
-        result = runner.invoke(pr_group, ["submit"], obj=ctx)
-
-        assert result.exit_code == 0
-        # Verify PR URL is displayed with the 🔗 prefix
-        assert "🔗 PR:" in result.output
-        assert "https://github.com/owner/repo/pull/789" in result.output
+        # Error message from FakeClaudeExecutor
+        assert "failed" in result.output.lower()

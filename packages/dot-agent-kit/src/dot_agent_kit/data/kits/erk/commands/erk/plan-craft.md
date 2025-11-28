@@ -38,11 +38,22 @@ Then:
 1. Explore the codebase to understand context
 2. Ask clarifying questions as needed
 3. Create a structured implementation plan
-4. When the plan is complete, tell the user you're ready to save it
+4. When the plan is complete, tell the user:
+
+> The plan is ready! When you confirm to proceed, I will save this plan to GitHub as an issue.
+>
+> Note: This will NOT implement the code yet. Implementation happens separately with:
+> erk implement [issue_number]
+>
+> Ready to save the plan?
 
 ### Phase 3: Exit Plan Mode
 
 When the user confirms the plan is ready, **use the ExitPlanMode tool**.
+
+**IMPORTANT WORKFLOW NOTE:**
+
+In this command, exiting Plan Mode returns control back to this command to execute Phase 4 (saving to GitHub). Unlike standard Plan Mode workflows where exiting leads to implementation, here the ExitPlanMode is an intermediate step—not the final step.
 
 The plan will be saved to `~/.claude/plans/` automatically.
 

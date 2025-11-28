@@ -1,5 +1,0 @@
-{
-  "number": 1401,
-  "url": "https://github.com/dagster-io/erk/issues/1401",
-  "title": "Fix: CI workflows not triggered after dispatch workflow"
-}

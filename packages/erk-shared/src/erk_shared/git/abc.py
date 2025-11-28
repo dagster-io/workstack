@@ -476,3 +476,105 @@ class Git(ABC):
             subprocess.CalledProcessError: If git command fails
         """
         ...
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    @abstractmethod
+    def add_all(self, cwd: Path) -> bool:
+        """Stage all changes for commit.
+
+        Args:
+            cwd: Working directory
+
+        Returns:
+            True on success, False on failure
+        """
+        ...
+
+    @abstractmethod
+    def commit(self, cwd: Path, message: str) -> bool:
+        """Create a commit with the given message.
+
+        Args:
+            cwd: Working directory
+            message: Commit message
+
+        Returns:
+            True on success, False on failure
+        """
+        ...
+
+    @abstractmethod
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """Amend the current commit with a new message.
+
+        Args:
+            cwd: Working directory
+            message: New commit message
+
+        Returns:
+            True on success, False on failure
+        """
+        ...
+
+    @abstractmethod
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits in current branch compared to parent.
+
+        Args:
+            cwd: Working directory
+            parent_branch: Name of the parent branch
+
+        Returns:
+            Number of commits, 0 if command fails
+        """
+        ...
+
+    @abstractmethod
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get the absolute path to the repository root.
+
+        Args:
+            cwd: Working directory
+
+        Returns:
+            Absolute path to repo root
+
+        Raises:
+            subprocess.CalledProcessError: If not in a git repository
+        """
+        ...
+
+    @abstractmethod
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD.
+
+        Args:
+            cwd: Working directory
+            parent_branch: Name of the parent branch
+
+        Returns:
+            Full diff output as string
+
+        Raises:
+            subprocess.CalledProcessError: If diff command fails
+        """
+        ...
+
+    @abstractmethod
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check if merging head_branch into base_branch would have conflicts.
+
+        Uses git merge-tree to simulate merge without touching working tree.
+
+        Args:
+            cwd: Working directory
+            base_branch: Base branch name (e.g., "master", "main")
+            head_branch: Head branch name (current branch)
+
+        Returns:
+            True if conflicts detected, False otherwise
+        """
+        ...

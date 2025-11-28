@@ -5,7 +5,7 @@ from pathlib import Path
 
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 
 
 class Graphite(ABC):
@@ -205,3 +205,60 @@ class Graphite(ABC):
         if branch not in all_branches:
             return []
         return all_branches[branch].children
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    @abstractmethod
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Run gt restack and capture the result.
+
+        Similar to restack() but returns CommandResult instead of raising on error.
+        Used by CLI commands that need to handle restack failures gracefully.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        ...
+
+    @abstractmethod
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Run gt squash to consolidate commits.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status and output
+        """
+        ...
+
+    @abstractmethod
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Run gt submit to create or update PR.
+
+        Args:
+            repo_root: Repository root directory
+            publish: Whether to use --publish flag
+            restack: Whether to use --restack flag
+
+        Returns:
+            CommandResult with success status and output
+        """
+        ...
+
+    @abstractmethod
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Navigate to child branch using gt up.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            True on success, False on failure
+        """
+        ...

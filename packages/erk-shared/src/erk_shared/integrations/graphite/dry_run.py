@@ -5,7 +5,7 @@ from pathlib import Path
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.integrations.graphite.abc import Graphite
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 
 
 class DryRunGraphite(Graphite):
@@ -73,3 +73,23 @@ class DryRunGraphite(Graphite):
     def check_auth_status(self) -> tuple[bool, str | None, str | None]:
         """Check authentication status (read-only, delegates to wrapped)."""
         return self._wrapped.check_auth_status()
+
+    # ==========================================================================
+    # Methods for GT kit commands (from consolidation of integrations/gt/)
+    # ==========================================================================
+
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """No-op for gt restack in dry-run mode."""
+        return CommandResult(success=True, stdout="[DRY RUN] Would run: gt restack", stderr="")
+
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """No-op for gt squash in dry-run mode."""
+        return CommandResult(success=True, stdout="[DRY RUN] Would run: gt squash", stderr="")
+
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """No-op for gt submit in dry-run mode."""
+        return CommandResult(success=True, stdout="[DRY RUN] Would run: gt submit", stderr="")
+
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """No-op for gt up in dry-run mode."""
+        return True

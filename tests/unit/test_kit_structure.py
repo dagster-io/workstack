@@ -92,7 +92,7 @@ def test_gt_kit_cli_commands_are_shims() -> None:
         / "src"
         / "erk_shared"
         / "integrations"
-        / "gt"
+        / "graphite"
         / "kit_cli_commands"
         / "gt"
     )
@@ -114,7 +114,7 @@ def test_gt_kit_cli_commands_are_shims() -> None:
 
         # Verify it's a shim by checking for re-export pattern
         content = shim_file.read_text()
-        assert "from erk_shared.integrations.gt" in content, (
+        assert "from erk_shared.integrations.graphite" in content, (
             f"{filename} should be a shim re-exporting from erk-shared"
         )
 

@@ -6,10 +6,31 @@ generation business logic.
 """
 
 from erk_shared.git.abc import WorktreeInfo
+from erk_shared.integrations.graphite.fake import FakeGraphite
+from erk_shared.integrations.graphite.types import BranchMetadata
 
 from erk.cli.commands.checkout import _perform_checkout
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
+
+
+def _graphite_with_branch_tracked(branch: str, parent: str = "main") -> FakeGraphite:
+    """Create a FakeGraphite with a branch already tracked.
+
+    This prevents the _ensure_graphite_tracking() function from prompting
+    for confirmation, making direct _perform_checkout() calls possible.
+    """
+    return FakeGraphite(
+        branches={
+            branch: BranchMetadata(
+                name=branch,
+                parent=parent,
+                children=[],
+                is_trunk=False,
+                commit_sha=None,
+            )
+        }
+    )
 
 
 def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
@@ -340,7 +361,9 @@ def test_message_non_script_mode_case_1() -> None:
             default_branches={env.cwd: "main"},
         )
 
-        test_ctx = env.build_context(git=git_ops, cwd=feature_wt)
+        # Pre-track branch to avoid confirmation prompt in non-script mode
+        graphite = _graphite_with_branch_tracked("feature-1")
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, cwd=feature_wt)
 
         # Capture stderr (where user_output writes)
         captured_stderr = StringIO()
@@ -395,7 +418,9 @@ def test_message_non_script_mode_case_4() -> None:
             default_branches={env.cwd: "main"},
         )
 
-        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
+        # Pre-track branch to avoid confirmation prompt in non-script mode
+        graphite = _graphite_with_branch_tracked("new-feature")
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, cwd=env.cwd)
 
         # Capture stderr (where user_output writes)
         captured_stderr = StringIO()

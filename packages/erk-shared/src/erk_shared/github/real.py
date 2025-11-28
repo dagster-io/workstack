@@ -22,28 +22,6 @@ from erk_shared.github.types import (
 )
 
 
-def _run_subprocess_with_timeout(
-    cmd: list[str],
-    timeout: int = 30,
-    capture_output: bool = True,
-    text: bool = True,
-    check: bool = False,
-    cwd: Path | None = None,
-) -> subprocess.CompletedProcess[str] | None:
-    """Run subprocess with timeout, returning None on timeout."""
-    try:
-        return subprocess.run(
-            cmd,
-            timeout=timeout,
-            capture_output=capture_output,
-            text=text,
-            check=check,
-            cwd=cwd,
-        )
-    except subprocess.TimeoutExpired:
-        return None
-
-
 class RealGitHub(GitHub):
     """Real implementation using gh CLI.
 
@@ -59,13 +37,16 @@ class RealGitHub(GitHub):
     ) -> dict[str, PullRequestInfo]:
         """Get PRs for all branches in the repository."""
         json_fields = "number,state,url,headRefName,title,isDraft"
-        result = _run_subprocess_with_timeout(
+        result = subprocess.run(
             ["gh", "pr", "list", "--state", "all", "--json", json_fields],
             timeout=30,
+            capture_output=True,
+            text=True,
+            check=False,
             cwd=repo_root,
         )
 
-        if result is None or result.returncode != 0:
+        if result.returncode != 0:
             return {}
 
         prs: dict[str, PullRequestInfo] = {}
@@ -91,13 +72,16 @@ class RealGitHub(GitHub):
 
     def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status for a specific branch."""
-        result = _run_subprocess_with_timeout(
+        result = subprocess.run(
             ["gh", "pr", "list", "--head", branch, "--json", "number,state,title"],
             timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
             cwd=repo_root,
         )
 
-        if result is None or result.returncode != 0:
+        if result.returncode != 0:
             return PRInfo("NONE", None, None)
 
         try:
@@ -115,13 +99,16 @@ class RealGitHub(GitHub):
 
     def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
         """Get base branch for a PR."""
-        result = _run_subprocess_with_timeout(
+        result = subprocess.run(
             ["gh", "pr", "view", str(pr_number), "--json", "baseRefName"],
             timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
             cwd=repo_root,
         )
 
-        if result is None or result.returncode != 0:
+        if result.returncode != 0:
             return None
 
         try:
@@ -303,14 +290,14 @@ class RealGitHub(GitHub):
 
     def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
         """Update PR title and body using gh pr edit."""
-        result = _run_subprocess_with_timeout(
+        result = subprocess.run(
             ["gh", "pr", "edit", str(pr_number), "--title", title, "--body", body],
             timeout=30,
+            capture_output=True,
+            text=True,
+            check=False,
             cwd=repo_root,
         )
-
-        if result is None:
-            return False
         return result.returncode == 0
 
     def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
@@ -326,13 +313,16 @@ class RealGitHub(GitHub):
 
     def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
         """Get Graphite PR URL by querying repository info."""
-        result = _run_subprocess_with_timeout(
+        result = subprocess.run(
             ["gh", "repo", "view", "--json", "owner,name"],
             timeout=10,
+            capture_output=True,
+            text=True,
+            check=False,
             cwd=repo_root,
         )
 
-        if result is None or result.returncode != 0:
+        if result.returncode != 0:
             return None
 
         try:

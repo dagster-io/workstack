@@ -353,3 +353,66 @@ class GitHub(ABC):
             (False, None, None)
         """
         ...
+
+    @abstractmethod
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """Update PR title and body using gh pr edit.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to update
+            title: New PR title
+            body: New PR body
+
+        Returns:
+            True on success, False on failure
+        """
+        ...
+
+    @abstractmethod
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """Mark PR as ready for review using gh pr ready.
+
+        Converts a draft PR to ready status. If PR is already ready, this is a no-op.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to mark as ready
+
+        Returns:
+            True on success, False on failure
+        """
+        ...
+
+    @abstractmethod
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get Graphite PR URL for given PR number.
+
+        Queries GitHub to get repository owner and name, then constructs
+        the Graphite URL.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number
+
+        Returns:
+            Graphite URL (e.g., "https://app.graphite.com/github/pr/owner/repo/123")
+            or None if repository info cannot be determined
+        """
+        ...
+
+    @abstractmethod
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Get the diff for a PR using gh pr diff.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to get diff for
+
+        Returns:
+            Diff content as string
+
+        Raises:
+            subprocess.CalledProcessError: If gh command fails
+        """
+        ...

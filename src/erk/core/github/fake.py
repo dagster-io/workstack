@@ -40,6 +40,7 @@ class FakeGitHub(GitHub):
         authenticated: bool = True,
         auth_username: str | None = "test-user",
         auth_hostname: str | None = "github.com",
+        pr_diffs: dict[int, str] | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -57,6 +58,7 @@ class FakeGitHub(GitHub):
             authenticated: Whether gh CLI is authenticated (default True for test convenience)
             auth_username: Username returned by check_auth_status() (default "test-user")
             auth_hostname: Hostname returned by check_auth_status() (default "github.com")
+            pr_diffs: Mapping of pr_number -> diff string for get_pr_diff()
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -95,6 +97,7 @@ class FakeGitHub(GitHub):
         self._authenticated = authenticated
         self._auth_username = auth_username
         self._auth_hostname = auth_hostname
+        self._pr_diffs = pr_diffs or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -450,3 +453,62 @@ class FakeGitHub(GitHub):
         This property is for test assertions only.
         """
         return self._check_auth_status_calls
+
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """Update PR title and body (fake always succeeds).
+
+        Records the update in mutation tracking for test assertions.
+        """
+        if not hasattr(self, "_updated_pr_metadata"):
+            self._updated_pr_metadata: list[tuple[int, str, str]] = []
+        self._updated_pr_metadata.append((pr_number, title, body))
+        return True
+
+    @property
+    def updated_pr_metadata(self) -> list[tuple[int, str, str]]:
+        """Read-only access to tracked PR metadata updates for test assertions.
+
+        Returns list of (pr_number, title, body) tuples.
+        """
+        if not hasattr(self, "_updated_pr_metadata"):
+            return []
+        return self._updated_pr_metadata
+
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """Mark PR as ready (fake always succeeds).
+
+        Records the call in mutation tracking for test assertions.
+        """
+        if not hasattr(self, "_marked_ready_prs"):
+            self._marked_ready_prs: list[int] = []
+        self._marked_ready_prs.append(pr_number)
+        return True
+
+    @property
+    def marked_ready_prs(self) -> list[int]:
+        """Read-only access to tracked mark_pr_ready calls for test assertions."""
+        if not hasattr(self, "_marked_ready_prs"):
+            return []
+        return self._marked_ready_prs
+
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Return a fake Graphite URL for test purposes."""
+        return f"https://app.graphite.com/github/pr/owner/repo/{pr_number}"
+
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Return a pre-configured diff or a default fake diff.
+
+        If pr_diffs was provided in constructor, looks up by pr_number.
+        Otherwise returns a simple default diff.
+        """
+        if pr_number in self._pr_diffs:
+            return self._pr_diffs[pr_number]
+
+        return (
+            "diff --git a/file.py b/file.py\n"
+            "--- a/file.py\n"
+            "+++ b/file.py\n"
+            "@@ -1,1 +1,1 @@\n"
+            "-old\n"
+            "+new"
+        )

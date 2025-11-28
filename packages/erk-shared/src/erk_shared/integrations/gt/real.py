@@ -14,8 +14,10 @@ Design:
 import json
 import subprocess
 
+from erk_shared.github.abc import GitHub
 from erk_shared.github.parsing import parse_gh_auth_status_output
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
+from erk_shared.integrations.gt.github_adapter import GitHubAdapter
 from erk_shared.integrations.gt.types import CommandResult
 
 
@@ -506,11 +508,21 @@ class RealGtKit(GtKit):
     Combines real git, Graphite, and GitHub operations for production use.
     """
 
-    def __init__(self) -> None:
-        """Initialize real operations instances."""
+    def __init__(self, github: GitHub | None = None) -> None:
+        """Initialize real operations instances.
+
+        Args:
+            github: Optional GitHub ABC implementation for dependency injection.
+                   If provided, uses GitHubAdapter to wrap it for GitHubGtKit interface.
+                   If None, uses RealGitHubGtKit for backward compatibility.
+        """
         self._git = RealGitGtKit()
         self._graphite = RealGraphiteGtKit()
-        self._github = RealGitHubGtKit()
+
+        if github is None:
+            self._github: GitHubGtKit = RealGitHubGtKit()
+        else:
+            self._github = GitHubAdapter(github, self._git)
 
     def git(self) -> GitGtKit:
         """Get the git operations interface."""

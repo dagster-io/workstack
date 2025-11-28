@@ -245,3 +245,39 @@ class RealGitHub(GitHub):
             "actual GitHub operations."
         )
         raise NotImplementedError(msg)
+
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)

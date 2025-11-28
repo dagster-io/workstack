@@ -54,6 +54,47 @@ def try_switch_root_worktree(ctx: ErkContext, repo: RepoContext, branch: str) ->
     return root_worktree.path
 
 
+def _ensure_graphite_tracking(
+    ctx: ErkContext,
+    repo_root: Path,
+    target_path: Path,
+    branch: str,
+    script: bool,
+) -> None:
+    """Ensure branch is tracked by Graphite (idempotent).
+
+    If the branch is not already tracked, tracks it with trunk as parent.
+    This enables branches created without Graphite (e.g., via erk-queue)
+    to be managed with Graphite locally.
+
+    Args:
+        ctx: Erk context
+        repo_root: Repository root path
+        target_path: Worktree path where `gt track` should run
+        branch: Target branch name
+        script: Whether to output only the activation script
+    """
+    trunk_branch = ctx.trunk_branch
+    # Skip if no trunk branch detected (shouldn't happen in checkout context)
+    if trunk_branch is None:
+        return
+
+    # Skip trunk branch - it's always implicitly tracked
+    if branch == trunk_branch:
+        return
+
+    # Check if already tracked (LBYL)
+    all_branches = ctx.graphite.get_all_branches(ctx.git, repo_root)
+    if branch in all_branches:
+        return  # Already tracked, nothing to do
+
+    # Track the branch with trunk as parent
+    ctx.graphite.track_branch(target_path, branch, trunk_branch)
+
+    if not script:
+        user_output(f"Tracked '{branch}' with Graphite (parent: {trunk_branch})")
+
+
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
     """Format worktree information for display.
 
@@ -103,6 +144,10 @@ def _perform_checkout(
         # Checkout the branch in the target worktree
         ctx.git.checkout_branch(target_path, branch)
 
+    # Ensure branch is tracked with Graphite (idempotent)
+    _ensure_graphite_tracking(ctx, repo_root, target_path, branch, script)
+
+    if need_checkout:
         # Show stack context
         if not script:
             stack = ctx.graphite.get_branch_stack(ctx.git, repo_root, branch)

@@ -34,20 +34,26 @@ if not submitted_by:
 ### Refactoring Plan
 
 #### Step 1: Add Ensure import
+
 Add to imports section (line 11):
+
 ```python
 from erk.cli.ensure import Ensure
 ```
 
 #### Step 2: Add authentication check at function start
+
 Add after line 63 (after `discover_repo_context`):
+
 ```python
 # Validate GitHub CLI authentication upfront (LBYL)
 Ensure.gh_authenticated(ctx)
 ```
 
 #### Step 3: Simplify username fetching
+
 Replace lines 100-114 with:
+
 ```python
 # Get GitHub username from gh CLI (authentication already validated)
 is_authenticated, username, _ = ctx.github.check_auth_status()
@@ -55,6 +61,7 @@ submitted_by = username or "unknown"
 ```
 
 **Rationale:** Since we've already validated authentication, `ctx.github.check_auth_status()` will return the username. This:
+
 - Removes subprocess call duplication (Ensure already checked via ctx.github)
 - Uses existing context integration methods
 - Maintains fallback to "unknown" if username unavailable

@@ -176,6 +176,37 @@ class DiffContextResult:
         }
 
 
+@dataclass
+class PreflightResult:
+    """Result from preflight phase (pre-analysis + submit + diff extraction)."""
+
+    success: bool
+    pr_number: int
+    pr_url: str
+    graphite_url: str
+    branch_name: str
+    diff_file: str  # Path to temp diff file
+    repo_root: str
+    current_branch: str
+    parent_branch: str
+    issue_number: int | None
+    message: str
+
+
+@dataclass
+class FinalizeResult:
+    """Result from finalize phase (update PR metadata)."""
+
+    success: bool
+    pr_number: int
+    pr_url: str
+    pr_title: str
+    graphite_url: str
+    branch_name: str
+    issue_number: int | None
+    message: str
+
+
 def get_diff_context(ops: GtKit | None = None) -> DiffContextResult:
     """Get all context needed for AI diff analysis.
 
@@ -236,7 +267,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
         ops = RealGtKit()
 
     # Step 0a: Check Graphite authentication FIRST (before any git operations)
-    click.echo("  ↳ Checking Graphite authentication...", err=True)
+    click.echo("  ↳ Checking Graphite authentication... (gt auth whoami)", err=True)
     gt_authenticated, gt_username, _ = ops.graphite().check_auth_status()
     if not gt_authenticated:
         return PreAnalysisError(
@@ -251,7 +282,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     click.echo(f"  ✓ Authenticated as {gt_username}", err=True)
 
     # Step 0b: Check GitHub authentication (required for PR operations)
-    click.echo("  ↳ Checking GitHub authentication...", err=True)
+    click.echo("  ↳ Checking GitHub authentication... (gh auth status)", err=True)
     gh_authenticated, gh_username, _ = ops.github().check_auth_status()
     if not gh_authenticated:
         return PreAnalysisError(
@@ -268,7 +299,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     # Step 0c: Check for and commit uncommitted changes
     uncommitted_changes_committed = False
     if ops.git().has_uncommitted_changes():
-        click.echo("  ↳ Committing uncommitted changes...", err=True)
+        click.echo("  ↳ Staging uncommitted changes... (git add -A)", err=True)
         if not ops.git().add_all():
             return PreAnalysisError(
                 success=False,
@@ -276,6 +307,8 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
                 message="Failed to stage uncommitted changes",
                 details={"reason": "git add failed"},
             )
+        click.echo("  ✓ Changes staged", err=True)
+        click.echo("  ↳ Committing staged changes... (git commit)", err=True)
         if not ops.git().commit("WIP: Prepare for submission"):
             return PreAnalysisError(
                 success=False,
@@ -365,7 +398,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     # Step 4: Run gt squash only if 2+ commits
     squashed = False
     if commit_count >= 2:
-        click.echo(f"  ↳ Squashing {commit_count} commits...", err=True)
+        click.echo(f"  ↳ Squashing {commit_count} commits... (gt squash --no-edit)", err=True)
         result = ops.graphite().squash_commits()
         if not result.success:
             # Check if failure was due to merge conflict
@@ -505,6 +538,40 @@ def _validate_claude_availability() -> tuple[bool, str]:
     return True, ""
 
 
+ERK_COMMIT_MESSAGE_MARKER = "<!-- erk-generated commit message -->"
+
+
+def _is_valid_commit_message(output: str) -> bool:
+    """Check if output contains the erk-generated commit message marker.
+
+    The commit-message-generator agent is required to append a specific marker
+    to all generated commit messages. This provides deterministic validation
+    that the output is actually a generated commit message rather than an
+    error message or permission request.
+
+    Args:
+        output: The text to validate
+
+    Returns:
+        True if the output contains the erk commit message marker
+    """
+    return ERK_COMMIT_MESSAGE_MARKER in output
+
+
+def _strip_commit_message_marker(output: str) -> str:
+    """Remove the erk commit message marker from the output.
+
+    Args:
+        output: The commit message with marker
+
+    Returns:
+        The commit message with the marker line removed
+    """
+    lines = output.split("\n")
+    filtered_lines = [line for line in lines if line.strip() != ERK_COMMIT_MESSAGE_MARKER]
+    return "\n".join(filtered_lines).strip()
+
+
 def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
     """Invoke commit-message-generator agent with diff file.
 
@@ -545,12 +612,19 @@ Parent branch: {diff_context.parent_branch}
 Use the Read tool to load the diff file."""
 
         # Invoke commit-message-generator agent
+        # Note: --permission-mode bypassPermissions is required because:
+        # 1. The agent needs to Read the temp diff file we created
+        # 2. When Claude is invoked via subprocess, it doesn't inherit
+        #    settings.json permissions from the parent session
+        # 3. The agent only has the Read tool available, limiting scope
         result = subprocess.run(
             [
                 "claude",
                 "--print",
                 "--output-format",
                 "text",
+                "--permission-mode",
+                "bypassPermissions",
                 "--agents",
                 "commit-message-generator",  # Use the agent!
                 "--",
@@ -559,7 +633,7 @@ Use the Read tool to load the diff file."""
             capture_output=True,
             text=True,
             check=False,
-            timeout=60,  # Add explicit timeout
+            timeout=120,  # Claude startup can take 30+ seconds
             cwd=diff_context.repo_root,
         )
 
@@ -576,8 +650,25 @@ Use the Read tool to load the diff file."""
             click.echo("   Stdout length: 0 (no output generated)", err=True)
             raise RuntimeError("Agent returned no output")
 
-        click.echo(f"   Stdout length: {len(result.stdout)} chars", err=True)
-        return result.stdout.strip()
+        output = result.stdout.strip()
+        click.echo(f"   Stdout length: {len(output)} chars", err=True)
+
+        # Validate output contains the erk marker
+        if not _is_valid_commit_message(output):
+            click.echo("   ⚠️  Output missing erk commit message marker", err=True)
+            click.echo("   Raw output from Claude:", err=True)
+            click.echo("   " + "-" * 60, err=True)
+            for line in output.split("\n"):
+                click.echo(f"   {line}", err=True)
+            click.echo("   " + "-" * 60, err=True)
+            raise RuntimeError(
+                "Claude agent did not return a valid commit message. "
+                "This may indicate a permission issue reading the diff file.\n\n"
+                "Fix: Ensure 'Read(/tmp/*)' is in ~/.claude/settings.json permissions.allow array"
+            )
+
+        # Strip the marker before returning
+        return _strip_commit_message_marker(output)
 
     finally:
         # Clean up temp file
@@ -681,7 +772,7 @@ def orchestrate_submit_workflow(
     pr_number, pr_url, graphite_url, branch_name = submit_result
 
     # Step 3: Get PR diff from GitHub API (accurate PR-specific diff)
-    click.echo("📊 Getting PR diff from GitHub...", err=True)
+    click.echo(f"📊 Getting PR diff from GitHub... (gh pr diff {pr_number})", err=True)
     try:
         pr_diff = ops.github().get_pr_diff(pr_number)
     except subprocess.CalledProcessError as e:
@@ -689,7 +780,8 @@ def orchestrate_submit_workflow(
         click.echo(f"⚠️  Could not get PR diff: {e}", err=True)
         pr_diff = None
     if pr_diff:
-        click.echo("✓ PR diff retrieved", err=True)
+        diff_lines = len(pr_diff.splitlines())
+        click.echo(f"✓ PR diff retrieved ({diff_lines} lines)", err=True)
 
     # Step 4: Validate Claude CLI availability and generate PR title/body via AI
     pr_title: str | None = None
@@ -708,7 +800,14 @@ def orchestrate_submit_workflow(
             )
 
         click.echo("✓ Claude CLI available", err=True)
-        click.echo("🤖 Generating PR description via AI...", err=True)
+        click.echo(
+            "🤖 Generating PR description via AI... (claude --agents commit-message-generator)",
+            err=True,
+        )
+        click.echo(
+            "   ⏳ This may take 30+ seconds (launching Claude for AI summarization)",
+            err=True,
+        )
         try:
             repo_root = ops.git().get_repository_root()
             current_branch = ops.git().get_current_branch() or branch_name
@@ -765,7 +864,7 @@ def orchestrate_submit_workflow(
             issue_number = issue_ref.issue_number
 
     # Always update PR metadata - build metadata section regardless of AI success
-    click.echo("📝 Updating PR metadata...", err=True)
+    click.echo("📝 Updating PR metadata... (gh pr edit)", err=True)
     metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
 
     # Use AI-generated content if available, otherwise use fallbacks
@@ -801,7 +900,7 @@ def _execute_submit_only(
     branch_name = ops.git().get_current_branch() or "unknown"
 
     # Phase 1: Restack the stack
-    click.echo("  ↳ Rebasing stack...", err=True)
+    click.echo("  ↳ Rebasing stack... (gt restack)", err=True)
     restack_start = time.time()
     restack_result = ops.graphite().restack()
 
@@ -839,7 +938,7 @@ def _execute_submit_only(
     click.echo(f"  ✓ Stack rebased ({restack_elapsed}s)", err=True)
 
     # Phase 2: Submit to GitHub (with progress markers)
-    click.echo("  ↳ Pushing branches and creating PR...", err=True)
+    click.echo("  ↳ Pushing branches and creating PR... (gt submit --publish)", err=True)
     result = _run_gt_submit_with_progress(ops)
 
     # Check for empty parent branch
@@ -933,14 +1032,15 @@ def _execute_submit_only(
     max_retries = 5
     retry_delays = [0.5, 1.0, 2.0, 4.0, 8.0]
 
-    click.echo("⏳ Waiting for PR info from GitHub API...", err=True)
+    click.echo("⏳ Waiting for PR info from GitHub API... (gh pr view)", err=True)
 
     for attempt in range(max_retries):
         if attempt > 0:
             click.echo(f"   Attempt {attempt + 1}/{max_retries}...", err=True)
         pr_info = ops.github().get_pr_info()
         if pr_info is not None:
-            click.echo("✓ PR info retrieved", err=True)
+            pr_num, _ = pr_info
+            click.echo(f"✓ PR info retrieved (PR #{pr_num})", err=True)
             break
         if attempt < max_retries - 1:
             time.sleep(retry_delays[attempt])
@@ -958,6 +1058,161 @@ def _execute_submit_only(
     graphite_url = graphite_url_result or ""
 
     return (pr_number, pr_url, graphite_url, branch_name)
+
+
+def execute_preflight(
+    ops: GtKit | None = None,
+) -> PreflightResult | PreAnalysisError | PostAnalysisError:
+    """Execute preflight phase: auth, squash, submit, get diff.
+
+    This combines pre-analysis + submit + diff extraction into a single phase
+    for use by the slash command orchestration.
+
+    Returns:
+        PreflightResult on success, or PreAnalysisError/PostAnalysisError on failure
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    from erk_shared.integrations.gt.prompts import truncate_diff
+
+    # Step 1: Pre-analysis (squash commits, auth checks)
+    click.echo("🔍 Running pre-analysis checks...", err=True)
+    pre_result = execute_pre_analysis(ops)
+    if isinstance(pre_result, PreAnalysisError):
+        return pre_result
+    click.echo("✓ Pre-analysis complete", err=True)
+
+    # Step 2: Submit branch (with existing commit message)
+    click.echo("🚀 Submitting PR...", err=True)
+    submit_start = time.time()
+    submit_result = _execute_submit_only(ops)
+    if isinstance(submit_result, PostAnalysisError):
+        return submit_result
+    submit_elapsed = int(time.time() - submit_start)
+    click.echo(f"✓ Branch submitted ({submit_elapsed}s)", err=True)
+
+    pr_number, pr_url, graphite_url, branch_name = submit_result
+
+    # Step 3: Get PR diff from GitHub API
+    click.echo(f"📊 Getting PR diff from GitHub... (gh pr diff {pr_number})", err=True)
+    pr_diff = ops.github().get_pr_diff(pr_number)
+    diff_lines = len(pr_diff.splitlines())
+    click.echo(f"✓ PR diff retrieved ({diff_lines} lines)", err=True)
+
+    # Step 4: Truncate diff if needed and write to temp file
+    diff_content, was_truncated = truncate_diff(pr_diff)
+    if was_truncated:
+        click.echo("  ⚠️  Diff truncated for size", err=True)
+
+    # Write diff to temp file
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
+    ) as f:
+        diff_file = f.name
+        f.write(diff_content)
+    click.echo(f"✓ Diff written to {diff_file}", err=True)
+
+    # Get repo root and branch info for AI prompt
+    repo_root = ops.git().get_repository_root()
+    current_branch = ops.git().get_current_branch() or branch_name
+    parent_branch = ops.graphite().get_parent_branch() or "main"
+
+    # Get issue reference if present
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    return PreflightResult(
+        success=True,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        graphite_url=graphite_url,
+        branch_name=branch_name,
+        diff_file=diff_file,
+        repo_root=repo_root,
+        current_branch=current_branch,
+        parent_branch=parent_branch,
+        issue_number=issue_number,
+        message=f"Preflight complete for branch: {branch_name}\nPR #{pr_number}: {pr_url}",
+    )
+
+
+def execute_finalize(
+    pr_number: int,
+    pr_title: str,
+    pr_body: str,
+    diff_file: str | None = None,
+    ops: GtKit | None = None,
+) -> FinalizeResult | PostAnalysisError:
+    """Execute finalize phase: update PR metadata and clean up.
+
+    Args:
+        pr_number: PR number to update
+        pr_title: AI-generated PR title (first line of commit message)
+        pr_body: AI-generated PR body (remaining lines)
+        diff_file: Optional temp diff file to clean up
+        ops: Optional GtKit for dependency injection
+
+    Returns:
+        FinalizeResult on success, or PostAnalysisError on failure
+    """
+    if ops is None:
+        ops = RealGtKit()
+
+    # Get impl directory for metadata
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+
+    issue_number: int | None = None
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            issue_number = issue_ref.issue_number
+
+    # Build metadata section and combine with AI body
+    metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
+    final_body = metadata_section + pr_body
+
+    # Update PR metadata
+    click.echo("📝 Updating PR metadata... (gh pr edit)", err=True)
+    if ops.github().update_pr_metadata(pr_title, final_body):
+        click.echo("✓ PR metadata updated", err=True)
+    else:
+        click.echo("⚠️  Failed to update PR metadata", err=True)
+
+    # Clean up temp diff file
+    if diff_file is not None:
+        diff_path = Path(diff_file)
+        if diff_path.exists():
+            try:
+                diff_path.unlink()
+                click.echo(f"✓ Cleaned up temp file: {diff_file}", err=True)
+            except OSError:
+                pass  # Ignore cleanup errors
+
+    # Get PR info for result
+    branch_name = ops.git().get_current_branch() or "unknown"
+    pr_url_result = ops.github().get_pr_info()
+    pr_url = pr_url_result[1] if pr_url_result else ""
+    graphite_url = ops.github().get_graphite_pr_url(pr_number) or ""
+
+    return FinalizeResult(
+        success=True,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        pr_title=pr_title,
+        graphite_url=graphite_url,
+        branch_name=branch_name,
+        issue_number=issue_number,
+        message=f"Successfully updated PR #{pr_number}: {pr_url}",
+    )
 
 
 def execute_post_analysis(
@@ -995,7 +1250,7 @@ def execute_post_analysis(
         branch_name = "unknown"
 
     # Step 2: Amend commit with COMPLETE message (metadata included!)
-    click.echo("  ↳ Amending commit with generated message...", err=True)
+    click.echo("  ↳ Amending commit with generated message... (git commit --amend)", err=True)
     if not ops.git().amend_commit(complete_commit_message):
         return PostAnalysisError(
             success=False,
@@ -1006,7 +1261,7 @@ def execute_post_analysis(
     click.echo("  ✓ Commit amended", err=True)
 
     # Step 3a: Restack the stack
-    click.echo("  ↳ Rebasing stack...", err=True)
+    click.echo("  ↳ Rebasing stack... (gt restack)", err=True)
     restack_start = time.time()
     restack_result = ops.graphite().restack()
 
@@ -1044,7 +1299,7 @@ def execute_post_analysis(
     click.echo(f"  ✓ Stack rebased ({restack_elapsed}s)", err=True)
 
     # Step 3b: Submit to GitHub
-    click.echo("  ↳ Submitting to GitHub...", err=True)
+    click.echo("  ↳ Submitting to GitHub... (gt submit --publish)", err=True)
     result = ops.graphite().submit(publish=True, restack=False)
 
     # Check for empty parent branch (Graphite returns success but nothing submitted)
@@ -1146,14 +1401,15 @@ def execute_post_analysis(
     max_retries = 5
     retry_delays = [0.5, 1.0, 2.0, 4.0, 8.0]
 
-    click.echo("⏳ Waiting for PR info from GitHub API...", err=True)
+    click.echo("⏳ Waiting for PR info from GitHub API... (gh pr view)", err=True)
 
     for attempt in range(max_retries):
         if attempt > 0:  # Don't print on first attempt
             click.echo(f"   Attempt {attempt + 1}/{max_retries}...", err=True)
         pr_info = ops.github().get_pr_info()
         if pr_info is not None:
-            click.echo("✓ PR info retrieved", err=True)
+            pr_num, _ = pr_info
+            click.echo(f"✓ PR info retrieved (PR #{pr_num})", err=True)
             break
         if attempt < max_retries - 1:
             time.sleep(retry_delays[attempt])
@@ -1179,6 +1435,7 @@ def execute_post_analysis(
         final_pr_body = metadata_with_pr + ai_body
 
         # Lightweight update (just replacing placeholder)
+        click.echo("  ↳ Updating PR metadata... (gh pr edit)", err=True)
         if not ops.github().update_pr_metadata(pr_title, final_pr_body):
             # This is now truly optional - metadata already in PR
             click.echo(
@@ -1191,6 +1448,7 @@ def execute_post_analysis(
                 "⚠️  Note: PR created with metadata, but checkout command shows placeholder"
             )
         else:
+            click.echo("  ✓ PR metadata updated", err=True)
             message = (
                 f"Successfully submitted branch: {branch_name}\nUpdated PR #{pr_number}: {pr_url}"
             )
@@ -1312,8 +1570,55 @@ def orchestrate() -> None:
         raise SystemExit(1) from None
 
 
+@click.command()
+def preflight() -> None:
+    """Execute preflight phase: auth, squash, submit, get diff.
+
+    Returns JSON with PR info and path to temp diff file for AI analysis.
+    This is phase 1 of the 3-phase workflow for slash command orchestration.
+    """
+    try:
+        result = execute_preflight()
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, (PreAnalysisError, PostAnalysisError)):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
+@click.command()
+@click.option("--pr-number", required=True, type=int, help="PR number to update")
+@click.option("--pr-title", required=True, help="AI-generated PR title")
+@click.option("--pr-body", required=True, help="AI-generated PR body")
+@click.option("--diff-file", required=False, help="Temp diff file to clean up")
+def finalize(pr_number: int, pr_title: str, pr_body: str, diff_file: str | None) -> None:
+    """Execute finalize phase: update PR metadata.
+
+    This is phase 3 of the 3-phase workflow for slash command orchestration.
+    """
+    try:
+        result = execute_finalize(pr_number, pr_title, pr_body, diff_file)
+        click.echo(json.dumps(asdict(result), indent=2))
+
+        if isinstance(result, PostAnalysisError):
+            raise SystemExit(1)
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted by user", err=True)
+        raise SystemExit(130) from None
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1) from None
+
+
 # Register subcommands
 pr_submit.add_command(pre_analysis)
 pr_submit.add_command(post_analysis)
 pr_submit.add_command(get_diff_context_cmd, name="get-diff-context")
 pr_submit.add_command(orchestrate)
+pr_submit.add_command(preflight)
+pr_submit.add_command(finalize)

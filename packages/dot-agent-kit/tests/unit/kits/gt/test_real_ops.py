@@ -210,7 +210,7 @@ class TestRealGraphiteGtKitOps:
 
             # Verify correct command was called
             mock_run.assert_called_once_with(
-                ["gt", "squash", "--no-interactive"],
+                ["gt", "squash", "--no-edit", "--no-interactive"],
                 capture_output=True,
                 text=True,
                 check=False,

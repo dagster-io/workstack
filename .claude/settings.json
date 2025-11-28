@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dot-agent:*)"
+      "Bash(dot-agent:*)",
+      "Read(/tmp/*)",
+      "Write(/tmp/*)"
     ],
     "deny": [],
     "ask": []

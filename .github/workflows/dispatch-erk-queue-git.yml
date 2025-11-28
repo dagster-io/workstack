@@ -128,6 +128,7 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
           TRUNK_BRANCH: ${{ steps.trunk.outputs.trunk_branch }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
           GH_TOKEN: ${{ github.token }}
         run: |
           source $HOME/.cargo/env
@@ -154,6 +155,9 @@ jobs:
           fi
 
           # Commit and push
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "$SUBMITTED_BY@users.noreply.github.com"
+
           git add .erp
           git commit -m "Add plan for issue #$ISSUE_NUMBER"
           git push -u origin "$BRANCH_NAME"
@@ -166,6 +170,7 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
           TRUNK_BRANCH: ${{ steps.trunk.outputs.trunk_branch }}
+          SUBMITTED_BY: ${{ inputs.submitted_by }}
           GH_TOKEN: ${{ github.token }}
         run: |
           source $HOME/.cargo/env
@@ -206,6 +211,9 @@ jobs:
           fi
 
           # Commit if changed
+          git config user.name "$SUBMITTED_BY"
+          git config user.email "$SUBMITTED_BY@users.noreply.github.com"
+
           git add .erp
           if [[ -n $(git status --porcelain) ]]; then
             git commit -m "Update plan for issue #$ISSUE_NUMBER (rerun)"

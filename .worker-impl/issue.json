@@ -1,0 +1,5 @@
+{
+  "number": 1473,
+  "url": "https://github.com/dagster-io/erk/issues/1473",
+  "title": "Plan: Replace manual error check with Ensure.invariant"
+}

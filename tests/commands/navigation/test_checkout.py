@@ -633,10 +633,10 @@ def test_checkout_trunk_with_dirty_root_errors() -> None:
 
 
 def test_checkout_tracks_untracked_branch_with_graphite() -> None:
-    """Test that checkout automatically tracks untracked branches with Graphite.
+    """Test that checkout tracks untracked branches with Graphite after confirmation.
 
     When checking out a branch that is not tracked by Graphite, checkout
-    should call track_branch() with trunk as the parent.
+    prompts the user. If confirmed, it calls track_branch() with trunk as parent.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -667,9 +667,9 @@ def test_checkout_tracks_untracked_branch_with_graphite() -> None:
 
         test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo)
 
-        # Checkout the untracked branch
+        # Checkout the untracked branch (non-script mode, confirm with 'y')
         result = runner.invoke(
-            cli, ["checkout", "feature-untracked", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-untracked"], obj=test_ctx, input="y\n", catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -684,6 +684,106 @@ def test_checkout_tracks_untracked_branch_with_graphite() -> None:
         assert cwd == feature_wt
         assert branch_name == "feature-untracked"
         assert parent_branch == "main"
+
+
+def test_checkout_skips_tracking_when_user_declines() -> None:
+    """Test that checkout skips tracking when user declines the confirmation.
+
+    When the user responds 'n' to the tracking confirmation, track_branch()
+    should not be called.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+        feature_wt = work_dir / "feature-untracked-wt"
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature-untracked"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        # Graphite has no branches tracked (empty dict)
+        graphite = FakeGraphite(branches={})
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo)
+
+        # Checkout the untracked branch (non-script mode, decline with 'n')
+        result = runner.invoke(
+            cli, ["checkout", "feature-untracked"], obj=test_ctx, input="n\n", catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        assert result.exit_code == 0
+
+        # Verify track_branch was NOT called (user declined)
+        assert len(graphite.track_branch_calls) == 0
+
+
+def test_checkout_skips_tracking_in_script_mode() -> None:
+    """Test that checkout skips tracking prompt in script mode.
+
+    Script mode cannot prompt interactively, so tracking should be skipped
+    entirely when --script is used.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+        feature_wt = work_dir / "feature-untracked-wt"
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature-untracked"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        # Graphite has no branches tracked (empty dict)
+        graphite = FakeGraphite(branches={})
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo)
+
+        # Checkout with --script flag (no interactive prompt)
+        result = runner.invoke(
+            cli, ["checkout", "feature-untracked", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        assert result.exit_code == 0
+
+        # Verify track_branch was NOT called (script mode skips tracking)
+        assert len(graphite.track_branch_calls) == 0
 
 
 def test_checkout_does_not_track_already_tracked_branch() -> None:

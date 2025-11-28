@@ -61,11 +61,11 @@ def _ensure_graphite_tracking(
     branch: str,
     script: bool,
 ) -> None:
-    """Ensure branch is tracked by Graphite (idempotent).
+    """Ensure branch is tracked by Graphite (idempotent), with user confirmation.
 
-    If the branch is not already tracked, tracks it with trunk as parent.
-    This enables branches created without Graphite (e.g., via erk-queue)
-    to be managed with Graphite locally.
+    If the branch is not already tracked, prompts the user and tracks it with
+    trunk as parent if confirmed. This enables branches created without Graphite
+    (e.g., via erk-queue) to be managed with Graphite locally.
 
     Args:
         ctx: Erk context
@@ -88,11 +88,20 @@ def _ensure_graphite_tracking(
     if branch in all_branches:
         return  # Already tracked, nothing to do
 
+    # In script mode, skip tracking (no interactive prompts allowed)
+    if script:
+        return
+
+    # Prompt user for confirmation
+    if not click.confirm(
+        f"Branch '{branch}' is not tracked by Graphite. Track it with parent '{trunk_branch}'?",
+        default=True,
+    ):
+        return
+
     # Track the branch with trunk as parent
     ctx.graphite.track_branch(target_path, branch, trunk_branch)
-
-    if not script:
-        user_output(f"Tracked '{branch}' with Graphite (parent: {trunk_branch})")
+    user_output(f"Tracked '{branch}' with Graphite (parent: {trunk_branch})")
 
 
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:

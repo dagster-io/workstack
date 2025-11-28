@@ -72,6 +72,7 @@ from erk_shared.impl_folder import (
 )
 from erk_shared.integrations.gt.abc import GtKit
 from erk_shared.integrations.gt.real import RealGtKit
+from erk_shared.integrations.gt.types import CommandResult
 
 
 class SubmitResult(NamedTuple):

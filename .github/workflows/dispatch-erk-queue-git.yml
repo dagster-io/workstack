@@ -375,6 +375,7 @@ jobs:
       # PHASE 5: SUBMISSION (Pure Git - no Graphite)
       # =================================================================
       - name: Submit branch with proper commit message
+        id: submit
         if: steps.implement.outputs.implementation_success == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -398,6 +399,9 @@ jobs:
             --verbose \
             "/git:pr-push Implement issue #$ISSUE_NUMBER"
 
+          # Capture implementation commit SHA before cleanup commits
+          echo "impl_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
           # Now clean up .worker-impl/ in a separate commit
           git rm -rf .worker-impl/
           git commit -m "Remove .worker-impl/ folder after implementation"
@@ -419,9 +423,10 @@ jobs:
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           SUBMITTED_BY: ${{ inputs.submitted_by }}
+          IMPL_SHA: ${{ steps.submit.outputs.impl_sha }}
         run: |
-          # Get the implementation commit message (the last commit before CI trigger)
-          commit_body=$(git log -1 --pretty=%B)
+          # Get the implementation commit message using the captured SHA
+          commit_body=$(git log "$IMPL_SHA" -1 --pretty=%B)
 
           # Get PR number for checkout instructions
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)

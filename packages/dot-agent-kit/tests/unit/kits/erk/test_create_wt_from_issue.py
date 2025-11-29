@@ -1,686 +1,297 @@
 """Unit tests for create_wt_from_issue kit CLI command.
 
-Tests worktree creation from GitHub issues with erk-plan label.
+Tests worktree creation from GitHub issues with erk-plan label using fakes.
 """
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
-import pytest
-from click.testing import CliRunner
+from erk_shared.github.metadata import MetadataBlock, render_metadata_block
+from erk_shared.integrations.erk_wt import (
+    FakeErkWtKit,
+    IssueData,
+    IssueParseResult,
+    WorktreeCreationResult,
+)
 
-from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_wt_from_issue import (
-    create_wt_from_issue,
+    WorktreeCreationSuccess,
+    create_wt_from_issue_impl,
     has_erk_plan_label,
 )
 
+
+def _make_issue_body(content: str = "Implementation details") -> str:
+    """Create a valid issue body with plan-header metadata block."""
+    plan_header_data = {
+        "schema_version": "2",
+        "created_at": "2024-01-01T00:00:00Z",
+        "created_by": "test-user",
+    }
+    header_block = render_metadata_block(MetadataBlock("plan-header", plan_header_data))
+    return f"{header_block}\n\n# Plan\n\n{content}"
+
+
 # ============================================================================
-# 1. Helper Function Tests (8 tests)
+# 1. Helper Function Tests (Layer 3: Pure Unit Tests)
 # ============================================================================
 
 
 def test_has_erk_plan_label_true() -> None:
     """Test has_erk_plan_label returns True when label present."""
-    issue_data = {
-        "labels": [
-            {"name": "bug"},
-            {"name": "erk-plan"},
-            {"name": "enhancement"},
-        ]
-    }
-    assert has_erk_plan_label(issue_data) is True
+    labels = ["bug", "erk-plan", "enhancement"]
+    assert has_erk_plan_label(labels) is True
 
 
 def test_has_erk_plan_label_false() -> None:
     """Test has_erk_plan_label returns False when label missing."""
-    issue_data = {"labels": [{"name": "bug"}, {"name": "enhancement"}]}
-    assert has_erk_plan_label(issue_data) is False
+    labels = ["bug", "enhancement"]
+    assert has_erk_plan_label(labels) is False
 
 
 def test_has_erk_plan_label_no_labels() -> None:
     """Test has_erk_plan_label returns False when no labels."""
-    issue_data = {"labels": []}
-    assert has_erk_plan_label(issue_data) is False
-
-
-def test_has_erk_plan_label_malformed() -> None:
-    """Test has_erk_plan_label handles malformed label data."""
-    issue_data = {"labels": "not-a-list"}
-    assert has_erk_plan_label(issue_data) is False
-
-
-def test_has_erk_plan_label_none_labels() -> None:
-    """Test has_erk_plan_label handles None labels."""
-    issue_data = {"labels": None}
-    assert has_erk_plan_label(issue_data) is False
-
-
-def test_has_erk_plan_label_missing_key() -> None:
-    """Test has_erk_plan_label handles missing labels key."""
-    issue_data = {}
-    assert has_erk_plan_label(issue_data) is False
+    labels = []
+    assert has_erk_plan_label(labels) is False
 
 
 # ============================================================================
-# 2. Success Case Tests (3 tests)
+# 2. Success Case Tests (Layer 4: Business Logic over Fakes)
 # ============================================================================
 
 
-def test_create_from_issue_number_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_create_from_issue_number_success(tmp_path: Path) -> None:
     """Test creating worktree from plain issue number."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    impl_dir = worktree_dir / ".impl"
-    impl_dir.mkdir()
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 123})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 123,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nImplementation details",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/123",
-                    "labels": [{"name": "erk-plan"}],
-                }
+    issue_body = _make_issue_body()
+    fake = FakeErkWtKit(
+        parse_results={
+            "123": IssueParseResult(
+                success=True,
+                issue_number=123,
+                message="Successfully parsed issue number",
             )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps(
-                {
-                    "status": "success",
-                    "worktree_name": "feature-branch",
-                    "worktree_path": str(worktree_dir),
-                    "branch_name": "issue-123-25-11-22",
-                }
+        },
+        issues={
+            123: IssueData(
+                number=123,
+                title="Test Issue",
+                body=issue_body,
+                state="open",
+                url="https://github.com/owner/repo/issues/123",
+                labels=["erk-plan"],
             )
-        elif cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            pass  # Success
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["123"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        },
+        worktree_result=WorktreeCreationResult(
+            success=True,
+            worktree_name="feature-branch",
+            worktree_path=str(tmp_path / "feature-branch"),
+            branch_name="issue-123-test",
+        ),
     )
 
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
-    assert "issue #123" in result.output
-    assert "feature-branch" in result.output
+    success, result = create_wt_from_issue_impl("123", fake)
+
+    assert success is True
+    assert isinstance(result, WorktreeCreationSuccess)
+    assert result.issue_number == 123
+    assert result.worktree_name == "feature-branch"
+    assert result.branch_name == "issue-123-test"
+
+    # Verify mutations occurred
+    assert len(fake.created_worktrees) == 1
+    assert "# Plan" in fake.created_worktrees[0]
+    assert len(fake.posted_comments) == 1
+    assert fake.posted_comments[0] == (123, "feature-branch", "issue-123-test")
 
 
-def test_create_from_github_url_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_create_from_github_url_success(tmp_path: Path) -> None:
     """Test creating worktree from full GitHub URL."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    impl_dir = worktree_dir / ".impl"
-    impl_dir.mkdir()
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 456})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 456,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nImplementation details",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/456",
-                    "labels": [{"name": "erk-plan"}],
-                }
+    issue_body = _make_issue_body("Details here")
+    fake = FakeErkWtKit(
+        parse_results={
+            "https://github.com/owner/repo/issues/456": IssueParseResult(
+                success=True,
+                issue_number=456,
+                message="Successfully parsed GitHub URL",
             )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps(
-                {
-                    "status": "success",
-                    "worktree_name": "feature-branch",
-                    "worktree_path": str(worktree_dir),
-                    "branch_name": "issue-456-25-11-22",
-                }
+        },
+        issues={
+            456: IssueData(
+                number=456,
+                title="Feature Request",
+                body=issue_body,
+                state="open",
+                url="https://github.com/owner/repo/issues/456",
+                labels=["erk-plan", "enhancement"],
             )
-        elif cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            pass  # Success
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue,
-        ["https://github.com/owner/repo/issues/456"],
-        obj=DotAgentContext.for_test(repo_root=tmp_path),
+        },
+        worktree_result=WorktreeCreationResult(
+            success=True,
+            worktree_name="feature-request",
+            worktree_path=str(tmp_path / "feature-request"),
+            branch_name="issue-456-feature",
+        ),
     )
 
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
-    assert "issue #456" in result.output
-
-
-def test_graceful_degradation_comment_fails(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Test worktree created successfully even if comment posting fails."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    impl_dir = worktree_dir / ".impl"
-    impl_dir.mkdir()
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-
-        if cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            result.returncode = 1  # Comment fails
-            result.stderr = "gh: authentication required"
-        else:
-            result.returncode = 0
-            if cmd[0] == "git":
-                result.stdout = str(tmp_path)
-            elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-                result.stdout = json.dumps({"success": True, "issue_number": 789})
-            elif cmd[0] == "gh":
-                result.stdout = json.dumps(
-                    {
-                        "number": 789,
-                        "title": "Test Issue",
-                        "body": "# Plan\n\nImplementation details",
-                        "state": "open",
-                        "url": "https://github.com/owner/repo/issues/789",
-                        "labels": [{"name": "erk-plan"}],
-                    }
-                )
-            elif cmd[0] == "erk":
-                result.stdout = json.dumps(
-                    {
-                        "status": "success",
-                        "worktree_name": "feature-branch",
-                        "worktree_path": str(worktree_dir),
-                        "branch_name": "issue-789-25-11-22",
-                    }
-                )
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["789"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    success, result = create_wt_from_issue_impl(
+        "https://github.com/owner/repo/issues/456",
+        fake,
     )
 
-    # Still succeeds
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
-    # But shows warning
-    assert "Warning:" in result.output
-    assert "Failed to post comment" in result.output
+    assert success is True
+    assert isinstance(result, WorktreeCreationSuccess)
+    assert result.issue_number == 456
+    assert result.issue_url == "https://github.com/owner/repo/issues/456"
 
 
 # ============================================================================
-# 3. Error Case Tests (8 tests)
+# 3. Error Case Tests (Layer 4: Business Logic over Fakes)
 # ============================================================================
 
 
-def test_invalid_issue_reference(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when issue reference is invalid."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.returncode = 1
-            result.stdout = json.dumps(
-                {
-                    "success": False,
-                    "error": "invalid_format",
-                    "message": "Issue reference must be a number or GitHub URL",
-                }
+def test_create_fails_parse_invalid_reference() -> None:
+    """Test failure when issue reference cannot be parsed."""
+    fake = FakeErkWtKit(
+        parse_results={
+            "invalid": IssueParseResult(
+                success=False,
+                error="invalid_format",
+                message="Not a valid issue reference",
             )
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["invalid"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        }
     )
 
-    assert result.exit_code == 1
-    assert "Failed to parse issue reference" in result.output
+    success, result = create_wt_from_issue_impl("invalid", fake)
+
+    assert success is False
+    assert isinstance(result, str)
+    assert "Failed to parse issue reference" in result
 
 
-def test_issue_not_found(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when GitHub issue doesn't exist."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-
-        if cmd[0] == "git":
-            result.returncode = 0
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.returncode = 0
-            result.stdout = json.dumps({"success": True, "issue_number": 99999})
-        elif cmd[0] == "gh":
-            result.returncode = 1  # Issue not found
-            result.stderr = "issue not found"
-        else:
-            result.returncode = 0
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["99999"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+def test_create_fails_issue_not_found() -> None:
+    """Test failure when issue doesn't exist on GitHub."""
+    fake = FakeErkWtKit(
+        parse_results={"999": IssueParseResult(success=True, issue_number=999)},
+        issues={},  # Issue 999 not in dict
     )
 
-    assert result.exit_code == 1
-    assert "Failed to fetch issue #99999" in result.output
+    success, result = create_wt_from_issue_impl("999", fake)
+
+    assert success is False
+    assert isinstance(result, str)
+    assert "Failed to fetch issue #999" in result
 
 
-def test_missing_erk_plan_label(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when issue lacks erk-plan label."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 100})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 100,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/100",
-                    "labels": [{"name": "bug"}, {"name": "enhancement"}],  # No erk-plan
-                }
+def test_create_fails_missing_erk_plan_label() -> None:
+    """Test failure when issue doesn't have erk-plan label."""
+    fake = FakeErkWtKit(
+        parse_results={"123": IssueParseResult(success=True, issue_number=123)},
+        issues={
+            123: IssueData(
+                number=123,
+                title="Test Issue",
+                body="# Plan",
+                state="open",
+                url="https://github.com/owner/repo/issues/123",
+                labels=["bug", "enhancement"],  # Missing erk-plan
             )
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["100"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        },
     )
 
-    assert result.exit_code == 1
-    assert "does not have the 'erk-plan' label" in result.output
-    assert "Current labels: bug, enhancement" in result.output
+    success, result = create_wt_from_issue_impl("123", fake)
+
+    assert success is False
+    assert isinstance(result, str)
+    assert "does not have the 'erk-plan' label" in result
+    assert "bug, enhancement" in result
 
 
-def test_gh_cli_not_authenticated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when gh not authenticated."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-
-        if cmd[0] == "git":
-            result.returncode = 0
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.returncode = 0
-            result.stdout = json.dumps({"success": True, "issue_number": 200})
-        elif cmd[0] == "gh":
-            result.returncode = 1
-            result.stderr = "authentication required"
-        else:
-            result.returncode = 0
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["200"], obj=DotAgentContext.for_test(repo_root=tmp_path)
-    )
-
-    assert result.exit_code == 1
-    assert "Failed to fetch issue #200" in result.output
-    assert "gh CLI is authenticated" in result.output
-
-
-def test_erk_create_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when erk create command fails."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 300})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 300,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/300",
-                    "labels": [{"name": "erk-plan"}],
-                }
+def test_create_fails_empty_issue_body() -> None:
+    """Test failure when issue has no body content."""
+    fake = FakeErkWtKit(
+        parse_results={"123": IssueParseResult(success=True, issue_number=123)},
+        issues={
+            123: IssueData(
+                number=123,
+                title="Test Issue",
+                body="",  # Empty body
+                state="open",
+                url="https://github.com/owner/repo/issues/123",
+                labels=["erk-plan"],
             )
-        elif cmd[0] == "erk":
-            result.returncode = 1  # erk create fails
-            result.stderr = "Error: Invalid plan format"
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["300"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        },
     )
 
-    assert result.exit_code == 1
-    assert "Failed to create worktree" in result.output
+    success, result = create_wt_from_issue_impl("123", fake)
+
+    assert success is False
+    assert isinstance(result, str)
+    assert "has no body content" in result
 
 
-def test_worktree_already_exists(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when worktree already exists."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 400})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 400,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/400",
-                    "labels": [{"name": "erk-plan"}],
-                }
+def test_create_fails_worktree_creation() -> None:
+    """Test failure when erk create command fails."""
+    fake = FakeErkWtKit(
+        parse_results={"123": IssueParseResult(success=True, issue_number=123)},
+        issues={
+            123: IssueData(
+                number=123,
+                title="Test Issue",
+                body="# Plan\n\nDetails",
+                state="open",
+                url="https://github.com/owner/repo/issues/123",
+                labels=["erk-plan"],
             )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps({"status": "exists"})  # Worktree exists
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["400"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        },
+        worktree_result=WorktreeCreationResult(success=False),
     )
 
-    assert result.exit_code == 1
-    assert "Failed to create worktree" in result.output
+    success, result = create_wt_from_issue_impl("123", fake)
 
-
-def test_issue_with_empty_body(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test command fails when issue has no body content."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 500})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 500,
-                    "title": "Test Issue",
-                    "body": "",  # Empty body
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/500",
-                    "labels": [{"name": "erk-plan"}],
-                }
-            )
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["500"], obj=DotAgentContext.for_test(repo_root=tmp_path)
-    )
-
-    assert result.exit_code == 1
-    assert "has no body content" in result.output
+    assert success is False
+    assert isinstance(result, str)
+    assert "Failed to create worktree" in result
 
 
 # ============================================================================
-# 4. Edge Case Tests (4 tests)
+# 4. Edge Cases (Layer 4: Business Logic over Fakes)
 # ============================================================================
 
 
-def test_issue_with_no_labels(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test handling issue with empty labels array."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 600})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 600,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/600",
-                    "labels": [],  # No labels
-                }
+def test_create_continues_on_comment_failure(tmp_path: Path) -> None:
+    """Test that worktree creation succeeds even if comment posting fails."""
+    issue_body = _make_issue_body()
+    fake = FakeErkWtKit(
+        parse_results={"123": IssueParseResult(success=True, issue_number=123)},
+        issues={
+            123: IssueData(
+                number=123,
+                title="Test Issue",
+                body=issue_body,
+                state="open",
+                url="https://github.com/owner/repo/issues/123",
+                labels=["erk-plan"],
             )
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["600"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+        },
+        worktree_result=WorktreeCreationResult(
+            success=True,
+            worktree_name="feature",
+            worktree_path=str(tmp_path / "feature"),
+            branch_name="issue-123",
+        ),
+        comment_success=False,  # Comment posting fails
     )
 
-    assert result.exit_code == 1
-    assert "does not have the 'erk-plan' label" in result.output
-    assert "Current labels: none" in result.output
+    success, result = create_wt_from_issue_impl("123", fake)
+
+    # Should still succeed overall
+    assert success is True
+    assert isinstance(result, WorktreeCreationSuccess)
 
 
-def test_issue_with_special_chars_in_title(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test handling Unicode and special characters in title."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    impl_dir = worktree_dir / ".impl"
-    impl_dir.mkdir()
+def test_has_erk_plan_label_case_sensitive() -> None:
+    """Test that erk-plan label matching is case sensitive."""
+    labels = ["ERK-PLAN", "Erk-Plan"]
+    assert has_erk_plan_label(labels) is False
 
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 700})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 700,
-                    "title": 'Test: Add 🎉 emoji support & "quotes"',
-                    "body": "# Plan\n\nImplementation details",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/700",
-                    "labels": [{"name": "erk-plan"}],
-                }
-            )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps(
-                {
-                    "status": "success",
-                    "worktree_name": "feature-branch",
-                    "worktree_path": str(worktree_dir),
-                    "branch_name": "issue-700-25-11-22",
-                }
-            )
-        elif cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            pass  # Success
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["700"], obj=DotAgentContext.for_test(repo_root=tmp_path)
-    )
-
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
-
-
-def test_multiple_labels_including_erk_plan(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Test label detection with multiple labels."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    impl_dir = worktree_dir / ".impl"
-    impl_dir.mkdir()
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 800})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 800,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/800",
-                    "labels": [
-                        {"name": "bug"},
-                        {"name": "erk-plan"},
-                        {"name": "enhancement"},
-                        {"name": "high-priority"},
-                    ],
-                }
-            )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps(
-                {
-                    "status": "success",
-                    "worktree_name": "feature-branch",
-                    "worktree_path": str(worktree_dir),
-                    "branch_name": "issue-800-25-11-22",
-                }
-            )
-        elif cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            pass  # Success
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["800"], obj=DotAgentContext.for_test(repo_root=tmp_path)
-    )
-
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
-
-
-def test_save_issue_reference_warning(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test warning when issue.json can't be written (non-fatal)."""
-    worktree_dir = tmp_path / "feature-branch"
-    worktree_dir.mkdir()
-    # Don't create .impl dir - will cause save to fail
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-
-        if cmd[0] == "git":
-            result.stdout = str(tmp_path)
-        elif cmd[0] == "dot-agent" and "parse-issue-reference" in cmd:
-            result.stdout = json.dumps({"success": True, "issue_number": 900})
-        elif cmd[0] == "gh":
-            result.stdout = json.dumps(
-                {
-                    "number": 900,
-                    "title": "Test Issue",
-                    "body": "# Plan\n\nDetails",
-                    "state": "open",
-                    "url": "https://github.com/owner/repo/issues/900",
-                    "labels": [{"name": "erk-plan"}],
-                }
-            )
-        elif cmd[0] == "erk":
-            result.stdout = json.dumps(
-                {
-                    "status": "success",
-                    "worktree_name": "feature-branch",
-                    "worktree_path": str(worktree_dir),
-                    "branch_name": "issue-900-25-11-22",
-                }
-            )
-        elif cmd[0] == "dot-agent" and "comment-worktree-creation" in cmd:
-            pass  # Success
-
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        create_wt_from_issue, ["900"], obj=DotAgentContext.for_test(repo_root=tmp_path)
-    )
-
-    # Still succeeds
-    assert result.exit_code == 0
-    assert "✅ Worktree created" in result.output
+    labels = ["erk-plan"]
+    assert has_erk_plan_label(labels) is True

@@ -500,7 +500,7 @@ class TestPreAnalysisExecution:
         assert result.details["branch_name"] == "feature-branch"
 
     def test_pre_analysis_detects_pr_conflicts_from_github(self) -> None:
-        """Test that PR conflicts are detected before any work is done."""
+        """Test that PR conflicts are detected and reported informational (not blocking)."""
         ops = (
             FakeGtKitOps()
             .with_branch("feature-branch", parent="master")
@@ -511,13 +511,14 @@ class TestPreAnalysisExecution:
 
         result = execute_pre_analysis(ops)
 
-        # Assert: Should return error, no commits made
-        assert isinstance(result, PreAnalysisError)
-        assert result.error_type == "pr_has_conflicts"
-        assert "conflicts" in result.message.lower()
-        assert result.details["pr_number"] == "123"
-        assert result.details["parent_branch"] == "master"
-        assert result.details["detection_method"] == "github_api"
+        # Assert: Should succeed with conflict info included
+        assert isinstance(result, PreAnalysisResult)
+        assert result.success is True
+        assert result.has_conflicts is True
+        assert result.conflict_details is not None
+        assert result.conflict_details["pr_number"] == "123"
+        assert result.conflict_details["parent_branch"] == "master"
+        assert result.conflict_details["detection_method"] == "github_api"
 
     def test_pre_analysis_proceeds_when_no_conflicts(self) -> None:
         """Test that workflow proceeds normally when no conflicts exist."""
@@ -530,12 +531,14 @@ class TestPreAnalysisExecution:
 
         result = execute_pre_analysis(ops)
 
-        # Assert: Should succeed (PR is MERGEABLE by default)
+        # Assert: Should succeed with no conflicts
         assert isinstance(result, PreAnalysisResult)
         assert result.success is True
+        assert result.has_conflicts is False
+        assert result.conflict_details is None
 
     def test_pre_analysis_fallback_to_git_merge_tree(self) -> None:
-        """Test fallback to git merge-tree when no PR exists."""
+        """Test fallback to git merge-tree when no PR exists (informational, not blocking)."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
         # Configure fake to simulate conflict
         ops.git().simulate_conflict("master", "feature-branch")
@@ -543,10 +546,12 @@ class TestPreAnalysisExecution:
         # No PR configured - should fallback to git merge-tree
         result = execute_pre_analysis(ops)
 
-        # Assert: Should detect conflict via git merge-tree
-        assert isinstance(result, PreAnalysisError)
-        assert result.error_type == "pr_has_conflicts"
-        assert result.details["detection_method"] == "git_merge_tree"
+        # Assert: Should succeed with conflict info via git merge-tree
+        assert isinstance(result, PreAnalysisResult)
+        assert result.success is True
+        assert result.has_conflicts is True
+        assert result.conflict_details is not None
+        assert result.conflict_details["detection_method"] == "git_merge_tree"
 
     def test_pre_analysis_proceeds_on_unknown_mergeability(self) -> None:
         """Test that UNKNOWN mergeability doesn't block workflow."""

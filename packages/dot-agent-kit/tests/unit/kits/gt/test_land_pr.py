@@ -266,3 +266,83 @@ class TestLandPrTitle:
         # No PR configured
 
         assert ops.github().get_pr_title() is None
+
+
+class TestLandPrBody:
+    """Tests for PR body handling in land_pr."""
+
+    def test_land_pr_fetches_pr_body(self) -> None:
+        """Test that land_pr fetches PR body before merging."""
+        # Setup: feature branch on main with open PR that has a body
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_pr(
+                123,
+                state="OPEN",
+                title="Add new feature",
+                body="This PR adds a new feature with detailed description.",
+            )
+        )
+
+        # Verify the body can be fetched
+        assert ops.github().get_pr_body() == "This PR adds a new feature with detailed description."
+
+        result = execute_land_pr(ops)
+
+        assert isinstance(result, LandPrSuccess)
+        assert result.success is True
+        assert result.pr_number == 123
+
+    def test_land_pr_success_without_pr_body(self) -> None:
+        """Test landing succeeds even when no PR body is set."""
+        # Setup: feature branch with PR but no body set
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_pr(123, state="OPEN", title="Add new feature")  # No body
+        )
+
+        # Verify no body is set
+        assert ops.github().get_pr_body() is None
+
+        result = execute_land_pr(ops)
+
+        # Should still succeed - body is optional
+        assert isinstance(result, LandPrSuccess)
+        assert result.success is True
+
+    def test_get_pr_body_returns_none_when_no_pr(self) -> None:
+        """Test get_pr_body returns None when no PR exists."""
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
+        # No PR configured
+
+        assert ops.github().get_pr_body() is None
+
+    def test_land_pr_with_title_and_body(self) -> None:
+        """Test landing with both title and body for rich merge commit."""
+        # Setup: feature branch with PR that has both title and body
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_pr(
+                123,
+                state="OPEN",
+                title="Extract subprocess calls into reusable interface",
+                body=(
+                    "Refactors `create_wt_from_issue` command to use dependency injection.\n\n"
+                    "## Changes\n"
+                    "- Added ErkWtKit ABC interface\n"
+                    "- Implemented real and fake versions"
+                ),
+            )
+        )
+
+        # Verify both can be fetched
+        assert ops.github().get_pr_title() == "Extract subprocess calls into reusable interface"
+        assert "Refactors" in ops.github().get_pr_body()  # type: ignore[operator]
+
+        result = execute_land_pr(ops)
+
+        assert isinstance(result, LandPrSuccess)
+        assert result.success is True

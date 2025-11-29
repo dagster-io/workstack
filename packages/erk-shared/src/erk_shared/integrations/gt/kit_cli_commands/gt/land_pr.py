@@ -151,9 +151,13 @@ def execute_land_pr(ops: GtKit | None = None) -> LandPrSuccess | LandPrError:
     # Step 5: Get children branches
     children = kit_ops.graphite().get_children_branches()
 
-    # Step 6: Get PR title and merge the PR
+    # Step 6: Get PR title and body for merge commit message
     pr_title = kit_ops.github().get_pr_title()
-    if not kit_ops.github().merge_pr(subject=pr_title):
+    pr_body = kit_ops.github().get_pr_body()
+
+    # Merge with squash using title and body
+    subject = f"{pr_title} (#{pr_number})" if pr_title else None
+    if not kit_ops.github().merge_pr(subject=subject, body=pr_body):
         return LandPrError(
             success=False,
             error_type="merge_failed",

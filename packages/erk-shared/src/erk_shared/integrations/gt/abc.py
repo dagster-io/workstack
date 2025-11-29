@@ -244,12 +244,22 @@ class GitHubGtKit(ABC):
         """
 
     @abstractmethod
-    def merge_pr(self, *, subject: str | None = None) -> bool:
+    def get_pr_body(self) -> str | None:
+        """Get the body of the PR for the current branch.
+
+        Returns:
+            PR body string, or None if no PR exists
+        """
+
+    @abstractmethod
+    def merge_pr(self, *, subject: str | None = None, body: str | None = None) -> bool:
         """Merge the PR using squash merge.
 
         Args:
             subject: Optional commit message subject for squash merge.
                      If provided, overrides GitHub's default behavior.
+            body: Optional commit message body for squash merge.
+                  If provided, included as the commit body text.
 
         Returns:
             True on success, False on failure

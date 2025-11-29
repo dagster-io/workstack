@@ -319,16 +319,20 @@ After completing all implementation steps:
 
 Run iterative CI to validate all changes before completion.
 
-**Iterative CI Process (max 5 attempts):**
+**Check for repo-specific CI configuration:**
 
-For each attempt:
+1. Check if `.erk/post-implement.md` exists in the repository root
+2. If it exists: Read that file and follow its instructions (it contains the complete CI workflow for this repo)
+3. If it does not exist: Use the default erk CI process below
 
-1. Run the fast CI checks: `/fast-ci` (unit tests + pyright)
-2. If all checks pass: Break out of loop, proceed to cleanup
-3. If checks fail: Read the error output carefully
-4. Analyze the failures and fix them
-5. Increment attempt counter
-6. If max attempts reached: Exit with error, DO NOT proceed
+**Default CI Process (no `.erk/post-implement.md` found):**
+
+If no repo-specific CI configuration exists, skip automated CI and inform the user:
+
+```
+⚠️ No .erk/post-implement.md found. Skipping automated CI validation.
+   Run your project's CI manually before submitting.
+```
 
 **After CI passes (or if .impl/ folder):**
 

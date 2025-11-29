@@ -169,8 +169,9 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
     )(f)
     f = click.option(
         "--runs",
+        "-r",
         is_flag=True,
-        default=True,
+        default=False,
         help="Show workflow run columns (run-id, run-state)",
     )(f)
     f = click.option(

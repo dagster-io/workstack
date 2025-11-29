@@ -8,7 +8,7 @@ from erk.cli.commands.navigation_helpers import (
     delete_branch_and_worktree,
     ensure_graphite_enabled,
     resolve_up_navigation,
-    verify_pr_merged,
+    verify_pr_closed_or_merged,
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
@@ -81,8 +81,8 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
         # Validate clean working tree (no uncommitted changes)
         check_clean_working_tree(ctx)
 
-        # Validate PR is merged on GitHub
-        verify_pr_merged(ctx, repo.root, current_branch)
+        # Validate PR is closed or merged on GitHub
+        verify_pr_closed_or_merged(ctx, repo.root, current_branch)
 
     # Resolve navigation to get target branch (may auto-create worktree)
     target_name, was_created = resolve_up_navigation(ctx, repo, current_branch, worktrees)

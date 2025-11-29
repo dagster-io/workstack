@@ -132,7 +132,7 @@ class TestExecuteUpdatePr:
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
-            .with_submit_failure(stdout="", stderr="network error")
+            .with_submit_failure(stderr="network error")
         )
 
         result = execute_update_pr(ops)

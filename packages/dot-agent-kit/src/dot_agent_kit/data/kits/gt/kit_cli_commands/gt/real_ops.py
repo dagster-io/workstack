@@ -8,8 +8,7 @@ erk-shared/integrations/gt/ for true canonicalization.
 from erk_shared.integrations.gt import (
     RealGitGtKit,
     RealGitHubGtKit,
-    RealGraphiteGtKit,
     RealGtKit,
 )
 
-__all__ = ["RealGtKit", "RealGitGtKit", "RealGraphiteGtKit", "RealGitHubGtKit"]
+__all__ = ["RealGtKit", "RealGitGtKit", "RealGitHubGtKit"]

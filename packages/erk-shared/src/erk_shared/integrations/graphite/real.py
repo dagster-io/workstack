@@ -322,3 +322,48 @@ class RealGraphite(Graphite):
                 break
 
         return (True, username, repo_info)
+
+    def squash_branch(self, repo_root: Path, *, quiet: bool = False) -> None:
+        """Squash all commits on the current branch into one."""
+        cmd = ["gt", "squash", "--no-edit", "--no-interactive"]
+
+        run_subprocess_with_context(
+            cmd,
+            operation_context="squash branch commits with Graphite",
+            cwd=repo_root,
+            stdout=DEVNULL if quiet else sys.stdout,
+            stderr=subprocess.PIPE,
+        )
+
+    def submit_stack(
+        self, repo_root: Path, *, publish: bool = False, restack: bool = False, quiet: bool = False
+    ) -> None:
+        """Submit the current stack to create or update PRs."""
+        cmd = ["gt", "submit", "--no-edit", "--no-interactive"]
+
+        if publish:
+            cmd.append("--publish")
+        if restack:
+            cmd.append("--restack")
+
+        # Use 120-second timeout for network operations
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=repo_root,
+                timeout=120,
+                stdout=DEVNULL if quiet else sys.stdout,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+            if not quiet and result.stderr:
+                user_output(result.stderr, nl=False)
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(
+                "gt submit timed out after 120 seconds. Check network connectivity and try again."
+            ) from e
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"gt submit failed (exit code {e.returncode}): {e.stderr or ''}"
+            ) from e

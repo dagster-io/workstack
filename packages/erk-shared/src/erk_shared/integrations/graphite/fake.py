@@ -26,6 +26,8 @@ class FakeGraphite(Graphite):
         restack_raises: Exception | None = None,
         submit_branch_raises: Exception | None = None,
         track_branch_raises: Exception | None = None,
+        squash_branch_raises: Exception | None = None,
+        submit_stack_raises: Exception | None = None,
         pr_info: dict[str, PullRequestInfo] | None = None,
         branches: dict[str, BranchMetadata] | None = None,
         stacks: dict[str, list[str]] | None = None,
@@ -40,6 +42,8 @@ class FakeGraphite(Graphite):
             restack_raises: Exception to raise when restack() is called
             submit_branch_raises: Exception to raise when submit_branch() is called
             track_branch_raises: Exception to raise when track_branch() is called
+            squash_branch_raises: Exception to raise when squash_branch() is called
+            submit_stack_raises: Exception to raise when submit_stack() is called
             pr_info: Mapping of branch name -> PullRequestInfo for get_prs_from_graphite()
             branches: Mapping of branch name -> BranchMetadata for get_all_branches()
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
@@ -51,10 +55,14 @@ class FakeGraphite(Graphite):
         self._restack_raises = restack_raises
         self._submit_branch_raises = submit_branch_raises
         self._track_branch_raises = track_branch_raises
+        self._squash_branch_raises = squash_branch_raises
+        self._submit_stack_raises = submit_stack_raises
         self._sync_calls: list[tuple[Path, bool, bool]] = []
         self._restack_calls: list[tuple[Path, bool, bool]] = []
         self._submit_branch_calls: list[tuple[Path, str, bool]] = []
         self._track_branch_calls: list[tuple[Path, str, str]] = []
+        self._squash_branch_calls: list[tuple[Path, bool]] = []
+        self._submit_stack_calls: list[tuple[Path, bool, bool, bool]] = []
         self._pr_info = pr_info if pr_info is not None else {}
         self._branches = branches if branches is not None else {}
         self._stacks = stacks if stacks is not None else {}
@@ -249,3 +257,33 @@ class FakeGraphite(Graphite):
         This property is for test assertions only.
         """
         return self._check_auth_status_calls
+
+    def squash_branch(self, repo_root: Path, *, quiet: bool = False) -> None:
+        """Track squash_branch calls and optionally raise."""
+        self._squash_branch_calls.append((repo_root, quiet))
+        if self._squash_branch_raises is not None:
+            raise self._squash_branch_raises
+
+    def submit_stack(
+        self, repo_root: Path, *, publish: bool = False, restack: bool = False, quiet: bool = False
+    ) -> None:
+        """Track submit_stack calls and optionally raise."""
+        self._submit_stack_calls.append((repo_root, publish, restack, quiet))
+        if self._submit_stack_raises is not None:
+            raise self._submit_stack_raises
+
+    @property
+    def squash_branch_calls(self) -> list[tuple[Path, bool]]:
+        """Get the list of squash_branch() calls.
+
+        Returns list of (repo_root, quiet) tuples.
+        """
+        return self._squash_branch_calls
+
+    @property
+    def submit_stack_calls(self) -> list[tuple[Path, bool, bool, bool]]:
+        """Get the list of submit_stack() calls.
+
+        Returns list of (repo_root, publish, restack, quiet) tuples.
+        """
+        return self._submit_stack_calls

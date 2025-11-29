@@ -73,3 +73,13 @@ class DryRunGraphite(Graphite):
     def check_auth_status(self) -> tuple[bool, str | None, str | None]:
         """Check authentication status (read-only, delegates to wrapped)."""
         return self._wrapped.check_auth_status()
+
+    def squash_branch(self, repo_root: Path, *, quiet: bool = False) -> None:
+        """No-op for gt squash in dry-run mode."""
+        pass
+
+    def submit_stack(
+        self, repo_root: Path, *, publish: bool = False, restack: bool = False, quiet: bool = False
+    ) -> None:
+        """No-op for gt submit in dry-run mode."""
+        pass

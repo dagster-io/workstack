@@ -12,11 +12,11 @@ Design:
 """
 
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 
 from erk_shared.integrations.graphite.abc import Graphite
 from erk_shared.integrations.graphite.fake import FakeGraphite
-from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
-from erk_shared.integrations.gt.types import CommandResult
+from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GtKit
 
 
 @dataclass(frozen=True)
@@ -30,26 +30,6 @@ class GitState:
     add_success: bool = True
     trunk_branch: str = "main"
     tracked_files: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class GraphiteState:
-    """Immutable Graphite stack state."""
-
-    branch_parents: dict[str, str] = field(default_factory=dict)
-    branch_children: dict[str, list[str]] = field(default_factory=dict)
-    submit_success: bool = True
-    submit_stdout: str = ""
-    submit_stderr: str = ""
-    restack_success: bool = True
-    restack_stdout: str = ""
-    restack_stderr: str = ""
-    squash_success: bool = True
-    squash_stdout: str = ""
-    squash_stderr: str = ""
-    authenticated: bool = True
-    auth_username: str | None = "test-user"
-    auth_repo_info: str | None = "owner/repo"
 
 
 @dataclass(frozen=True)
@@ -179,38 +159,18 @@ class FakeGitGtKitOps(GitGtKit):
             self._simulated_conflicts: set[tuple[str, str]] = set()
         self._simulated_conflicts.add((base_branch, head_branch))
 
+    def get_git_common_dir(self, cwd: Path) -> Path | None:
+        """Fake git common dir - returns parent of cwd as .git location."""
+        return cwd / ".git"
 
-class FakeGraphiteGtKitOps(GraphiteGtKit):
-    """Fake Graphite operations with in-memory state."""
+    def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
+        """Fake branch head - returns a fake SHA."""
+        return f"fake-sha-for-{branch}"
 
-    def __init__(self, state: GraphiteState | None = None) -> None:
-        """Initialize with optional initial state."""
-        self._state = state if state is not None else GraphiteState()
-        self._current_branch = "main"
-
-    def set_current_branch(self, branch: str) -> None:
-        """Set current branch (needed for context)."""
-        self._current_branch = branch
-
-    def get_state(self) -> GraphiteState:
-        """Get current state (for testing assertions)."""
-        return self._state
-
-    def squash_commits(self) -> CommandResult:
-        """Run gt squash with configurable success/failure."""
-        return CommandResult(
-            success=self._state.squash_success,
-            stdout=self._state.squash_stdout,
-            stderr=self._state.squash_stderr,
-        )
-
-    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
-        """Run gt submit with configurable success/failure."""
-        return CommandResult(
-            success=self._state.submit_success,
-            stdout=self._state.submit_stdout,
-            stderr=self._state.submit_stderr,
-        )
+    def checkout_branch(self, branch: str) -> bool:
+        """Fake checkout - always succeeds and updates current branch."""
+        self._state = replace(self._state, current_branch=branch)
+        return True
 
 
 class FakeGitHubGtKitOps(GitHubGtKit):
@@ -347,23 +307,17 @@ class FakeGtKitOps(GtKit):
     def __init__(
         self,
         git_state: GitState | None = None,
-        graphite_state: GraphiteState | None = None,
         github_state: GitHubState | None = None,
         main_graphite: Graphite | None = None,
     ) -> None:
         """Initialize with optional initial states."""
         self._git = FakeGitGtKitOps(git_state)
-        self._graphite = FakeGraphiteGtKitOps(graphite_state)
         self._github = FakeGitHubGtKitOps(github_state)
         self._main_graphite = main_graphite if main_graphite is not None else FakeGraphite()
 
     def git(self) -> FakeGitGtKitOps:
         """Get the git operations interface."""
         return self._git
-
-    def graphite(self) -> FakeGraphiteGtKitOps:
-        """Get the Graphite operations interface."""
-        return self._graphite
 
     def github(self) -> FakeGitHubGtKitOps:
         """Get the GitHub operations interface."""
@@ -388,12 +342,6 @@ class FakeGtKitOps(GtKit):
         # Update git state
         git_state = self._git.get_state()
         self._git._state = replace(git_state, current_branch=branch)
-
-        # Update graphite state with parent relationship
-        gt_state = self._graphite.get_state()
-        new_parents = {**gt_state.branch_parents, branch: parent}
-        self._graphite._state = replace(gt_state, branch_parents=new_parents)
-        self._graphite.set_current_branch(branch)
 
         # Update github state
         self._github.set_current_branch(branch)
@@ -474,54 +422,6 @@ class FakeGtKitOps(GtKit):
         )
         return self
 
-    def with_children(self, children: list[str]) -> "FakeGtKitOps":
-        """Set child branches for current branch.
-
-        Args:
-            children: List of child branch names
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        branch = self._graphite._current_branch
-
-        new_children = {**gt_state.branch_children, branch: children}
-        self._graphite._state = replace(gt_state, branch_children=new_children)
-        return self
-
-    def with_submit_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
-        """Configure submit to fail.
-
-        Args:
-            stdout: Stdout to return
-            stderr: Stderr to return
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        self._graphite._state = replace(
-            gt_state, submit_success=False, submit_stdout=stdout, submit_stderr=stderr
-        )
-        return self
-
-    def with_restack_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
-        """Configure restack to fail.
-
-        Args:
-            stdout: Stdout to return
-            stderr: Stderr to return
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        self._graphite._state = replace(
-            gt_state, restack_success=False, restack_stdout=stdout, restack_stderr=stderr
-        )
-        return self
-
     def with_merge_failure(self) -> "FakeGtKitOps":
         """Configure PR merge to fail.
 
@@ -530,22 +430,6 @@ class FakeGtKitOps(GtKit):
         """
         gh_state = self._github.get_state()
         self._github._state = replace(gh_state, merge_success=False)
-        return self
-
-    def with_squash_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
-        """Configure squash to fail.
-
-        Args:
-            stdout: Stdout to return
-            stderr: Stderr to return
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        self._graphite._state = replace(
-            gt_state, squash_success=False, squash_stdout=stdout, squash_stderr=stderr
-        )
         return self
 
     def with_add_failure(self) -> "FakeGtKitOps":
@@ -582,44 +466,6 @@ class FakeGtKitOps(GtKit):
         gh_state = self._github.get_state()
         self._github._state = replace(
             gh_state, pr_delay_attempts_until_visible=attempts_until_visible
-        )
-        return self
-
-    def with_submit_success_but_nothing_submitted(self) -> "FakeGtKitOps":
-        """Configure submit to succeed but with 'Nothing to submit!' warning.
-
-        Simulates the case where a parent branch is empty/already merged.
-        Graphite returns exit code 0 but with warning text.
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        self._graphite._state = replace(
-            gt_state,
-            submit_success=True,
-            submit_stdout=(
-                "WARNING: This branch does not introduce any changes:\n"
-                "▸ stale-parent-branch\n"
-                "WARNING: This branch and any dependent branches will not be submitted.\n"
-                "Nothing to submit!"
-            ),
-            submit_stderr="",
-        )
-        return self
-
-    def with_gt_unauthenticated(self) -> "FakeGtKitOps":
-        """Configure Graphite as not authenticated.
-
-        Returns:
-            Self for chaining
-        """
-        gt_state = self._graphite.get_state()
-        self._graphite._state = replace(
-            gt_state,
-            authenticated=False,
-            auth_username=None,
-            auth_repo_info=None,
         )
         return self
 

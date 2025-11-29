@@ -8,7 +8,7 @@ Design:
 - Each implementation wraps existing subprocess patterns from CLI commands
 - Returns match interface contracts (str | None, bool, tuple)
 - Uses check=False to allow LBYL error handling
-- RealGtKitOps composes all three real implementations
+- RealGtKit composes git, GitHub, and main_graphite implementations
 """
 
 import json
@@ -18,8 +18,7 @@ from pathlib import Path
 from erk_shared.github.parsing import parse_gh_auth_status_output
 from erk_shared.integrations.graphite.abc import Graphite
 from erk_shared.integrations.graphite.real import RealGraphite
-from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
-from erk_shared.integrations.gt.types import CommandResult
+from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GtKit
 
 
 def _run_subprocess_with_timeout(
@@ -249,54 +248,6 @@ class RealGitGtKit(GitGtKit):
         return result.returncode == 0
 
 
-class RealGraphiteGtKit(GraphiteGtKit):
-    """Real Graphite operations using subprocess."""
-
-    def squash_commits(self) -> CommandResult:
-        """Run gt squash to consolidate commits."""
-        result = subprocess.run(
-            ["gt", "squash", "--no-edit", "--no-interactive"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return CommandResult(
-            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
-        )
-
-    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
-        """Run gt submit to create or update PR."""
-        args = ["gt", "submit", "--no-edit", "--no-interactive"]
-
-        if publish:
-            args.append("--publish")
-
-        if restack:
-            args.append("--restack")
-
-        result = _run_subprocess_with_timeout(
-            args,
-            timeout=120,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result is None:
-            return CommandResult(
-                success=False,
-                stdout="",
-                stderr=(
-                    "gt submit timed out after 120 seconds. "
-                    "Check network connectivity and try again."
-                ),
-            )
-
-        return CommandResult(
-            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
-        )
-
-
 class RealGitHubGtKit(GitHubGtKit):
     """Real GitHub operations using subprocess."""
 
@@ -500,23 +451,18 @@ class RealGitHubGtKit(GitHubGtKit):
 class RealGtKit(GtKit):
     """Real composite operations implementation.
 
-    Combines real git, Graphite, and GitHub operations for production use.
+    Combines real git, GitHub, and Graphite operations for production use.
     """
 
     def __init__(self) -> None:
         """Initialize real operations instances."""
         self._git = RealGitGtKit()
-        self._graphite = RealGraphiteGtKit()
         self._github = RealGitHubGtKit()
         self._main_graphite = RealGraphite()
 
     def git(self) -> GitGtKit:
         """Get the git operations interface."""
         return self._git
-
-    def graphite(self) -> GraphiteGtKit:
-        """Get the Graphite operations interface."""
-        return self._graphite
 
     def github(self) -> GitHubGtKit:
         """Get the GitHub operations interface."""

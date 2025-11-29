@@ -5,8 +5,8 @@ used by GT kit CLI commands. These interfaces enable dependency injection with
 in-memory fakes for testing while maintaining type safety.
 
 Design:
-- Three separate ABC interfaces: GitGtKitOps, GraphiteGtKitOps, GitHubGtKitOps
-- Composite GtKitOps interface that combines all three
+- Two separate ABC interfaces: GitGtKit, GitHubGtKit
+- Composite GtKit interface that combines both plus main_graphite()
 - Return values match existing subprocess patterns (str | None, bool, etc.)
 - LBYL pattern: operations check state, return None/False on failure
 """
@@ -15,7 +15,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from erk_shared.integrations.graphite.abc import Graphite
-from erk_shared.integrations.gt.types import CommandResult
 
 
 class GitGtKit(ABC):
@@ -166,30 +165,6 @@ class GitGtKit(ABC):
         """
 
 
-class GraphiteGtKit(ABC):
-    """Graphite (gt) operations interface for GT kit commands."""
-
-    @abstractmethod
-    def squash_commits(self) -> CommandResult:
-        """Run gt squash to consolidate commits.
-
-        Returns:
-            CommandResult with success status and output
-        """
-
-    @abstractmethod
-    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
-        """Run gt submit to create or update PR.
-
-        Args:
-            publish: Whether to use --publish flag
-            restack: Whether to use --restack flag
-
-        Returns:
-            CommandResult with success status and output
-        """
-
-
 class GitHubGtKit(ABC):
     """GitHub (gh) operations interface for GT kit commands."""
 
@@ -334,15 +309,7 @@ class GtKit(ABC):
         """Get the git operations interface.
 
         Returns:
-            GitGtKitOps implementation
-        """
-
-    @abstractmethod
-    def graphite(self) -> GraphiteGtKit:
-        """Get the Graphite operations interface.
-
-        Returns:
-            GraphiteGtKitOps implementation
+            GitGtKit implementation
         """
 
     @abstractmethod

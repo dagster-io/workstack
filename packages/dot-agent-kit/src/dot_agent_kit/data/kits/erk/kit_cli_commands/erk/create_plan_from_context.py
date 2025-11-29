@@ -75,8 +75,10 @@ def create_plan_from_context(ctx: click.Context) -> None:
         raise SystemExit(1) from e
 
     # Create issue (ABC interface with EAFP pattern)
+    # Add [erk-plan] suffix to title for visibility
+    issue_title = f"{title} [erk-plan]"
     try:
-        result = github.create_issue(repo_root, title, initial_body, ["erk-plan"])
+        result = github.create_issue(repo_root, issue_title, initial_body, ["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
         raise SystemExit(1) from e

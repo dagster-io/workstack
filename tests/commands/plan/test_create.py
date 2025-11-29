@@ -35,7 +35,7 @@ def test_create_from_file(tmp_path) -> None:
         # Verify issue was created with correct data
         assert len(issues.created_issues) == 1
         title, body, labels = issues.created_issues[0]
-        assert title == "Test Feature"
+        assert title == "Test Feature [erk-plan]"
         assert "erk-plan" in labels
 
         # Verify Schema V2 format: metadata in body
@@ -67,9 +67,9 @@ def test_create_from_stdin() -> None:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         assert "Created plan #1" in result.output
 
-        # Verify title was extracted from H1
+        # Verify title was extracted from H1 (with [erk-plan] suffix)
         title, body, labels = issues.created_issues[0]
-        assert title == "Stdin Feature"
+        assert title == "Stdin Feature [erk-plan]"
 
 
 def test_create_extracts_h1_title(tmp_path) -> None:
@@ -90,7 +90,7 @@ def test_create_extracts_h1_title(tmp_path) -> None:
         # Assert
         assert result.exit_code == 0
         title, body, labels = issues.created_issues[0]
-        assert title == "Auto Extracted Title"
+        assert title == "Auto Extracted Title [erk-plan]"
 
 
 def test_create_with_explicit_title(tmp_path) -> None:
@@ -113,7 +113,7 @@ def test_create_with_explicit_title(tmp_path) -> None:
         # Assert
         assert result.exit_code == 0
         title, body, labels = issues.created_issues[0]
-        assert title == "Custom Title"
+        assert title == "Custom Title [erk-plan]"
 
 
 def test_create_with_additional_labels(tmp_path) -> None:
@@ -183,9 +183,9 @@ def test_create_with_file_ignores_stdin(tmp_path) -> None:
 
         # Assert
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        # Verify the file content was used, not stdin
+        # Verify the file content was used, not stdin (with [erk-plan] suffix)
         title, body, labels = issues.created_issues[0]
-        assert title == "File Title"
+        assert title == "File Title [erk-plan]"
 
 
 def test_create_ensures_label_exists(tmp_path) -> None:
@@ -304,7 +304,7 @@ def test_create_with_h2_title_fallback(tmp_path) -> None:
         # Assert
         assert result.exit_code == 0
         title, body, labels = issues.created_issues[0]
-        assert title == "H2 Title"
+        assert title == "H2 Title [erk-plan]"
 
 
 def test_create_does_not_include_worktree_name(tmp_path) -> None:

@@ -166,6 +166,8 @@ def create_issue_from_session(session_id: str | None) -> None:
         )
 
         # Step 8: Create GitHub issue with metadata body
+        # Add [erk-plan] suffix to title for visibility
+        issue_title = f"{title} [erk-plan]"
         try:
             create_result = subprocess.run(
                 [
@@ -173,7 +175,7 @@ def create_issue_from_session(session_id: str | None) -> None:
                     "issue",
                     "create",
                     "--title",
-                    title,
+                    issue_title,
                     "--body",
                     formatted_body,
                     "--label",

@@ -91,7 +91,7 @@ def test_mark_step_json_output(impl_folder_with_steps: Path, monkeypatch) -> Non
     data = json.loads(result.output)
 
     assert data["success"] is True
-    assert data["step_num"] == 1
+    assert data["step_nums"] == [1]
     assert data["completed"] is True
     assert data["total_completed"] == 1
     assert data["total_steps"] == 3
@@ -148,3 +148,79 @@ def test_mark_step_multiple_steps_sequential(impl_folder_with_steps: Path, monke
     assert metadata is not None
     assert metadata["completed_steps"] == 3
     assert all(step["completed"] for step in metadata["steps"])
+
+
+def test_mark_step_multiple_steps_single_command(impl_folder_with_steps: Path, monkeypatch) -> None:
+    """Test marking multiple steps in a single command."""
+    monkeypatch.chdir(impl_folder_with_steps)
+
+    runner = CliRunner()
+    result = runner.invoke(mark_step, ["1", "2", "3"])
+
+    assert result.exit_code == 0
+    assert "✓ Step 1" in result.output
+    assert "✓ Step 2" in result.output
+    assert "✓ Step 3" in result.output
+    assert "Progress: 3/3" in result.output
+
+    # Verify progress.md was updated
+    progress_file = impl_folder_with_steps / ".impl" / "progress.md"
+    content = progress_file.read_text(encoding="utf-8")
+
+    metadata = parse_progress_frontmatter(content)
+    assert metadata is not None
+    assert metadata["completed_steps"] == 3
+    assert all(step["completed"] for step in metadata["steps"])
+
+
+def test_mark_step_multiple_steps_json_output(impl_folder_with_steps: Path, monkeypatch) -> None:
+    """Test JSON output with multiple steps."""
+    monkeypatch.chdir(impl_folder_with_steps)
+
+    runner = CliRunner()
+    result = runner.invoke(mark_step, ["1", "3", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+
+    assert data["success"] is True
+    assert data["step_nums"] == [1, 3]
+    assert data["completed"] is True
+    assert data["total_completed"] == 2
+    assert data["total_steps"] == 3
+
+
+def test_mark_step_multiple_steps_one_invalid_fails_entire_batch(
+    impl_folder_with_steps: Path, monkeypatch
+) -> None:
+    """Test that if one step is invalid, the entire batch fails with no partial writes."""
+    monkeypatch.chdir(impl_folder_with_steps)
+
+    runner = CliRunner()
+    # Step 99 is invalid (out of range)
+    result = runner.invoke(mark_step, ["1", "99", "2"])
+
+    assert result.exit_code == 1
+    assert "Error" in result.output
+    assert "out of range" in result.output
+
+    # Verify progress.md was NOT modified (no partial writes)
+    progress_file = impl_folder_with_steps / ".impl" / "progress.md"
+    content = progress_file.read_text(encoding="utf-8")
+
+    metadata = parse_progress_frontmatter(content)
+    assert metadata is not None
+    assert metadata["completed_steps"] == 0
+    assert all(not step["completed"] for step in metadata["steps"])
+
+
+def test_mark_step_empty_args_error(impl_folder_with_steps: Path, monkeypatch) -> None:
+    """Test error when no step numbers are provided."""
+    monkeypatch.chdir(impl_folder_with_steps)
+
+    runner = CliRunner()
+    result = runner.invoke(mark_step, [])
+
+    assert result.exit_code == 1
+    assert "Error" in result.output
+    assert "At least one step number is required" in result.output

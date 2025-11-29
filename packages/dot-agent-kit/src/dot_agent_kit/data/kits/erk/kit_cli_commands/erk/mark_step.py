@@ -1,15 +1,18 @@
-"""Mark a step as completed or incomplete in progress.md.
+"""Mark one or more steps as completed or incomplete in progress.md.
 
 This kit CLI command updates the YAML frontmatter in .impl/progress.md to mark
-a specific step as completed or incomplete, then regenerates the checkboxes.
+steps as completed or incomplete, then regenerates the checkboxes.
+
+Supports marking multiple steps in a single invocation to avoid race conditions
+when Claude runs parallel commands.
 
 Usage:
-    dot-agent run erk mark-step STEP_NUM
+    dot-agent run erk mark-step STEP_NUM [STEP_NUM ...]
     dot-agent run erk mark-step STEP_NUM --incomplete
     dot-agent run erk mark-step STEP_NUM --json
 
 Output:
-    JSON format: {"success": true, "step_num": N, "completed": true,
+    JSON format: {"success": true, "step_nums": [N, ...], "completed": true,
                   "total_completed": X, "total_steps": Y}
     Human format: ✓ Step N: <description>\n              Progress: X/Y
 
@@ -22,8 +25,14 @@ Examples:
     ✓ Step 5: Implement feature X
     Progress: 5/10
 
+    $ dot-agent run erk mark-step 1 2 3
+    ✓ Step 1: First step
+    ✓ Step 2: Second step
+    ✓ Step 3: Third step
+    Progress: 3/10
+
     $ dot-agent run erk mark-step 5 --json
-    {"success": true, "step_num": 5, "completed": true, "total_completed": 5, "total_steps": 10}
+    {"success": true, "step_nums": [5], "completed": true, "total_completed": 5, "total_steps": 10}
 
     $ dot-agent run erk mark-step 5 --incomplete
     ○ Step 5: Implement feature X
@@ -96,31 +105,56 @@ def _parse_progress_file(progress_file: Path) -> tuple[dict[str, Any], str]:
     return metadata, post.content
 
 
+def _validate_step_nums(
+    step_nums: tuple[int, ...],
+    total_steps: int,
+) -> None:
+    """Validate all step numbers are in range.
+
+    Args:
+        step_nums: Tuple of step numbers (1-indexed)
+        total_steps: Total number of steps in the plan
+
+    Raises:
+        SystemExit: If any step_num is out of range
+    """
+    if len(step_nums) == 0:
+        _error("At least one step number is required")
+
+    for step_num in step_nums:
+        if step_num < 1 or step_num > total_steps:
+            _error(f"Step number {step_num} out of range (1-{total_steps})")
+
+
 def _update_step_status(
     metadata: dict[str, Any],
     step_num: int,
     completed: bool,
 ) -> None:
-    """Update step status in metadata and recalculate completed_steps count.
+    """Update step status in metadata.
 
     Args:
         metadata: Progress metadata dict (modified in place)
-        step_num: Step number (1-indexed)
+        step_num: Step number (1-indexed), must be pre-validated
         completed: True to mark complete, False for incomplete
 
-    Raises:
-        SystemExit: If step_num is out of range
+    Note:
+        Does NOT validate step_num - caller must validate first.
+        Does NOT recalculate completed_steps - caller must do this after all updates.
     """
-    total_steps = metadata["total_steps"]
     steps = metadata["steps"]
-
-    if step_num < 1 or step_num > total_steps:
-        _error(f"Step number {step_num} out of range (1-{total_steps})")
 
     # Update step status (convert to 0-indexed)
     steps[step_num - 1]["completed"] = completed
 
-    # Recalculate completed_steps count
+
+def _recalculate_completed_steps(metadata: dict[str, Any]) -> None:
+    """Recalculate completed_steps count from steps array.
+
+    Args:
+        metadata: Progress metadata dict (modified in place)
+    """
+    steps = metadata["steps"]
     completed_count = sum(1 for step in steps if step["completed"])
     metadata["completed_steps"] = completed_count
 
@@ -164,40 +198,52 @@ def _write_progress_file(
 
 
 @click.command(name="mark-step")
-@click.argument("step_num", type=int)
+@click.argument("step_nums", type=int, nargs=-1)
 @click.option(
     "--completed/--incomplete",
     default=True,
     help="Mark as completed (default) or incomplete",
 )
 @click.option("--json", "output_json", is_flag=True, help="Output JSON format")
-def mark_step(step_num: int, completed: bool, output_json: bool) -> None:
-    """Mark a step as completed or incomplete in progress.md.
+def mark_step(step_nums: tuple[int, ...], completed: bool, output_json: bool) -> None:
+    """Mark one or more steps as completed or incomplete in progress.md.
 
-    Updates the YAML frontmatter to mark STEP_NUM as completed/incomplete,
+    Updates the YAML frontmatter to mark STEP_NUMS as completed/incomplete,
     recalculates the completed_steps count, and regenerates checkboxes.
 
-    STEP_NUM: Step number to mark (1-indexed)
+    Supports multiple step numbers to avoid race conditions from parallel execution.
+
+    STEP_NUMS: One or more step numbers to mark (1-indexed)
     """
     progress_file = _validate_progress_file()
     metadata, _ = _parse_progress_file(progress_file)
 
-    _update_step_status(metadata, step_num, completed)
+    # Validate all steps first (fail fast before any modifications)
+    _validate_step_nums(step_nums, metadata["total_steps"])
+
+    # Update all steps in a single read-modify-write cycle
+    for step_num in step_nums:
+        _update_step_status(metadata, step_num, completed)
+
+    # Recalculate completed count once after all updates
+    _recalculate_completed_steps(metadata)
+
     _write_progress_file(progress_file, metadata)
 
     # Output result
     if output_json:
         result = {
             "success": True,
-            "step_num": step_num,
+            "step_nums": list(step_nums),
             "completed": completed,
             "total_completed": metadata["completed_steps"],
             "total_steps": metadata["total_steps"],
         }
         click.echo(json.dumps(result))
     else:
-        # Get step text for human output
-        step_text = metadata["steps"][step_num - 1]["text"]
+        # Output each marked step
         status_icon = "✓" if completed else "○"
-        click.echo(f"{status_icon} Step {step_num}: {step_text}")
+        for step_num in step_nums:
+            step_text = metadata["steps"][step_num - 1]["text"]
+            click.echo(f"{status_icon} Step {step_num}: {step_text}")
         click.echo(f"Progress: {metadata['completed_steps']}/{metadata['total_steps']}")

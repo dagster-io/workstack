@@ -30,9 +30,8 @@ The erk plan lifecycle manages implementation plans from creation through automa
        │                  │                   │                   │                   │
        ▼                  ▼                   ▼                   ▼                   ▼
  GitHub Issue       Branch + PR          GitHub Actions      Code Changes        Issue Closed
- with erk-plan      created locally      runs Claude         committed           via PR merge
- label              then workflow        to execute          and pushed
-                    dispatched           the plan
+ with erk-plan      created by           finds existing      committed           via PR merge
+ label              erk submit           PR and executes     and pushed
 ```
 
 ### Key File Locations at a Glance
@@ -145,6 +144,8 @@ The `erk-plan` label marks issues as implementation plans:
 
 Submission prepares the plan for remote execution via `erk submit <issue_number>`.
 
+**Key responsibility**: `erk submit` is the **source of truth** for branch and PR creation. The workflow dispatch (Phase 3) expects these to already exist.
+
 ### Pre-Submission Validation
 
 Before submission, the command validates:
@@ -253,16 +254,15 @@ This ensures only one implementation runs per issue at a time.
 - Configure git with submitter identity
 - Detect trunk branch (main or master)
 
-#### Phase 2: Branch Setup
+#### Phase 2: Find PR & Checkout Branch
 
-- Derive branch name from issue title (deterministic)
-- Check if branch already exists
-- **If new**: Create branch from trunk, create `.worker-impl/`, commit and push
-- **If exists**: Reuse branch, update `.worker-impl/` with fresh plan content
+- Find existing PR via "Closes #N" search pattern (created by `erk submit`)
+- Checkout the implementation branch
+- Update `.worker-impl/` with fresh plan content (for reruns)
 
-#### Phase 3: PR Setup
+#### Phase 3: Use Existing PR
 
-- Create draft PR (or reuse existing)
+- Use existing PR (created by `erk submit`)
 - Post `workflow-started` comment to issue
 - Update issue body with `last_dispatched_run_id`
 

@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
 from erk.cli.cli import cli
-from erk.cli.commands.ls import ls_cmd
+from erk.cli.commands.plan.list_cmd import list_plans
 from erk.core.plan_store.fake import FakePlanStore
 from erk.core.plan_store.types import Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
@@ -80,8 +80,8 @@ def test_ls_command_lists_plans_by_default() -> None:
         issues = FakeGitHubIssues(issues={1: plan_to_issue(plan1)})
         ctx = build_workspace_test_context(env, issues=issues)
 
-        # Act - Use ls command
-        result = runner.invoke(ls_cmd, [], obj=ctx)
+        # Act - Use list_plans command (which has @alias("ls"))
+        result = runner.invoke(list_plans, [], obj=ctx)
 
         # Assert - Should show plans
         assert result.exit_code == 0
@@ -125,8 +125,8 @@ def test_ls_command_plan_filters_work() -> None:
         )
         ctx = build_workspace_test_context(env, issues=issues)
 
-        # Act - Filter for open plans
-        result = runner.invoke(ls_cmd, ["--state", "open"], obj=ctx)
+        # Act - Filter for open plans using list_plans command
+        result = runner.invoke(list_plans, ["--state", "open"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0

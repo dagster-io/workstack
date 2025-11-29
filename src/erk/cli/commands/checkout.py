@@ -7,6 +7,7 @@ from erk_shared.git.abc import WorktreeInfo
 from erk_shared.output.output import user_output
 
 from erk.cli.activation import render_activation_script
+from erk.cli.alias import alias
 from erk.cli.commands.completions import complete_branch_names
 from erk.cli.commands.wt.create_cmd import ensure_worktree_for_branch
 from erk.cli.core import discover_repo_context
@@ -238,6 +239,7 @@ def _perform_checkout(
         user_output(f"Or use: source <(erk checkout {branch} --script)")
 
 
+@alias("co")
 @click.command("checkout")
 @click.argument("branch", metavar="BRANCH", shell_complete=complete_branch_names)
 @click.option(

@@ -604,3 +604,61 @@ def execute_assemble(plan_path: Path, discoveries_path: Path) -> None:
 5. **Python is infrastructure** - File I/O, JSON, subprocess, validation. Nothing more.
 
 **Decision shortcut:** "Does this require understanding what the text means?" → LLM. Otherwise, consider Python only if it reduces tokens.
+
+## Command Loading and Naming Conventions
+
+Kit CLI commands are loaded lazily by `LazyKitGroup` in `dot_agent_kit/commands/kit_command/group.py`.
+
+### Naming Convention
+
+Command names use **kebab-case**, function names use **snake_case**:
+
+| Command Name (kit.yaml) | Expected Function Name |
+|-------------------------|------------------------|
+| `get-closing-text`      | `get_closing_text`     |
+| `plan-save-to-issue`    | `plan_save_to_issue`   |
+| `submit-branch`         | `submit_branch`        |
+
+The loader converts hyphens to underscores automatically (line 133 in `group.py`).
+
+### Handling Import Collisions
+
+When your CLI command function would collide with an imported function name, use an import alias:
+
+**Problem:**
+```python
+from erk_shared.impl_folder import get_closing_text  # Collision!
+
+@click.command(name="get-closing-text")
+def get_closing_text() -> None:  # Same name as import
+    closing_text = get_closing_text(impl_dir)  # Which one?
+```
+
+**Solution - use import alias:**
+```python
+from erk_shared.impl_folder import get_closing_text as get_closing_text_impl
+
+@click.command(name="get-closing-text")
+def get_closing_text() -> None:
+    closing_text = get_closing_text_impl(impl_dir)  # Clear!
+```
+
+**DO NOT** rename the function with a `_cmd` suffix - this breaks the loader's name resolution.
+
+### Validation Rules
+
+Commands are validated during loading. Each command must have:
+
+1. **Name**: lowercase letters, numbers, hyphens only (`^[a-z][a-z0-9-]*$`)
+2. **Path**: must end with `.py` and start with `kit_cli_commands/`
+3. **Description**: non-empty string
+4. **No directory traversal**: path cannot contain `..`
+
+### Warning Sources
+
+If you see warnings during kit loading, check:
+
+1. **"does not have expected function"** - Function name doesn't match command name (see naming convention above)
+2. **"Command file not found"** - Path in kit.yaml doesn't exist
+3. **"Failed to import command"** - Python import error in the command file
+4. **"Invalid command"** - Validation error (name format, path, description)

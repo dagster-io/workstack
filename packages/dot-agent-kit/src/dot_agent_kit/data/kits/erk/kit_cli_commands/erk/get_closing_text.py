@@ -36,7 +36,7 @@ import click
 
 
 @click.command(name="get-closing-text")
-def get_closing_text_cmd() -> None:
+def get_closing_text() -> None:
     """Get GitHub issue closing text for PR body.
 
     Checks for `.impl/issue.json` in current directory and returns the "Closes #N"
@@ -46,12 +46,12 @@ def get_closing_text_cmd() -> None:
     is optional functionality that should degrade gracefully.
     """
     # Import here to avoid loading when not needed
-    from erk_shared.impl_folder import get_closing_text
+    from erk_shared.impl_folder import get_closing_text as get_closing_text_impl
 
     impl_dir = Path.cwd() / ".impl"
 
     # Get closing text using canonical function
-    closing_text = get_closing_text(impl_dir)
+    closing_text = get_closing_text_impl(impl_dir)
     if not closing_text:
         # No issue reference - return empty (no output)
         return

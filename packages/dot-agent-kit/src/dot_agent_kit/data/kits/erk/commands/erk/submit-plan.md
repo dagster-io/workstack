@@ -2,7 +2,7 @@
 description: Submit the last created issue for remote implementation
 ---
 
-# /erk:plan-submit
+# /erk:submit-plan
 
 ## Goal
 

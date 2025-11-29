@@ -64,7 +64,7 @@ version = "0.3.1"
 artifacts = [
     ".claude/commands/erk/plan-implement.md",
     ".claude/commands/erk/merge-conflicts-fix.md",
-    ".claude/commands/erk/plan-submit.md",
+    ".claude/commands/erk/submit-plan.md",
     ".claude/agents/erk/issue-wt-creator.md",
     ".claude/agents/erk/plan-extractor.md",
     ".claude/docs/erk/EXAMPLES.md",

@@ -957,7 +957,7 @@ def execute_preflight(
     parent_branch = ops.graphite().get_parent_branch() or "main"
 
     # Write diff to scratch file in repo .tmp/<session_id>/
-    from erk_shared.scratch import write_scratch_file
+    from erk_shared.scratch.scratch import write_scratch_file
 
     diff_file = str(
         write_scratch_file(

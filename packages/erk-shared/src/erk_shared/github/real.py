@@ -141,6 +141,8 @@ class RealGitHub(GitHub):
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """Stub method - not implemented in erk-shared."""
         msg = (

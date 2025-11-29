@@ -636,6 +636,8 @@ query {{
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """Create a pull request using gh CLI.
 
@@ -645,6 +647,7 @@ query {{
             title: PR title
             body: PR body (markdown)
             base: Target base branch (defaults to repository default branch if None)
+            draft: If True, create as draft PR
 
         Returns:
             PR number
@@ -660,6 +663,10 @@ query {{
             "--body",
             body,
         ]
+
+        # Add --draft flag if specified
+        if draft:
+            cmd.append("--draft")
 
         # Add --base flag if specified
         if base is not None:

@@ -99,6 +99,8 @@ class DryRunGitHub(GitHub):
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """No-op for creating PR in dry-run mode.
 

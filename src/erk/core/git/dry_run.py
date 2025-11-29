@@ -213,3 +213,20 @@ class DryRunGit(Git):
         """No-op for fetching PR ref in dry-run mode."""
         # Do nothing - prevents actual fetch execution
         pass
+
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """No-op for staging files in dry-run mode."""
+        # Do nothing - prevents actual file staging
+        pass
+
+    def commit(self, cwd: Path, message: str) -> None:
+        """No-op for committing in dry-run mode."""
+        # Do nothing - prevents actual commit creation
+        pass
+
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """No-op for pushing in dry-run mode."""
+        # Do nothing - prevents actual push execution
+        pass

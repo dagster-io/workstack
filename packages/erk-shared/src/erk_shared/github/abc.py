@@ -168,6 +168,8 @@ class GitHub(ABC):
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """Create a pull request.
 
@@ -177,6 +179,7 @@ class GitHub(ABC):
             title: PR title
             body: PR body (markdown)
             base: Target base branch (defaults to trunk branch if None)
+            draft: If True, create as draft PR
 
         Returns:
             PR number

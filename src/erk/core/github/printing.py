@@ -130,19 +130,22 @@ class PrintingGitHub(PrintingBase, GitHub):
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """Create PR with printed output.
 
         Returns:
             PR number
         """
+        draft_arg = "--draft " if draft else ""
         base_arg = f"--base {base} " if base is not None else ""
         self._emit(
             self._format_command(
-                f'gh pr create --head {branch} {base_arg}--title "{title}" --body <body>'
+                f'gh pr create --head {branch} {draft_arg}{base_arg}--title "{title}" --body <body>'
             )
         )
-        pr_number = self._wrapped.create_pr(repo_root, branch, title, body, base=base)
+        pr_number = self._wrapped.create_pr(repo_root, branch, title, body, base=base, draft=draft)
         self._emit(f"-> PR #{pr_number}")
         return pr_number
 

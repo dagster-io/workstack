@@ -5,6 +5,7 @@ import pytest
 from erk_shared.naming import (
     WORKTREE_DATE_SUFFIX_FORMAT,
     default_branch_for_worktree,
+    derive_branch_name_from_title,
     ensure_unique_worktree_name,
     extract_trailing_number,
     sanitize_branch_component,
@@ -298,3 +299,51 @@ def test_very_long_title_truncates_to_45_chars_total() -> None:
     # Verify the base name is correctly truncated (30 chars after rstrip of trailing hyphen)
     assert base_name == "refactor-erk-implement-command"
     assert len(base_name) == 30  # 31 chars truncated, then trailing hyphen stripped
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("My Feature", "my-feature"),
+        ("Fix Bug #123!", "fix-bug-123"),
+        ("Simple", "simple"),
+        ("With_Underscores", "with-underscores"),
+        ("UPPERCASE", "uppercase"),
+        ("spaces  multiple   here", "spaces-multiple-here"),
+        ("leading---hyphens", "leading-hyphens"),
+        ("trailing---", "trailing"),
+        ("---both---", "both"),
+        # Test 30-char truncation (different from sanitize_branch_component's 31)
+        ("a" * 40, "a" * 30),
+        ("abcdefghijklmnopqrstuvwxyz-1234567890", "abcdefghijklmnopqrstuvwxyz-123"),
+        # Trailing hyphen after truncation is removed
+        ("this-is-thirty-chars-exact-yes", "this-is-thirty-chars-exact-yes"),  # Exactly 30
+        ("this-is-thirty-one-chars-exact", "this-is-thirty-one-chars-exact"),  # 31 chars -> 30
+        # Test non-alphanumeric characters
+        ("feat: add something", "feat-add-something"),
+        ("feat/add/something", "feat-add-something"),
+        ("feat(scope): message", "feat-scope-message"),
+    ],
+)
+def test_derive_branch_name_from_title(title: str, expected: str) -> None:
+    """Test derive_branch_name_from_title matches workflow logic."""
+    assert derive_branch_name_from_title(title) == expected
+
+
+def test_derive_branch_name_truncates_to_30_chars() -> None:
+    """Branch names from titles should truncate to 30 characters maximum.
+
+    This matches the workflow logic in dispatch-erk-queue-git.yml which uses:
+    BRANCH_NAME="${BRANCH_NAME:0:30}"
+    """
+    # Exactly 30 characters
+    assert len(derive_branch_name_from_title("a" * 30)) == 30
+
+    # 31 characters truncates to 30
+    assert len(derive_branch_name_from_title("a" * 31)) == 30
+
+    # Long descriptive name gets truncated
+    long_name = "fix-dependency-injection-in-simplesubmitpy-to-eliminate-test-mocking"
+    result = derive_branch_name_from_title(long_name)
+    assert len(result) == 30
+    assert not result.endswith("-")  # No trailing hyphens after truncation

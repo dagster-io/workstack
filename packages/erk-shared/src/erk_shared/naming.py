@@ -400,3 +400,49 @@ def default_branch_for_worktree(name: str) -> str:
         "fix-bug"
     """
     return sanitize_branch_component(name)
+
+
+def derive_branch_name_from_title(title: str) -> str:
+    """Derive branch name from issue/plan title.
+
+    This function matches the logic used by the dispatch-erk-queue-git workflow
+    to ensure CLI and workflow produce identical branch names.
+
+    Transforms:
+    - Lowercase
+    - Replace non-alphanumeric (except hyphen) with hyphen
+    - Collapse consecutive hyphens
+    - Strip leading/trailing hyphens
+    - Truncate to 30 chars
+    - Strip trailing hyphen after truncation
+
+    Args:
+        title: Issue or plan title
+
+    Returns:
+        Branch name (max 30 chars, kebab-case)
+
+    Examples:
+        >>> derive_branch_name_from_title("My Feature")
+        "my-feature"
+        >>> derive_branch_name_from_title("Fix Bug #123!")
+        "fix-bug-123"
+        >>> derive_branch_name_from_title("A" * 40)
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 30 chars (one less than sanitize_branch_component)
+    """
+    # Convert to lowercase
+    branch_name = title.lower()
+    # Replace non-alphanumeric (except hyphen) with hyphen
+    branch_name = re.sub(r"[^a-z0-9-]", "-", branch_name)
+    # Collapse consecutive hyphens
+    branch_name = re.sub(r"-+", "-", branch_name)
+    # Strip leading/trailing hyphens
+    branch_name = branch_name.strip("-")
+
+    # Truncate to 30 chars (matches workflow logic)
+    branch_name = branch_name[:30]
+
+    # Strip trailing hyphen after truncation
+    branch_name = branch_name.rstrip("-")
+
+    return branch_name

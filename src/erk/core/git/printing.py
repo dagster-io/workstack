@@ -199,3 +199,28 @@ class PrintingGit(PrintingBase, Git):
     def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
         """Get branch issue (read-only, no printing)."""
         return self._wrapped.get_branch_issue(repo_root, branch)
+
+    def fetch_pr_ref(self, repo_root: Path, remote: str, pr_number: int, local_branch: str) -> None:
+        """Fetch PR ref with printed output."""
+        self._emit(self._format_command(f"git fetch {remote} pull/{pr_number}/head:{local_branch}"))
+        self._wrapped.fetch_pr_ref(repo_root, remote, pr_number, local_branch)
+
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """Stage files with printed output."""
+        self._emit(self._format_command(f"git add {' '.join(paths)}"))
+        self._wrapped.stage_files(cwd, paths)
+
+    def commit(self, cwd: Path, message: str) -> None:
+        """Commit with printed output."""
+        # Truncate message for display
+        display_msg = message[:50] + "..." if len(message) > 50 else message
+        self._emit(self._format_command(f'git commit -m "{display_msg}"'))
+        self._wrapped.commit(cwd, message)
+
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """Push to remote with printed output."""
+        upstream_flag = "-u " if set_upstream else ""
+        self._emit(self._format_command(f"git push {upstream_flag}{remote} {branch}"))
+        self._wrapped.push_to_remote(cwd, remote, branch, set_upstream=set_upstream)

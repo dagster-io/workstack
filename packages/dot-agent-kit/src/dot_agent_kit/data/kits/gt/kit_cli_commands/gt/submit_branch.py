@@ -6,17 +6,17 @@ erk-shared/integrations/gt/ for true canonicalization.
 """
 
 from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
-    execute_post_analysis,
+    execute_finalize,
     execute_pre_analysis,
+    execute_preflight,
     get_diff_context,
-    orchestrate_submit_workflow,
     pr_submit,
 )
 
 __all__ = [
     "execute_pre_analysis",
-    "execute_post_analysis",
+    "execute_preflight",
+    "execute_finalize",
     "get_diff_context",
-    "orchestrate_submit_workflow",
     "pr_submit",
 ]

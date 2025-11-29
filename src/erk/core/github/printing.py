@@ -4,7 +4,13 @@ from pathlib import Path
 
 import click
 from erk_shared.github.abc import GitHub
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 from erk_shared.printing.base import PrintingBase
 
 
@@ -161,3 +167,35 @@ class PrintingGitHub(PrintingBase, GitHub):
         return self._wrapped.poll_for_workflow_run(
             repo_root, workflow, branch_name, timeout, poll_interval
         )
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR checkout info (read-only, no printing)."""
+        return self._wrapped.get_pr_checkout_info(repo_root, pr_number)
+
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get workflow runs batch (read-only, no printing)."""
+        return self._wrapped.get_workflow_runs_batch(repo_root, run_ids)
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check auth status (read-only, no printing)."""
+        return self._wrapped.check_auth_status()
+
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """Update PR metadata with printed output."""
+        self._emit(self._format_command(f"gh pr edit {pr_number} --title <title> --body <body>"))
+        return self._wrapped.update_pr_metadata(repo_root, pr_number, title, body)
+
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """Mark PR as ready with printed output."""
+        self._emit(self._format_command(f"gh pr ready {pr_number}"))
+        return self._wrapped.mark_pr_ready(repo_root, pr_number)
+
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get Graphite PR URL (read-only, no printing)."""
+        return self._wrapped.get_graphite_pr_url(repo_root, pr_number)
+
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Get PR diff (read-only, no printing)."""
+        return self._wrapped.get_pr_diff(repo_root, pr_number)

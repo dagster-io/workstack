@@ -13,7 +13,9 @@ Design:
 
 from dataclasses import dataclass, field, replace
 
+from erk_shared.github.abc import GitHub
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
+from erk_shared.integrations.gt.github_adapter import GitHubAdapter
 from erk_shared.integrations.gt.types import CommandResult
 
 
@@ -367,11 +369,32 @@ class FakeGtKitOps(GtKit):
         git_state: GitState | None = None,
         graphite_state: GraphiteState | None = None,
         github_state: GitHubState | None = None,
+        github: GitHub | None = None,
     ) -> None:
-        """Initialize with optional initial states."""
+        """Initialize with optional initial states.
+
+        Args:
+            git_state: Initial git state
+            graphite_state: Initial Graphite state
+            github_state: Initial GitHub state (used if github is None)
+            github: Optional GitHub ABC implementation for dependency injection.
+                   If provided, uses GitHubAdapter to wrap it for GitHubGtKit interface.
+                   If None, uses FakeGitHubGtKitOps with github_state.
+
+        Note:
+            When github is provided, the declarative setup methods (with_pr, with_merge_failure,
+            etc.) will not work for GitHub operations. Use github_state for test setup instead.
+        """
         self._git = FakeGitGtKitOps(git_state)
         self._graphite = FakeGraphiteGtKitOps(graphite_state)
-        self._github = FakeGitHubGtKitOps(github_state)
+
+        if github is not None:
+            self._github: GitHubGtKit = GitHubAdapter(github, self._git)
+            self._fake_github: FakeGitHubGtKitOps | None = None
+        else:
+            fake_github = FakeGitHubGtKitOps(github_state)
+            self._github = fake_github
+            self._fake_github = fake_github
 
     def git(self) -> FakeGitGtKitOps:
         """Get the git operations interface."""
@@ -381,9 +404,23 @@ class FakeGtKitOps(GtKit):
         """Get the Graphite operations interface."""
         return self._graphite
 
-    def github(self) -> FakeGitHubGtKitOps:
+    def github(self) -> GitHubGtKit:
         """Get the GitHub operations interface."""
         return self._github
+
+    def _require_fake_github(self) -> FakeGitHubGtKitOps:
+        """Get the FakeGitHubGtKitOps instance, raising if adapter is used.
+
+        Raises:
+            RuntimeError: If GitHub was injected via constructor (adapter mode)
+        """
+        if self._fake_github is None:
+            msg = (
+                "Cannot use declarative setup methods when GitHub is injected. "
+                "Use github_state parameter or configure the injected GitHub directly."
+            )
+            raise RuntimeError(msg)
+        return self._fake_github
 
     # Declarative setup methods
 
@@ -408,7 +445,8 @@ class FakeGtKitOps(GtKit):
         self._graphite.set_current_branch(branch)
 
         # Update github state
-        self._github.set_current_branch(branch)
+        fake_github = self._require_fake_github()
+        fake_github.set_current_branch(branch)
 
         return self
 
@@ -450,8 +488,9 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
-        branch = self._github._current_branch
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
+        branch = fake_github._current_branch
 
         if url is None:
             url = f"https://github.com/repo/pull/{number}"
@@ -460,7 +499,7 @@ class FakeGtKitOps(GtKit):
         new_pr_urls = {**gh_state.pr_urls, branch: url}
         new_pr_states = {**gh_state.pr_states, branch: state}
 
-        self._github._state = replace(
+        fake_github._state = replace(
             gh_state,
             pr_numbers=new_pr_numbers,
             pr_urls=new_pr_urls,
@@ -522,8 +561,9 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
-        self._github._state = replace(gh_state, merge_success=False)
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
+        fake_github._state = replace(gh_state, merge_success=False)
         return self
 
     def with_squash_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
@@ -558,8 +598,9 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
-        self._github._state = replace(gh_state, pr_update_success=False)
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
+        fake_github._state = replace(gh_state, pr_update_success=False)
         return self
 
     def with_pr_delay(self, attempts_until_visible: int) -> "FakeGtKitOps":
@@ -573,8 +614,9 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
-        self._github._state = replace(
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
+        fake_github._state = replace(
             gh_state, pr_delay_attempts_until_visible=attempts_until_visible
         )
         return self
@@ -623,8 +665,9 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
-        self._github._state = replace(
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
+        fake_github._state = replace(
             gh_state,
             authenticated=False,
             auth_username=None,
@@ -641,12 +684,13 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
         new_mergeability = {
             **gh_state.pr_mergeability,
             pr_number: ("CONFLICTING", "DIRTY"),
         }
-        self._github._state = replace(gh_state, pr_mergeability=new_mergeability)
+        fake_github._state = replace(gh_state, pr_mergeability=new_mergeability)
         return self
 
     def with_pr_mergeability(
@@ -662,10 +706,11 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
-        gh_state = self._github.get_state()
+        fake_github = self._require_fake_github()
+        gh_state = fake_github.get_state()
         new_mergeability = {
             **gh_state.pr_mergeability,
             pr_number: (mergeable, merge_state),
         }
-        self._github._state = replace(gh_state, pr_mergeability=new_mergeability)
+        fake_github._state = replace(gh_state, pr_mergeability=new_mergeability)
         return self

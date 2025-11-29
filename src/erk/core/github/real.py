@@ -1240,3 +1240,72 @@ query {{
 
         output = result.stdout + result.stderr
         return parse_gh_auth_status_output(output)
+
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """Update PR title and body using gh pr edit.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = ["gh", "pr", "edit", str(pr_number), "--title", title, "--body", body]
+            run_subprocess_with_context(
+                cmd,
+                operation_context=f"update PR #{pr_number} metadata",
+                cwd=repo_root,
+            )
+            return True
+        except (RuntimeError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed
+            return False
+
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """Mark PR as ready for review using gh pr ready.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = ["gh", "pr", "ready", str(pr_number)]
+            run_subprocess_with_context(
+                cmd,
+                operation_context=f"mark PR #{pr_number} as ready",
+                cwd=repo_root,
+            )
+            return True
+        except (RuntimeError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed
+            return False
+
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get Graphite PR URL by querying repository owner and name.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = ["gh", "repo", "view", "--json", "owner,name"]
+            result = run_subprocess_with_context(
+                cmd,
+                operation_context="get repository info for Graphite URL",
+                cwd=repo_root,
+            )
+            data = json.loads(result.stdout)
+            owner = data["owner"]["login"]
+            repo = data["name"]
+            return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
+            # gh not installed, not authenticated, or parsing failed
+            return None
+
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Get the diff for a PR using gh pr diff."""
+        result = run_subprocess_with_context(
+            ["gh", "pr", "diff", str(pr_number)],
+            operation_context=f"get diff for PR #{pr_number}",
+            cwd=repo_root,
+        )
+        return result.stdout

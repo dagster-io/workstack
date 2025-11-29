@@ -162,3 +162,21 @@ class DryRunGitHub(GitHub):
     def check_auth_status(self) -> tuple[bool, str | None, str | None]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.check_auth_status()
+
+    def update_pr_metadata(self, repo_root: Path, pr_number: int, title: str, body: str) -> bool:
+        """No-op for updating PR metadata in dry-run mode."""
+        # Do nothing - prevents actual PR update
+        return True
+
+    def mark_pr_ready(self, repo_root: Path, pr_number: int) -> bool:
+        """No-op for marking PR ready in dry-run mode."""
+        # Do nothing - prevents actual PR state change
+        return True
+
+    def get_graphite_pr_url(self, repo_root: Path, pr_number: int) -> str | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_graphite_pr_url(repo_root, pr_number)
+
+    def get_pr_diff(self, repo_root: Path, pr_number: int) -> str:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_pr_diff(repo_root, pr_number)

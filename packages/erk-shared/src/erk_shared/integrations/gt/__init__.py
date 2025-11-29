@@ -3,16 +3,15 @@
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
 from erk_shared.integrations.gt.fake import (
     FakeGitGtKitOps,
-    FakeGitHubGtKitOps,
     FakeGraphiteGtKitOps,
     FakeGtKitOps,
     GitHubState,
     GitState,
     GraphiteState,
 )
+from erk_shared.integrations.gt.github_adapter import GitHubAdapter
 from erk_shared.integrations.gt.real import (
     RealGitGtKit,
-    RealGitHubGtKit,
     RealGraphiteGtKit,
     RealGtKit,
 )
@@ -29,12 +28,12 @@ __all__ = [
     "RealGtKit",
     "RealGitGtKit",
     "RealGraphiteGtKit",
-    "RealGitHubGtKit",
+    # Adapter
+    "GitHubAdapter",
     # Fake implementations
     "FakeGtKitOps",
     "FakeGitGtKitOps",
     "FakeGraphiteGtKitOps",
-    "FakeGitHubGtKitOps",
     # State types
     "GitState",
     "GraphiteState",

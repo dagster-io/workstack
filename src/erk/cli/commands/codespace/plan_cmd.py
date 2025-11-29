@@ -9,6 +9,23 @@ import click
 from erk_shared.output.output import user_output
 
 
+def _print_command(cmd: list[str]) -> None:
+    """Print a command with nice formatting."""
+    formatted = " ".join(cmd)
+    user_output(click.style("$ ", fg="cyan") + click.style(formatted, fg="white", bold=True))
+
+
+def _run_command(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run a command, printing it first with nice formatting."""
+    _print_command(cmd)
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def _get_repo_name() -> str:
     """Get the current repository's name with owner.
 
@@ -18,12 +35,7 @@ def _get_repo_name() -> str:
     Raises:
         SystemExit: If gh command fails or repo info cannot be retrieved.
     """
-    result = subprocess.run(
-        ["gh", "repo", "view", "--json", "nameWithOwner"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = _run_command(["gh", "repo", "view", "--json", "nameWithOwner"])
 
     if result.returncode != 0:
         user_output(
@@ -60,22 +72,18 @@ def _create_codespace(repo: str, description: str) -> str:
     """
     display_name = f"plan: {description}" if description else "plan"
 
-    result = subprocess.run(
-        [
-            "gh",
-            "codespace",
-            "create",
-            "-R",
-            repo,
-            "-d",
-            display_name,
-            "--idle-timeout",
-            "30m",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    cmd = [
+        "gh",
+        "codespace",
+        "create",
+        "-R",
+        repo,
+        "-d",
+        display_name,
+        "--idle-timeout",
+        "30m",
+    ]
+    result = _run_command(cmd)
 
     if result.returncode != 0:
         user_output(
@@ -116,12 +124,7 @@ def _wait_for_codespace(codespace_name: str, timeout_seconds: int = 300) -> None
             )
             raise SystemExit(1)
 
-        result = subprocess.run(
-            ["gh", "codespace", "list", "--json", "name,state"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = _run_command(["gh", "codespace", "list", "--json", "name,state"])
 
         if result.returncode != 0:
             # Retry on transient errors
@@ -172,5 +175,7 @@ def plan_codespace(description: str) -> None:
     user_output("Connecting via SSH...")
 
     # Replace current process with SSH to Codespace
-    os.execvp("gh", ["gh", "codespace", "ssh", "-c", codespace_name])
+    ssh_cmd = ["gh", "codespace", "ssh", "-c", codespace_name]
+    _print_command(ssh_cmd)
+    os.execvp("gh", ssh_cmd)
     # Never returns - process is replaced

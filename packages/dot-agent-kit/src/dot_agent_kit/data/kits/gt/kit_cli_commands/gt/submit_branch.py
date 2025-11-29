@@ -9,7 +9,6 @@ from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
     execute_finalize,
     execute_pre_analysis,
     execute_preflight,
-    get_diff_context,
     pr_submit,
 )
 
@@ -17,6 +16,5 @@ __all__ = [
     "execute_pre_analysis",
     "execute_preflight",
     "execute_finalize",
-    "get_diff_context",
     "pr_submit",
 ]

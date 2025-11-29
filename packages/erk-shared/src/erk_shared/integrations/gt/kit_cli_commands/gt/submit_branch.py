@@ -53,7 +53,6 @@ Examples:
 """
 
 import json
-import subprocess
 import sys
 import threading
 import time
@@ -156,27 +155,6 @@ class PostAnalysisError:
 
 
 @dataclass
-class DiffContextResult:
-    """Result of getting diff context for AI analysis."""
-
-    success: bool
-    repo_root: str
-    current_branch: str
-    parent_branch: str
-    diff: str
-
-    def model_dump(self) -> dict[str, str | bool]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "success": self.success,
-            "repo_root": self.repo_root,
-            "current_branch": self.current_branch,
-            "parent_branch": self.parent_branch,
-            "diff": self.diff,
-        }
-
-
-@dataclass
 class PreflightResult:
     """Result from preflight phase (pre-analysis + submit + diff extraction)."""
 
@@ -205,60 +183,6 @@ class FinalizeResult:
     branch_name: str
     issue_number: int | None
     message: str
-
-
-def get_diff_context(ops: GtKit | None = None) -> DiffContextResult:
-    """Get all context needed for AI diff analysis.
-
-    Args:
-        ops: Optional ops implementation for testing
-
-    Returns:
-        DiffContextResult with repo root, branches, and diff
-
-    Raises:
-        ValueError: If no parent branch found
-        subprocess.CalledProcessError: If git operations fail
-    """
-    if ops is None:
-        ops = RealGtKit()
-
-    # Get repository root
-    repo_root = ops.git().get_repository_root()
-
-    # Get current branch
-    current_branch = ops.git().get_current_branch()
-    if current_branch is None:
-        raise ValueError("Could not determine current branch")
-
-    # Get parent branch
-    parent_branch = ops.graphite().get_parent_branch()
-    if parent_branch is None:
-        raise ValueError("No parent branch found - not in a Graphite stack")
-
-    # Get full diff
-    diff = ops.git().get_diff_to_parent(parent_branch)
-
-    return DiffContextResult(
-        success=True,
-        repo_root=repo_root,
-        current_branch=current_branch,
-        parent_branch=parent_branch,
-        diff=diff,
-    )
-
-
-def _branch_name_to_title(branch_name: str) -> str:
-    """Convert kebab-case branch name to readable title.
-
-    Examples:
-        "fix-user-auth-bug" -> "Fix user auth bug"
-        "add-new-feature" -> "Add new feature"
-    """
-    # Replace hyphens with spaces
-    words = branch_name.replace("-", " ").replace("_", " ")
-    # Capitalize first letter
-    return words.capitalize() if words else "PR submitted"
 
 
 def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAnalysisError:
@@ -512,170 +436,6 @@ def build_pr_metadata_section(
     metadata_parts.append("\n---\n")
 
     return "\n".join(metadata_parts)
-
-
-def _validate_claude_availability() -> tuple[bool, str]:
-    """Check if Claude CLI is available and executable.
-
-    Returns:
-        (is_available, error_message) tuple
-    """
-    import os
-    import shutil
-
-    claude_path = shutil.which("claude")
-    if claude_path is None:
-        return False, (
-            "Claude CLI not found in PATH.\n"
-            "Install from: https://claude.ai/download\n"
-            "Or ensure ~/.local/bin is in PATH"
-        )
-
-    # Verify it's executable
-    if not os.access(claude_path, os.X_OK):
-        return False, f"Claude CLI found at {claude_path} but not executable"
-
-    return True, ""
-
-
-ERK_COMMIT_MESSAGE_MARKER = "<!-- erk-generated commit message -->"
-
-
-def _is_valid_commit_message(output: str) -> bool:
-    """Check if output contains the erk-generated commit message marker.
-
-    The commit-message-generator agent is required to append a specific marker
-    to all generated commit messages. This provides deterministic validation
-    that the output is actually a generated commit message rather than an
-    error message or permission request.
-
-    Args:
-        output: The text to validate
-
-    Returns:
-        True if the output contains the erk commit message marker
-    """
-    return ERK_COMMIT_MESSAGE_MARKER in output
-
-
-def _strip_commit_message_marker(output: str) -> str:
-    """Remove the erk commit message marker from the output.
-
-    Args:
-        output: The commit message with marker
-
-    Returns:
-        The commit message with the marker line removed
-    """
-    lines = output.split("\n")
-    filtered_lines = [line for line in lines if line.strip() != ERK_COMMIT_MESSAGE_MARKER]
-    return "\n".join(filtered_lines).strip()
-
-
-def _invoke_commit_message_agent(diff_context: DiffContextResult) -> str:
-    """Invoke commit-message-generator agent with diff file.
-
-    Args:
-        diff_context: Diff and repository context
-
-    Returns:
-        Generated commit message text
-
-    Raises:
-        RuntimeError: If agent invocation fails
-    """
-    import os
-    import tempfile
-
-    from erk_shared.integrations.gt.prompts import truncate_diff
-
-    # Truncate if needed
-    diff_content, was_truncated = truncate_diff(diff_context.diff)
-
-    # Save diff to temporary file for agent to read
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
-    ) as f:
-        diff_path = f.name
-        f.write(diff_content)
-
-    try:
-        # Build prompt for agent
-        truncation_note = "**NOTE**: Diff truncated for size.\n" if was_truncated else ""
-        prompt = f"""Analyze the git diff and generate a commit message.
-
-{truncation_note}Diff file: {diff_path}
-Repository root: {diff_context.repo_root}
-Current branch: {diff_context.current_branch}
-Parent branch: {diff_context.parent_branch}
-
-Use the Read tool to load the diff file."""
-
-        # Invoke commit-message-generator agent
-        # Note: --permission-mode bypassPermissions is required because:
-        # 1. The agent needs to Read the temp diff file we created
-        # 2. When Claude is invoked via subprocess, it doesn't inherit
-        #    settings.json permissions from the parent session
-        # 3. The agent only has the Read tool available, limiting scope
-        result = subprocess.run(
-            [
-                "claude",
-                "--print",
-                "--output-format",
-                "text",
-                "--permission-mode",
-                "bypassPermissions",
-                "--agents",
-                "commit-message-generator",  # Use the agent!
-                "--",
-                prompt,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=120,  # Claude startup can take 30+ seconds
-            cwd=diff_context.repo_root,
-        )
-
-        # Log diagnostics
-        click.echo(f"   Claude exit code: {result.returncode}", err=True)
-        if result.returncode != 0:
-            click.echo(
-                f"   Stderr: {result.stderr[:200] if result.stderr else '(empty)'}",
-                err=True,
-            )
-            raise RuntimeError(f"Agent failed: {result.stderr or 'Unknown error'}")
-
-        if not result.stdout.strip():
-            click.echo("   Stdout length: 0 (no output generated)", err=True)
-            raise RuntimeError("Agent returned no output")
-
-        output = result.stdout.strip()
-        click.echo(f"   Stdout length: {len(output)} chars", err=True)
-
-        # Validate output contains the erk marker
-        if not _is_valid_commit_message(output):
-            click.echo("   ⚠️  Output missing erk commit message marker", err=True)
-            click.echo("   Raw output from Claude:", err=True)
-            click.echo("   " + "-" * 60, err=True)
-            for line in output.split("\n"):
-                click.echo(f"   {line}", err=True)
-            click.echo("   " + "-" * 60, err=True)
-            raise RuntimeError(
-                "Claude agent did not return a valid commit message. "
-                "This may indicate a permission issue reading the diff file.\n\n"
-                "Fix: Ensure 'Read(/tmp/*)' is in ~/.claude/settings.json permissions.allow array"
-            )
-
-        # Strip the marker before returning
-        return _strip_commit_message_marker(output)
-
-    finally:
-        # Clean up temp file
-        try:
-            os.unlink(diff_path)
-        except Exception:
-            pass  # Ignore cleanup errors
 
 
 def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:

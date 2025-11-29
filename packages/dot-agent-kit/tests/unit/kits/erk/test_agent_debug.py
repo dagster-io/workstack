@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from erk.data.kits.erk.kit_cli_commands.erk.agent_debug import (
+from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug import (
     agent_debug,
     discover_agent_logs,
     export_json,
@@ -95,7 +95,7 @@ def test_find_project_dir_for_session_success(tmp_path: Path) -> None:
     session_log.write_text(json.dumps(session_entry), encoding="utf-8")
 
     # Mock Path.home() to return tmp_path
-    import erk.data.kits.erk.kit_cli_commands.erk.agent_debug as debug_module
+    import dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug as debug_module
 
     original_home = Path.home
 
@@ -118,7 +118,7 @@ def test_find_project_dir_for_session_not_found(tmp_path: Path) -> None:
     claude_dir.mkdir(parents=True)
 
     # Mock Path.home() to return tmp_path
-    import erk.data.kits.erk.kit_cli_commands.erk.agent_debug as debug_module
+    import dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug as debug_module
 
     original_home = Path.home
 
@@ -362,7 +362,7 @@ def test_cli_with_explicit_session_id(tmp_path: Path, monkeypatch: pytest.Monkey
         return tmp_path
 
     monkeypatch.setattr(
-        "erk.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
         staticmethod(mock_home),
     )
 
@@ -401,7 +401,7 @@ def test_cli_json_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
         return tmp_path
 
     monkeypatch.setattr(
-        "erk.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
         staticmethod(mock_home),
     )
 
@@ -464,7 +464,7 @@ def test_cli_filters_by_agent_type(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         return tmp_path
 
     monkeypatch.setattr(
-        "erk.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.agent_debug.Path.home",
         staticmethod(mock_home),
     )
 

@@ -36,14 +36,11 @@ Execute the preflight command to do all deterministic work.
 **Session ID extraction**: Look for the `SESSION_CONTEXT` reminder in your context (injected by hooks). It contains `session_id=<uuid>`. Extract this value and pass it to preflight.
 
 ```bash
-# If SESSION_CONTEXT contains session_id=abc-123-def:
-dot-agent run gt pr-submit preflight --session-id "abc-123-def"
-
-# If no session ID is available (legacy fallback):
-dot-agent run gt pr-submit preflight
+# Extract session_id from SESSION_CONTEXT reminder and pass to preflight:
+dot-agent run gt pr-submit preflight --session-id "<session-id>"
 ```
 
-When `--session-id` is provided, the diff file is written to `.tmp/<session-id>/` in the repo root, which is accessible to subagents without permission prompts. Without it, falls back to `/tmp/` (which may require permission prompts for subagents to read).
+The `--session-id` is **required**. The diff file is written to `.tmp/<session-id>/` in the repo root, which is accessible to subagents without permission prompts.
 
 This returns JSON with:
 

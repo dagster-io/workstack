@@ -901,7 +901,7 @@ def _execute_submit_only(
 def execute_preflight(
     ops: GtKit | None = None,
     *,
-    session_id: str | None = None,
+    session_id: str,
 ) -> PreflightResult | PreAnalysisError | PostAnalysisError:
     """Execute preflight phase: auth, squash, submit, get diff.
 
@@ -910,9 +910,9 @@ def execute_preflight(
 
     Args:
         ops: Optional GtKit for dependency injection.
-        session_id: Claude session ID for scratch file isolation. If provided,
-            writes diff to .tmp/<session_id>/ in repo root (readable by subagents
-            without permission prompts). If None, uses /tmp/ (legacy behavior).
+        session_id: Claude session ID for scratch file isolation. Writes diff
+            to .tmp/<session_id>/ in repo root (readable by subagents without
+            permission prompts).
 
     Returns:
         PreflightResult on success, or PreAnalysisError/PostAnalysisError on failure
@@ -956,27 +956,18 @@ def execute_preflight(
     current_branch = ops.git().get_current_branch() or branch_name
     parent_branch = ops.graphite().get_parent_branch() or "main"
 
-    # Write diff to scratch file (in-repo .tmp/) or legacy /tmp/
-    if session_id is not None:
-        from erk_shared.scratch import write_scratch_file
+    # Write diff to scratch file in repo .tmp/<session_id>/
+    from erk_shared.scratch import write_scratch_file
 
-        diff_file = str(
-            write_scratch_file(
-                diff_content,
-                session_id=session_id,
-                suffix=".diff",
-                prefix="pr-diff-",
-                repo_root=Path(repo_root),
-            )
+    diff_file = str(
+        write_scratch_file(
+            diff_content,
+            session_id=session_id,
+            suffix=".diff",
+            prefix="pr-diff-",
+            repo_root=Path(repo_root),
         )
-    else:
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
-        ) as f:
-            diff_file = f.name
-            f.write(diff_content)
+    )
     click.echo(f"✓ Diff written to {diff_file}", err=True)
 
     # Get issue reference if present
@@ -1083,11 +1074,11 @@ def pr_submit() -> None:
 @click.command()
 @click.option(
     "--session-id",
-    required=False,
+    required=True,
     help="Claude session ID for scratch file isolation. "
-    "When provided, writes diff to .tmp/<session-id>/ in repo root.",
+    "Writes diff to .tmp/<session-id>/ in repo root.",
 )
-def preflight(session_id: str | None) -> None:
+def preflight(session_id: str) -> None:
     """Execute preflight phase: auth, squash, submit, get diff.
 
     Returns JSON with PR info and path to temp diff file for AI analysis.

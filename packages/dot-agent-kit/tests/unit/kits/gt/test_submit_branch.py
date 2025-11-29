@@ -936,7 +936,7 @@ class TestExecutePreflight:
     """Tests for execute_preflight() function."""
 
     @patch("erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch.time.sleep")
-    def test_preflight_success(self, mock_sleep: Mock) -> None:
+    def test_preflight_success(self, mock_sleep: Mock, tmp_path: Path) -> None:
         """Test successful preflight execution."""
         from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
             PreflightResult,
@@ -948,25 +948,25 @@ class TestExecutePreflight:
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123, url="https://github.com/org/repo/pull/123")
+            .with_repo_root(str(tmp_path))
         )
 
-        result = execute_preflight(ops)
+        result = execute_preflight(ops, session_id="test-session-123")
 
         assert isinstance(result, PreflightResult)
         assert result.success is True
         assert result.pr_number == 123
         assert result.pr_url == "https://github.com/org/repo/pull/123"
         assert result.branch_name == "feature-branch"
-        assert result.diff_file.startswith("/tmp/")
+        assert ".tmp/test-session-123/" in result.diff_file
         assert result.diff_file.endswith(".diff")
         assert result.current_branch == "feature-branch"
         assert result.parent_branch == "main"
 
         # Clean up temp file
-        import os
-
-        if os.path.exists(result.diff_file):
-            os.unlink(result.diff_file)
+        diff_path = Path(result.diff_file)
+        if diff_path.exists():
+            diff_path.unlink()
 
     def test_preflight_pre_analysis_error(self) -> None:
         """Test preflight returns error when pre-analysis fails."""
@@ -982,7 +982,7 @@ class TestExecutePreflight:
             .with_gt_unauthenticated()
         )
 
-        result = execute_preflight(ops)
+        result = execute_preflight(ops, session_id="test-session-123")
 
         assert isinstance(result, PreAnalysisError)
         assert result.error_type == "gt_not_authenticated"
@@ -1001,7 +1001,7 @@ class TestExecutePreflight:
             .with_submit_failure(stdout="", stderr="submit failed")
         )
 
-        result = execute_preflight(ops)
+        result = execute_preflight(ops, session_id="test-session-123")
 
         assert isinstance(result, PostAnalysisError)
         assert result.error_type == "submit_failed"

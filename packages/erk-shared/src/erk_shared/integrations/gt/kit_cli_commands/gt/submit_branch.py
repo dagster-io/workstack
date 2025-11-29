@@ -62,6 +62,7 @@ from typing import Literal, NamedTuple
 import click
 
 from erk_shared.impl_folder import (
+    get_closing_text,
     has_issue_reference,
     read_issue_reference,
 )
@@ -396,11 +397,12 @@ def build_pr_metadata_section(
     Returns:
         Metadata footer section as string (empty if no issue reference exists)
     """
-    issue_ref = read_issue_reference(impl_dir) if has_issue_reference(impl_dir) else None
+    # Get closing text using canonical function
+    closing_text = get_closing_text(impl_dir)
 
     # Only build metadata if we have an issue reference
     # (checkout command is only useful if we have a PR to link to)
-    if issue_ref is None:
+    if not closing_text:
         return ""
 
     metadata_parts: list[str] = []
@@ -417,8 +419,8 @@ def build_pr_metadata_section(
         f"```\n"
     )
 
-    # Closes #N
-    metadata_parts.append(f"\nCloses #{issue_ref.issue_number}\n")
+    # Closes #N - use canonical closing text
+    metadata_parts.append(f"\n{closing_text}\n")
 
     return "\n".join(metadata_parts)
 

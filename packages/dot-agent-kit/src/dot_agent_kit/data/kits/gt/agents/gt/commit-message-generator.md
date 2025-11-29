@@ -54,6 +54,7 @@ Follow the shared diff analysis guide:
 
 - **Output ONLY the commit message** (no preamble, no explanation, no commentary)
 - **NO Claude attribution or footer** (NEVER add "Generated with Claude Code" or similar)
+- **NO metadata headers** (NEVER add `**Author:**`, `**Plan:**`, `Closes #N`, or similar - metadata is handled separately)
 - **Use relative paths** from repository root
 - **Be concise** (15-30 lines total message)
 - **Component-level** descriptions (not function-level)

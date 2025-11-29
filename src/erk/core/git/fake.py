@@ -34,7 +34,7 @@ class FakeGit(Git):
     Mutation Tracking:
     -----------------
     This fake tracks mutations for test assertions via read-only properties:
-    - deleted_branches: Branches deleted via delete_branch_with_graphite()
+    - deleted_branches: Branches deleted via delete_branch() or delete_branch_with_graphite()
     - added_worktrees: Worktrees added via add_worktree()
     - removed_worktrees: Worktrees removed via remove_worktree()
     - checked_out_branches: Branches checked out via checkout_branch()
@@ -140,6 +140,9 @@ class FakeGit(Git):
         self._pulled_branches: list[tuple[str, str, bool]] = []
         self._chdir_history: list[Path] = []
         self._created_tracking_branches: list[tuple[str, str]] = []
+        self._staged_files: list[str] = []
+        self._commits: list[tuple[Path, str, list[str]]] = []
+        self._pushed_branches: list[tuple[str, str, bool]] = []
 
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         """List all worktrees in the repository."""
@@ -327,9 +330,12 @@ class FakeGit(Git):
         pass
 
     def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
-        """Delete a local branch (no-op for fake)."""
-        # Fake doesn't need to track deleted branches unless using delete_branch_with_graphite
-        pass
+        """Delete a local branch (mutates internal state for test assertions)."""
+        # Check if we should raise an exception for this branch
+        if branch_name in self._delete_branch_raises:
+            raise self._delete_branch_raises[branch_name]
+
+        self._deleted_branches.append(branch_name)
 
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
         """Track which branches were deleted (mutates internal state).
@@ -614,3 +620,39 @@ class FakeGit(Git):
             self._local_branches[repo_root] = []
         if local_branch not in self._local_branches[repo_root]:
             self._local_branches[repo_root].append(local_branch)
+
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """Record staged files for commit."""
+        self._staged_files.extend(paths)
+
+    def commit(self, cwd: Path, message: str) -> None:
+        """Record commit with staged changes."""
+        self._commits.append((cwd, message, list(self._staged_files)))
+        self._staged_files = []  # Clear staged files after commit
+
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """Record push to remote."""
+        self._pushed_branches.append((remote, branch, set_upstream))
+
+    @property
+    def staged_files(self) -> list[str]:
+        """Read-only access to currently staged files for test assertions."""
+        return self._staged_files
+
+    @property
+    def commits(self) -> list[tuple[Path, str, list[str]]]:
+        """Read-only access to commits for test assertions.
+
+        Returns list of (cwd, message, staged_files) tuples.
+        """
+        return self._commits
+
+    @property
+    def pushed_branches(self) -> list[tuple[str, str, bool]]:
+        """Read-only access to pushed branches for test assertions.
+
+        Returns list of (remote, branch, set_upstream) tuples.
+        """
+        return self._pushed_branches

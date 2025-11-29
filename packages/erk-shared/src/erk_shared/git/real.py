@@ -596,3 +596,34 @@ class RealGit(Git):
             operation_context=f"fetch PR #{pr_number} into branch '{local_branch}'",
             cwd=repo_root,
         )
+
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """Stage specific files for commit."""
+        run_subprocess_with_context(
+            ["git", "add", *paths],
+            operation_context=f"stage files: {', '.join(paths)}",
+            cwd=cwd,
+        )
+
+    def commit(self, cwd: Path, message: str) -> None:
+        """Create a commit with staged changes."""
+        run_subprocess_with_context(
+            ["git", "commit", "-m", message],
+            operation_context="create commit",
+            cwd=cwd,
+        )
+
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """Push a branch to a remote."""
+        cmd = ["git", "push"]
+        if set_upstream:
+            cmd.append("-u")
+        cmd.extend([remote, branch])
+
+        run_subprocess_with_context(
+            cmd,
+            operation_context=f"push branch '{branch}' to remote '{remote}'",
+            cwd=cwd,
+        )

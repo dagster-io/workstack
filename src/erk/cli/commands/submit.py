@@ -4,7 +4,9 @@ from datetime import UTC, datetime
 
 import click
 from erk_shared.github.metadata import create_submission_queued_block, render_erk_issue_event
+from erk_shared.naming import derive_branch_name_from_title
 from erk_shared.output.output import user_output
+from erk_shared.worker_impl_folder import create_worker_impl_folder
 
 from erk.cli.constants import (
     DISPATCH_WORKFLOW_METADATA_NAME,
@@ -37,19 +39,44 @@ def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
     return f"https://github.com/actions/runs/{run_id}"
 
 
+def _strip_plan_prefix(title: str) -> str:
+    """Strip 'Plan: ' prefix from issue title for use as PR title."""
+    if title.startswith("Plan: "):
+        return title[6:]
+    return title
+
+
+def _construct_pr_url(issue_url: str, pr_number: int) -> str:
+    """Construct GitHub PR URL from issue URL and PR number.
+
+    Args:
+        issue_url: GitHub issue URL (e.g., https://github.com/owner/repo/issues/123)
+        pr_number: PR number
+
+    Returns:
+        PR URL (e.g., https://github.com/owner/repo/pull/456)
+    """
+    # Extract owner/repo from issue URL
+    # Pattern: https://github.com/owner/repo/issues/123
+    parts = issue_url.split("/")
+    if len(parts) >= 5:
+        owner = parts[-4]
+        repo = parts[-3]
+        return f"https://github.com/{owner}/{repo}/pull/{pr_number}"
+    return f"https://github.com/pull/{pr_number}"
+
+
 @click.command("submit")
 @click.argument("issue_number", type=int)
 @click.pass_obj
 def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     """Submit issue for remote AI implementation via GitHub Actions.
 
-    Triggers the dispatch-erk-queue.yml GitHub Actions workflow via direct
-    workflow dispatch for automated implementation.
+    Creates branch and draft PR locally (for correct commit attribution),
+    then triggers the dispatch-erk-queue.yml GitHub Actions workflow.
 
     The workflow will:
-    - Create a branch from the trunk branch
-    - Create .worker-impl/ folder with plan content
-    - Create a draft PR
+    - Pick up the existing branch and PR
     - Run the implementation
 
     Arguments:
@@ -58,6 +85,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     Requires:
         - Issue must have erk-plan label
         - Issue must be OPEN
+        - Working directory must be clean (no uncommitted changes)
     """
     # Validate GitHub CLI authentication upfront (LBYL)
     Ensure.gh_authenticated(ctx)
@@ -67,6 +95,22 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
         repo = ctx.repo
     else:
         repo = discover_repo_context(ctx, ctx.cwd)
+
+    # Step 1: Save current state and check for uncommitted changes
+    original_branch = ctx.git.get_current_branch(repo.root)
+    if original_branch is None:
+        user_output(
+            click.style("Error: ", fg="red")
+            + "Not on a branch (detached HEAD state). Cannot submit from here."
+        )
+        raise SystemExit(1)
+
+    if ctx.git.has_uncommitted_changes(repo.root):
+        user_output(
+            click.style("Error: ", fg="red")
+            + "You have uncommitted changes. Please commit or stash them first."
+        )
+        raise SystemExit(1)
 
     # Fetch issue from GitHub
     try:
@@ -100,14 +144,93 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")
 
+    # Get GitHub username from gh CLI (authentication already validated)
+    _, username, _ = ctx.github.check_auth_status()
+    submitted_by = username or "unknown"
+
+    # Step 2: Derive branch name (same logic as workflow)
+    branch_name = derive_branch_name_from_title(issue.title)
+    user_output(f"Branch name: {click.style(branch_name, fg='cyan')}")
+
+    # Step 3: Check if branch already exists on remote
+    trunk_branch = ctx.git.get_trunk_branch(repo.root)
+    branch_exists = ctx.git.branch_exists_on_remote(repo.root, "origin", branch_name)
+    pr_number: int | None = None
+
+    if branch_exists:
+        # Check PR status for existing branch
+        pr_status = ctx.github.get_pr_status(repo.root, branch_name, debug=False)
+        if pr_status.pr_number is not None:
+            pr_number = pr_status.pr_number
+            user_output(
+                f"PR #{pr_number} already exists for branch "
+                f"'{branch_name}' (state: {pr_status.state})"
+            )
+            user_output("Skipping branch/PR creation, triggering workflow...")
+        else:
+            user_output(f"Branch '{branch_name}' exists but no PR. Skipping creation...")
+    else:
+        # Step 4: Create branch and initial commit
+        user_output(f"Creating branch from origin/{trunk_branch}...")
+
+        # Fetch trunk branch
+        ctx.git.fetch_branch(repo.root, "origin", trunk_branch)
+
+        # Create and checkout new branch from trunk
+        ctx.git.create_branch(repo.root, branch_name, f"origin/{trunk_branch}")
+        ctx.git.checkout_branch(repo.root, branch_name)
+
+        # Get plan content and create .worker-impl/ folder
+        user_output("Fetching plan content...")
+        plan = ctx.plan_store.get_plan(repo.root, str(issue_number))
+
+        user_output("Creating .worker-impl/ folder...")
+        create_worker_impl_folder(
+            plan_content=plan.body,
+            issue_number=issue_number,
+            issue_url=issue.url,
+            issue_title=issue.title,
+            repo_root=repo.root,
+        )
+
+        # Stage, commit, and push
+        ctx.git.stage_files(repo.root, [".worker-impl"])
+        ctx.git.commit(repo.root, f"Add plan for issue #{issue_number}")
+        ctx.git.push_to_remote(repo.root, "origin", branch_name, set_upstream=True)
+        user_output(click.style("✓", fg="green") + " Branch pushed to remote")
+
+        # Step 5: Create draft PR
+        user_output("Creating draft PR...")
+        pr_body = (
+            f"**Author:** @{submitted_by}\n"
+            f"**Plan:** #{issue_number}\n\n"
+            f"**Status:** Queued for implementation\n\n"
+            f"This PR will be marked ready for review after implementation completes.\n\n"
+            f"---\n\n"
+            f"Closes #{issue_number}"
+        )
+        pr_title = _strip_plan_prefix(issue.title)
+        pr_number = ctx.github.create_pr(
+            repo_root=repo.root,
+            branch=branch_name,
+            title=pr_title,
+            body=pr_body,
+            base=trunk_branch,
+            draft=True,
+        )
+        user_output(click.style("✓", fg="green") + f" Draft PR #{pr_number} created")
+
+        # Step 6: Restore local state
+        user_output("Restoring local state...")
+        ctx.git.checkout_branch(repo.root, original_branch)
+        ctx.git.delete_branch(repo.root, branch_name, force=True)
+        user_output(click.style("✓", fg="green") + " Local branch cleaned up")
+
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()
 
-    # Get GitHub username from gh CLI (authentication already validated)
-    is_authenticated, username, _ = ctx.github.check_auth_status()
-    submitted_by = username or "unknown"
-
-    # Trigger workflow via direct dispatch
+    # Step 7: Trigger workflow via direct dispatch
+    user_output("")
     user_output(f"Triggering workflow: {click.style(DISPATCH_WORKFLOW_NAME, fg='cyan')}")
     user_output(f"  Display name: {DISPATCH_WORKFLOW_METADATA_NAME}")
     run_id = ctx.github.trigger_workflow(
@@ -145,11 +268,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
                 f"The `{DISPATCH_WORKFLOW_METADATA_NAME}` workflow has been "
                 f"triggered via direct dispatch.\n\n"
                 f"**Workflow run:** {workflow_url}\n\n"
-                f"The workflow will:\n"
-                f"- Create a branch from trunk\n"
-                f"- Create `.worker-impl/` folder with plan content\n"
-                f"- Create a draft PR\n"
-                f"- Run the implementation"
+                f"Branch and draft PR were created locally for correct commit attribution."
             ),
         )
 
@@ -170,5 +289,8 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output("")
     user_output("Next steps:")
     user_output(f"  • View issue: {issue.url}")
+    if pr_number is not None:
+        pr_url = _construct_pr_url(issue.url, pr_number)
+        user_output(f"  • View PR: {pr_url}")
     user_output(f"  • View workflow run: {workflow_url}")
     user_output("")

@@ -102,6 +102,7 @@ class FakeGitHub(GitHub):
         self._triggered_workflows: list[tuple[str, dict[str, str]]] = []
         self._poll_attempts: list[tuple[str, str, int, int]] = []
         self._check_auth_status_calls: list[None] = []
+        self._created_prs: list[tuple[str, str, str, str | None, bool]] = []
 
     @property
     def merged_prs(self) -> list[int]:
@@ -237,14 +238,25 @@ class FakeGitHub(GitHub):
         title: str,
         body: str,
         base: str | None = None,
+        *,
+        draft: bool = False,
     ) -> int:
         """Record PR creation in mutation tracking list.
 
         Returns:
             A fake PR number for testing
         """
+        self._created_prs.append((branch, title, body, base, draft))
         # Return a fake PR number
         return 999
+
+    @property
+    def created_prs(self) -> list[tuple[str, str, str, str | None, bool]]:
+        """Read-only access to tracked PR creations for test assertions.
+
+        Returns list of (branch, title, body, base, draft) tuples.
+        """
+        return self._created_prs
 
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:

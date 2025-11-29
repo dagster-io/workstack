@@ -604,3 +604,47 @@ class FakeGit(Git):
         """Fetch a PR ref into a local branch (tracks mutation)."""
         # Track similar to fetch_branch but with PR ref format
         self._fetched_branches.append((remote, f"pull/{pr_number}/head"))
+
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """Stage files for commit (tracks mutation)."""
+        # Track staged files for test assertions
+        if not hasattr(self, "_staged_files"):
+            self._staged_files: list[str] = []
+        self._staged_files.extend(paths)
+
+    def commit(self, cwd: Path, message: str) -> None:
+        """Create a commit (tracks mutation)."""
+        # Track commits for test assertions
+        if not hasattr(self, "_commits"):
+            self._commits: list[tuple[Path, str]] = []
+        self._commits.append((cwd, message))
+
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """Push branch to remote (tracks mutation)."""
+        # Track pushed branches for test assertions
+        if not hasattr(self, "_pushed_branches"):
+            self._pushed_branches: list[tuple[str, str, bool]] = []
+        self._pushed_branches.append((remote, branch, set_upstream))
+
+    @property
+    def staged_files(self) -> list[str]:
+        """Get list of staged files."""
+        if not hasattr(self, "_staged_files"):
+            self._staged_files = []
+        return self._staged_files.copy()
+
+    @property
+    def commits(self) -> list[tuple[Path, str]]:
+        """Get list of commits made during test."""
+        if not hasattr(self, "_commits"):
+            self._commits = []
+        return self._commits.copy()
+
+    @property
+    def pushed_branches(self) -> list[tuple[str, str, bool]]:
+        """Get list of branches pushed during test."""
+        if not hasattr(self, "_pushed_branches"):
+            self._pushed_branches = []
+        return self._pushed_branches.copy()

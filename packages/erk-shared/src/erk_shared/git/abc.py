@@ -476,3 +476,46 @@ class Git(ABC):
             subprocess.CalledProcessError: If git command fails
         """
         ...
+
+    @abstractmethod
+    def stage_files(self, cwd: Path, paths: list[str]) -> None:
+        """Stage specific files for commit.
+
+        Args:
+            cwd: Working directory
+            paths: List of file paths to stage (relative to cwd)
+
+        Raises:
+            subprocess.CalledProcessError: If git command fails
+        """
+        ...
+
+    @abstractmethod
+    def commit(self, cwd: Path, message: str) -> None:
+        """Create a commit with staged changes.
+
+        Args:
+            cwd: Working directory
+            message: Commit message
+
+        Raises:
+            subprocess.CalledProcessError: If git command fails
+        """
+        ...
+
+    @abstractmethod
+    def push_to_remote(
+        self, cwd: Path, remote: str, branch: str, *, set_upstream: bool = False
+    ) -> None:
+        """Push a branch to a remote.
+
+        Args:
+            cwd: Working directory
+            remote: Remote name (e.g., "origin")
+            branch: Branch name to push
+            set_upstream: If True, set upstream tracking (-u flag)
+
+        Raises:
+            subprocess.CalledProcessError: If git command fails
+        """
+        ...

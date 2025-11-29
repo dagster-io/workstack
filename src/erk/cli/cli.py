@@ -7,6 +7,7 @@ from erk.cli.commands.config import config_group
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
+from erk.cli.commands.land_branch import land_branch_cmd
 from erk.cli.commands.ls import ls_cmd
 from erk.cli.commands.plan import plan_group
 from erk.cli.commands.plan.create_cmd import create_plan
@@ -46,6 +47,7 @@ cli.add_command(create_plan, name="create")  # Plan command
 cli.add_command(down_cmd)
 cli.add_command(implement)
 cli.add_command(init_cmd)
+cli.add_command(land_branch_cmd)
 cli.add_command(list_plans, name="list")  # Plan command (top-level)
 cli.add_command(ls_cmd)  # List plans
 cli.add_command(plan_group)

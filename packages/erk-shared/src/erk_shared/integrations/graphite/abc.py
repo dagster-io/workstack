@@ -5,7 +5,7 @@ from pathlib import Path
 
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 
 
 class Graphite(ABC):
@@ -205,3 +205,65 @@ class Graphite(ABC):
         if branch not in all_branches:
             return []
         return all_branches[branch].children
+
+    @abstractmethod
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Run gt restack in no-interactive mode and capture result.
+
+        This method restacks the current branch's stack and returns detailed
+        result information including success status and command output.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        ...
+
+    @abstractmethod
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Run gt squash to consolidate commits.
+
+        This method squashes all commits in the current branch into a single
+        commit and returns detailed result information.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        ...
+
+    @abstractmethod
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Run gt submit to create or update PR.
+
+        This method submits the current branch to create or update a pull request
+        on GitHub via Graphite.
+
+        Args:
+            repo_root: Repository root directory
+            publish: If True, pass --publish flag to make PR immediately ready for review
+            restack: If True, pass --restack flag to restack before submitting
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        ...
+
+    @abstractmethod
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Navigate to child branch using gt up.
+
+        This method switches to the first child branch of the current branch.
+        If there are multiple children, gt will prompt or choose the first one.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            True if navigation succeeded, False otherwise
+        """
+        ...

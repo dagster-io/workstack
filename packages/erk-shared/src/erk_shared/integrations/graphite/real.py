@@ -14,7 +14,7 @@ from erk_shared.integrations.graphite.parsing import (
     parse_graphite_pr_info,
     read_graphite_json_file,
 )
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 from erk_shared.output.output import user_output
 from erk_shared.subprocess_utils import run_subprocess_with_context
 
@@ -322,3 +322,129 @@ class RealGraphite(Graphite):
                 break
 
         return (True, username, repo_info)
+
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Run gt restack in no-interactive mode and capture result.
+
+        This method restacks the current branch's stack and returns detailed
+        result information including success status and command output.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        result = subprocess.run(
+            ["gt", "restack", "--no-interactive"],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=repo_root,
+        )
+
+        # Invalidate branches cache - gt restack modifies Graphite metadata
+        self._branches_cache = None
+
+        return CommandResult(
+            success=result.returncode == 0,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Run gt squash to consolidate commits.
+
+        This method squashes all commits in the current branch into a single
+        commit and returns detailed result information.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        result = subprocess.run(
+            ["gt", "squash", "--no-edit", "--no-interactive"],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=repo_root,
+        )
+
+        return CommandResult(
+            success=result.returncode == 0,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Run gt submit to create or update PR.
+
+        This method submits the current branch to create or update a pull request
+        on GitHub via Graphite.
+
+        Args:
+            repo_root: Repository root directory
+            publish: If True, pass --publish flag to make PR immediately ready for review
+            restack: If True, pass --restack flag to restack before submitting
+
+        Returns:
+            CommandResult with success status, stdout, and stderr
+        """
+        cmd = ["gt", "submit", "--no-edit", "--no-interactive"]
+
+        if publish:
+            cmd.append("--publish")
+
+        if restack:
+            cmd.append("--restack")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=repo_root,
+                timeout=120,
+            )
+            return CommandResult(
+                success=result.returncode == 0,
+                stdout=result.stdout,
+                stderr=result.stderr,
+            )
+        except subprocess.TimeoutExpired:
+            return CommandResult(
+                success=False,
+                stdout="",
+                stderr=(
+                    "gt submit timed out after 120 seconds. "
+                    "Check network connectivity and try again."
+                ),
+            )
+
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Navigate to child branch using gt up.
+
+        This method switches to the first child branch of the current branch.
+        If there are multiple children, gt will prompt or choose the first one.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            True if navigation succeeded, False otherwise
+        """
+        result = subprocess.run(
+            ["gt", "up"],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=repo_root,
+        )
+
+        # Invalidate branches cache - gt up changes the current branch
+        self._branches_cache = None
+
+        return result.returncode == 0

@@ -9,7 +9,7 @@ from pathlib import Path
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.integrations.graphite.abc import Graphite
-from erk_shared.integrations.graphite.types import BranchMetadata
+from erk_shared.integrations.graphite.types import BranchMetadata, CommandResult
 
 
 class FakeGraphite(Graphite):
@@ -28,6 +28,10 @@ class FakeGraphite(Graphite):
         pr_info: dict[str, PullRequestInfo] | None = None,
         branches: dict[str, BranchMetadata] | None = None,
         stacks: dict[str, list[str]] | None = None,
+        restack_result: CommandResult | None = None,
+        squash_result: CommandResult | None = None,
+        submit_result: CommandResult | None = None,
+        navigate_to_child_success: bool = True,
     ) -> None:
         """Create FakeGraphite with pre-configured state.
 
@@ -38,6 +42,10 @@ class FakeGraphite(Graphite):
             pr_info: Mapping of branch name -> PullRequestInfo for get_prs_from_graphite()
             branches: Mapping of branch name -> BranchMetadata for get_all_branches()
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
+            restack_result: CommandResult to return from restack_with_result()
+            squash_result: CommandResult to return from squash_commits()
+            submit_result: CommandResult to return from submit()
+            navigate_to_child_success: Whether navigate_to_child() should succeed
         """
         self._sync_raises = sync_raises
         self._submit_branch_raises = submit_branch_raises
@@ -48,6 +56,22 @@ class FakeGraphite(Graphite):
         self._pr_info = pr_info if pr_info is not None else {}
         self._branches = branches if branches is not None else {}
         self._stacks = stacks if stacks is not None else {}
+        self._restack_result = (
+            restack_result
+            if restack_result is not None
+            else CommandResult(success=True, stdout="", stderr="")
+        )
+        self._squash_result = (
+            squash_result
+            if squash_result is not None
+            else CommandResult(success=True, stdout="", stderr="")
+        )
+        self._submit_result = (
+            submit_result
+            if submit_result is not None
+            else CommandResult(success=True, stdout="", stderr="")
+        )
+        self._navigate_to_child_success = navigate_to_child_success
 
     def get_graphite_url(self, owner: str, repo: str, pr_number: int) -> str:
         """Get Graphite PR URL (constructs URL directly)."""
@@ -164,3 +188,33 @@ class FakeGraphite(Graphite):
         This property is for test assertions only.
         """
         return self._submit_branch_calls
+
+    def restack(self, repo_root: Path, *, no_interactive: bool, quiet: bool) -> None:
+        """Fake restack operation.
+
+        This is a no-op in the fake implementation. For result-returning version,
+        use restack_with_result().
+        """
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Return fake authentication status.
+
+        Always returns authenticated with fake credentials for testing.
+        """
+        return (True, "fake-user", "fake-owner/fake-repo")
+
+    def restack_with_result(self, repo_root: Path) -> CommandResult:
+        """Return pre-configured restack result."""
+        return self._restack_result
+
+    def squash_commits(self, repo_root: Path) -> CommandResult:
+        """Return pre-configured squash result."""
+        return self._squash_result
+
+    def submit(self, repo_root: Path, *, publish: bool, restack: bool) -> CommandResult:
+        """Return pre-configured submit result."""
+        return self._submit_result
+
+    def navigate_to_child(self, repo_root: Path) -> bool:
+        """Return pre-configured navigation success status."""
+        return self._navigate_to_child_success

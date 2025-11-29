@@ -138,8 +138,8 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1)
 
-        # Step 5: Extract title from plan
-        title = extract_title_from_plan(plan_text)
+        # Step 5: Extract base title from plan (without suffix)
+        base_title = extract_title_from_plan(plan_text)
 
         # Generate timestamp
         created_at = datetime.now(UTC).isoformat()
@@ -165,7 +165,8 @@ def create_issue_from_session(session_id: str | None) -> None:
             created_by=username,
         )
 
-        # Step 8: Create GitHub issue with metadata body
+        # Step 8: Create GitHub issue with metadata body and [erk-plan] suffix
+        issue_title = f"{base_title} [erk-plan]"
         try:
             create_result = subprocess.run(
                 [
@@ -173,7 +174,7 @@ def create_issue_from_session(session_id: str | None) -> None:
                     "issue",
                     "create",
                     "--title",
-                    title,
+                    issue_title,
                     "--body",
                     formatted_body,
                     "--label",
@@ -233,7 +234,7 @@ def create_issue_from_session(session_id: str | None) -> None:
             "success": True,
             "issue_number": issue_number,
             "issue_url": issue_url,
-            "title": title,
+            "title": issue_title,
         }
         click.echo(json.dumps(result))
 

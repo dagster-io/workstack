@@ -33,7 +33,7 @@ def test_create_plan_issue_success() -> None:
     # Verify behavior through fake's mutation tracking
     assert len(fake_gh.created_issues) == 1
     title, body, labels = fake_gh.created_issues[0]
-    assert title == "My Feature"
+    assert title == "My Feature [erk-plan]"
     assert "erk-plan" in labels
     assert "Step 1" in body
 
@@ -107,10 +107,10 @@ def test_create_plan_issue_h2_title() -> None:
     )
 
     assert result.exit_code == 0
-    # Verify issue was created with H2 title
+    # Verify issue was created with H2 title and suffix
     assert len(fake_gh.created_issues) == 1
     title, _body, _labels = fake_gh.created_issues[0]
-    assert title == "Secondary Title"
+    assert title == "Secondary Title [erk-plan]"
 
 
 def test_create_plan_issue_preserves_body() -> None:
@@ -148,3 +148,24 @@ Test instructions
     assert "## Steps" in body
     assert "## Testing" in body
     assert "First step" in body
+
+
+def test_create_plan_issue_adds_suffix_to_title() -> None:
+    """Test that [erk-plan] suffix is added to issue title."""
+    fake_gh = FakeGitHubIssues()
+    runner = CliRunner()
+
+    plan = "# Implement Feature X\n\n- Step 1\n- Step 2"
+
+    result = runner.invoke(
+        create_plan_from_context,
+        input=plan,
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
+    )
+
+    assert result.exit_code == 0
+
+    # Verify suffix is added to created issue
+    assert len(fake_gh.created_issues) == 1
+    created_title, _body, _labels = fake_gh.created_issues[0]
+    assert created_title == "Implement Feature X [erk-plan]"

@@ -33,7 +33,7 @@ def test_plan_save_to_issue_success() -> None:
     output = json.loads(result.output)
     assert output["success"] is True
     assert output["issue_number"] == 1
-    assert output["title"] == "My Feature"
+    assert output["title"] == "My Feature [erk-plan]"
     assert output["enriched"] is False
 
 
@@ -160,3 +160,32 @@ def test_plan_save_to_issue_label_created() -> None:
     assert label == "erk-plan"
     assert description == "Implementation plan for manual execution"
     assert color == "0E8A16"
+
+
+def test_plan_save_to_issue_adds_suffix_to_title() -> None:
+    """Test that [erk-plan] suffix is added to issue title."""
+    fake_gh = FakeGitHubIssues()
+    runner = CliRunner()
+
+    plan = "# Implement Feature X\n\n- Step 1\n- Step 2"
+
+    with patch(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.plan_save_to_issue.get_latest_plan",
+        return_value=plan,
+    ):
+        result = runner.invoke(
+            plan_save_to_issue,
+            ["--format", "json"],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+    assert result.exit_code == 0
+    output = json.loads(result.output)
+
+    # Verify suffix is added in output
+    assert output["title"] == "Implement Feature X [erk-plan]"
+
+    # Verify suffix is added to actual issue creation
+    assert len(fake_gh.created_issues) == 1
+    created_title, _body, _labels = fake_gh.created_issues[0]
+    assert created_title == "Implement Feature X [erk-plan]"

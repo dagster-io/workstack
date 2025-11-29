@@ -39,10 +39,10 @@ def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
     return f"https://github.com/actions/runs/{run_id}"
 
 
-def _strip_plan_prefix(title: str) -> str:
-    """Strip 'Plan: ' prefix from issue title for use as PR title."""
-    if title.startswith("Plan: "):
-        return title[6:]
+def _strip_erk_plan_suffix(title: str) -> str:
+    """Strip '[erk-plan]' suffix from issue title for use as PR title."""
+    if title.endswith(" [erk-plan]"):
+        return title[:-11]
     return title
 
 
@@ -209,7 +209,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             f"---\n\n"
             f"Closes #{issue_number}"
         )
-        pr_title = _strip_plan_prefix(issue.title)
+        pr_title = _strip_erk_plan_suffix(issue.title)
         pr_number = ctx.github.create_pr(
             repo_root=repo.root,
             branch=branch_name,

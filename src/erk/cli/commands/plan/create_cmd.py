@@ -72,13 +72,16 @@ def create_plan(
     # Validate content is not empty
     Ensure.not_empty(content.strip(), "Plan content is empty. Provide a non-empty plan.")
 
-    # Extract or use provided title
+    # Extract or use provided base title (without suffix)
+    base_title: str
     if title is None:
-        title = extract_title_from_plan(content)
+        base_title = extract_title_from_plan(content)
+    else:
+        base_title = title
 
     # Validate title is not empty
     Ensure.not_empty(
-        title.strip(), "Could not extract title from plan. Use --title to specify one."
+        base_title.strip(), "Could not extract title from plan. Use --title to specify one."
     )
 
     # Ensure erk-plan label exists
@@ -110,11 +113,12 @@ def create_plan(
         created_by=creator,
     )
 
-    # Create the issue
+    # Create the issue with [erk-plan] suffix
+    issue_title = f"{base_title} [erk-plan]"
     try:
         result = ctx.issues.create_issue(
             repo_root=repo_root,
-            title=title,
+            title=issue_title,
             body=issue_body,
             labels=labels,
         )

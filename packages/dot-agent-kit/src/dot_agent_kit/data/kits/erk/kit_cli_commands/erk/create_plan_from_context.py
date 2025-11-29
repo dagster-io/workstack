@@ -55,8 +55,8 @@ def create_plan_from_context(ctx: click.Context) -> None:
         click.echo("Error: Empty plan content received", err=True)
         raise SystemExit(1)
 
-    # Extract title (pure function call)
-    title = extract_title_from_plan(plan)
+    # Extract base title (pure function call)
+    base_title = extract_title_from_plan(plan)
 
     # Initial body: just the plan content (without commands, since we don't have issue number yet)
     # We'll update it after creation with the full formatted body including commands
@@ -74,9 +74,10 @@ def create_plan_from_context(ctx: click.Context) -> None:
         click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
         raise SystemExit(1) from e
 
-    # Create issue (ABC interface with EAFP pattern)
+    # Create issue with [erk-plan] suffix (ABC interface with EAFP pattern)
+    issue_title = f"{base_title} [erk-plan]"
     try:
-        result = github.create_issue(repo_root, title, initial_body, ["erk-plan"])
+        result = github.create_issue(repo_root, issue_title, initial_body, ["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
         raise SystemExit(1) from e

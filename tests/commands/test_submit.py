@@ -8,7 +8,7 @@ from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 from erk_shared.plan_store.fake import FakePlanStore
 from erk_shared.plan_store.types import Plan, PlanState
 
-from erk.cli.commands.submit import ERK_PLAN_LABEL, _strip_erk_plan_suffix, submit_cmd
+from erk.cli.commands.submit import ERK_PLAN_LABEL, _strip_plan_markers, submit_cmd
 from erk.core.context import ErkContext
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
@@ -426,16 +426,24 @@ def test_submit_requires_gh_authentication(tmp_path: Path) -> None:
     assert len(fake_github.triggered_workflows) == 0
 
 
-def test_strip_erk_plan_suffix() -> None:
-    """Test _strip_erk_plan_suffix removes '[erk-plan]' suffix from titles."""
-    assert _strip_erk_plan_suffix("Implement feature X [erk-plan]") == "Implement feature X"
-    assert _strip_erk_plan_suffix("Implement feature X") == "Implement feature X"
-    assert _strip_erk_plan_suffix(" [erk-plan]") == ""
-    assert _strip_erk_plan_suffix("Planning [erk-plan] ahead") == "Planning [erk-plan] ahead"
+def test_strip_plan_markers() -> None:
+    """Test _strip_plan_markers removes 'Plan:' prefix and '[erk-plan]' suffix from titles."""
+    # Strip [erk-plan] suffix only
+    assert _strip_plan_markers("Implement feature X [erk-plan]") == "Implement feature X"
+    assert _strip_plan_markers("Implement feature X") == "Implement feature X"
+    assert _strip_plan_markers(" [erk-plan]") == ""
+    assert _strip_plan_markers("Planning [erk-plan] ahead") == "Planning [erk-plan] ahead"
+    # Strip Plan: prefix only
+    assert _strip_plan_markers("Plan: Implement feature X") == "Implement feature X"
+    assert _strip_plan_markers("Plan: Already has prefix") == "Already has prefix"
+    # Strip both Plan: prefix and [erk-plan] suffix
+    assert _strip_plan_markers("Plan: Implement feature X [erk-plan]") == "Implement feature X"
+    # No stripping needed
+    assert _strip_plan_markers("Regular title") == "Regular title"
 
 
-def test_submit_strips_erk_plan_suffix_from_pr_title(tmp_path: Path) -> None:
-    """Test submit strips '[erk-plan]' suffix from issue title when creating PR."""
+def test_submit_strips_plan_markers_from_pr_title(tmp_path: Path) -> None:
+    """Test submit strips plan markers from issue title when creating PR."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -499,3 +507,9 @@ def test_submit_strips_erk_plan_suffix_from_pr_title(tmp_path: Path) -> None:
     assert len(fake_github.created_prs) == 1
     branch_name, title, body, base, draft = fake_github.created_prs[0]
     assert title == "Implement feature X"  # NOT "Implement feature X [erk-plan]"
+
+    # Verify PR body was updated with checkout footer
+    assert len(fake_github.updated_pr_bodies) == 1
+    pr_number, updated_body = fake_github.updated_pr_bodies[0]
+    assert pr_number == 999  # FakeGitHub returns 999 for created PRs
+    assert "erk pr checkout 999" in updated_body

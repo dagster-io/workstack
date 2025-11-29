@@ -49,6 +49,11 @@ class DryRunGitHub(GitHub):
         # Do nothing - prevents actual PR base update
         pass
 
+    def update_pr_body(self, repo_root: Path, pr_number: int, body: str) -> None:
+        """No-op for updating PR body in dry-run mode."""
+        # Do nothing - prevents actual PR body update
+        pass
+
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)

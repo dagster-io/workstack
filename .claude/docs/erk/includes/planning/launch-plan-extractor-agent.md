@@ -6,7 +6,7 @@ Use the Task tool to launch the specialized agent with the plan content:
 {
   "subagent_type": "plan-extractor",
   "description": "Enrich plan with context",
-  "prompt": "Enrich the implementation plan with semantic understanding.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[plan content]\",\n  \"guidance\": \"\"\n}\n\nYour job:\n1. Ask clarifying questions via AskUserQuestion tool\n2. Extract semantic understanding (8 categories) from the plan content\n3. Return markdown output with enrichment details.\n\nExpected output: Markdown with # Plan: title, Enrichment Details section, and full enriched plan content.",
+  "prompt": "Enrich the implementation plan with semantic understanding.\n\nInput:\n{\n  \"mode\": \"enriched\",\n  \"plan_content\": \"[plan content]\",\n  \"guidance\": \"\"\n}\n\nYour job:\n1. Ask clarifying questions via AskUserQuestion tool\n2. Extract semantic understanding (8 categories) from the plan content\n3. Return markdown output with enrichment details.\n\nExpected output: Markdown with `# [title]` heading (no 'Plan:' prefix), Enrichment Details section, and full enriched plan content.",
   "model": "haiku"
 }
 ```

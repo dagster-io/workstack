@@ -170,7 +170,7 @@ JSONL_SESSION_WITHOUT_SLUG = """{
 }"""
 
 # Sample plan content for testing
-SAMPLE_PLAN_CONTENT = """# Plan: Test Feature
+SAMPLE_PLAN_CONTENT = """# Test Feature
 
 ## Problem Statement
 

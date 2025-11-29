@@ -39,11 +39,16 @@ def _construct_workflow_run_url(issue_url: str, run_id: str) -> str:
     return f"https://github.com/actions/runs/{run_id}"
 
 
-def _strip_erk_plan_suffix(title: str) -> str:
-    """Strip '[erk-plan]' suffix from issue title for use as PR title."""
-    if title.endswith(" [erk-plan]"):
-        return title[:-11]
-    return title
+def _strip_plan_markers(title: str) -> str:
+    """Strip 'Plan:' prefix and '[erk-plan]' suffix from issue title for use as PR title."""
+    result = title
+    # Strip "Plan: " prefix if present
+    if result.startswith("Plan: "):
+        result = result[6:]
+    # Strip " [erk-plan]" suffix if present
+    if result.endswith(" [erk-plan]"):
+        result = result[:-11]
+    return result
 
 
 def _construct_pr_url(issue_url: str, pr_number: int) -> str:
@@ -209,7 +214,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             f"---\n\n"
             f"Closes #{issue_number}"
         )
-        pr_title = _strip_erk_plan_suffix(issue.title)
+        pr_title = _strip_plan_markers(issue.title)
         pr_number = ctx.github.create_pr(
             repo_root=repo.root,
             branch=branch_name,
@@ -219,6 +224,17 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             draft=True,
         )
         user_output(click.style("✓", fg="green") + f" Draft PR #{pr_number} created")
+
+        # Update PR body with checkout command footer
+        footer_body = (
+            f"{pr_body}\n\n"
+            f"---\n\n"
+            f"To checkout this PR locally:\n\n"
+            f"```\n"
+            f"erk pr checkout {pr_number}\n"
+            f"```"
+        )
+        ctx.github.update_pr_body(repo.root, pr_number, footer_body)
 
         # Step 6: Restore local state
         user_output("Restoring local state...")

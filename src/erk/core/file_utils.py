@@ -11,7 +11,7 @@ def extract_plan_title(plan_path: Path, git_ops: Git | None = None) -> str | Non
 
     Uses python-frontmatter library to properly parse YAML frontmatter,
     then extracts the first line starting with # from the content.
-    Common prefixes like "Implementation Plan: " are stripped from the title.
+    Common prefixes like "Plan: " and "Implementation Plan: " are stripped from the title.
 
     Args:
         plan_path: Path to the plan markdown file (e.g., .plan/plan.md)
@@ -34,6 +34,7 @@ def extract_plan_title(plan_path: Path, git_ops: Git | None = None) -> str | Non
 
     # Common prefixes to strip from plan titles
     COMMON_PREFIXES = [
+        "Plan: ",
         "Implementation Plan: ",
         "Implementation Plan - ",
     ]

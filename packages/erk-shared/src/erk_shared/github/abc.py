@@ -77,6 +77,17 @@ class GitHub(ABC):
         ...
 
     @abstractmethod
+    def update_pr_body(self, repo_root: Path, pr_number: int, body: str) -> None:
+        """Update body of a PR on GitHub.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to update
+            body: New PR body (markdown)
+        """
+        ...
+
+    @abstractmethod
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Get PR mergeability status from GitHub.
 

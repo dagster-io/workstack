@@ -96,6 +96,7 @@ class FakeGitHub(GitHub):
         self._auth_username = auth_username
         self._auth_hostname = auth_hostname
         self._updated_pr_bases: list[tuple[int, str]] = []
+        self._updated_pr_bodies: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
         self._get_pr_status_calls: list[tuple[Path, str]] = []
@@ -169,6 +170,10 @@ class FakeGitHub(GitHub):
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
         """Record PR base branch update in mutation tracking list."""
         self._updated_pr_bases.append((pr_number, new_base))
+
+    def update_pr_body(self, repo_root: Path, pr_number: int, body: str) -> None:
+        """Record PR body update in mutation tracking list."""
+        self._updated_pr_bodies.append((pr_number, body))
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Get PR mergeability status from configured state.
@@ -262,6 +267,11 @@ class FakeGitHub(GitHub):
     def updated_pr_bases(self) -> list[tuple[int, str]]:
         """Read-only access to tracked PR base updates for test assertions."""
         return self._updated_pr_bases
+
+    @property
+    def updated_pr_bodies(self) -> list[tuple[int, str]]:
+        """Read-only access to tracked PR body updates for test assertions."""
+        return self._updated_pr_bodies
 
     @property
     def triggered_workflows(self) -> list[tuple[str, dict[str, str]]]:

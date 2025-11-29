@@ -742,7 +742,8 @@ def execute_preflight(
 def execute_finalize(
     pr_number: int,
     pr_title: str,
-    pr_body: str,
+    pr_body: str | None = None,
+    pr_body_file: Path | None = None,
     diff_file: str | None = None,
     ops: GtKit | None = None,
 ) -> FinalizeResult | PostAnalysisError:
@@ -751,13 +752,29 @@ def execute_finalize(
     Args:
         pr_number: PR number to update
         pr_title: AI-generated PR title (first line of commit message)
-        pr_body: AI-generated PR body (remaining lines)
+        pr_body: AI-generated PR body (remaining lines). Mutually exclusive with pr_body_file.
+        pr_body_file: Path to file containing PR body. Mutually exclusive with pr_body.
         diff_file: Optional temp diff file to clean up
         ops: Optional GtKit for dependency injection
 
     Returns:
         FinalizeResult on success, or PostAnalysisError on failure
+
+    Raises:
+        ValueError: If neither pr_body nor pr_body_file is provided, or if both are provided.
     """
+    # LBYL: Validate exactly one of pr_body or pr_body_file is provided
+    if pr_body is not None and pr_body_file is not None:
+        raise ValueError("Cannot specify both --pr-body and --pr-body-file")
+    if pr_body is None and pr_body_file is None:
+        raise ValueError("Must specify either --pr-body or --pr-body-file")
+
+    # Read body from file if pr_body_file is provided
+    if pr_body_file is not None:
+        if not pr_body_file.exists():
+            raise ValueError(f"PR body file does not exist: {pr_body_file}")
+        pr_body = pr_body_file.read_text(encoding="utf-8")
+
     if ops is None:
         ops = RealGtKit()
 
@@ -846,19 +863,35 @@ def preflight(session_id: str) -> None:
 @click.command()
 @click.option("--pr-number", required=True, type=int, help="PR number to update")
 @click.option("--pr-title", required=True, help="AI-generated PR title")
-@click.option("--pr-body", required=True, help="AI-generated PR body")
+@click.option("--pr-body", required=False, help="AI-generated PR body (text)")
+@click.option(
+    "--pr-body-file",
+    type=click.Path(exists=True, path_type=Path),
+    required=False,
+    help="Path to file containing PR body (mutually exclusive with --pr-body)",
+)
 @click.option("--diff-file", required=False, help="Temp diff file to clean up")
-def finalize(pr_number: int, pr_title: str, pr_body: str, diff_file: str | None) -> None:
+def finalize(
+    pr_number: int,
+    pr_title: str,
+    pr_body: str | None,
+    pr_body_file: Path | None,
+    diff_file: str | None,
+) -> None:
     """Execute finalize phase: update PR metadata.
 
     This is phase 3 of the 3-phase workflow for slash command orchestration.
+    Accepts PR body either as inline text (--pr-body) or from a file (--pr-body-file).
     """
     try:
-        result = execute_finalize(pr_number, pr_title, pr_body, diff_file)
+        result = execute_finalize(pr_number, pr_title, pr_body, pr_body_file, diff_file)
         click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, PostAnalysisError):
             raise SystemExit(1)
+    except ValueError as e:
+        click.echo(f"Validation error: {e}", err=True)
+        raise SystemExit(1) from None
     except KeyboardInterrupt:
         click.echo("\nInterrupted by user", err=True)
         raise SystemExit(130) from None

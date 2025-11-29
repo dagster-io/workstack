@@ -88,7 +88,24 @@ Parse the agent output:
 
 ### Step 3: Run Finalize Phase
 
-Execute the finalize command to update PR metadata:
+Execute the finalize command to update PR metadata.
+
+**IMPORTANT**: Use `--pr-body-file` instead of `--pr-body` to avoid shell escaping issues with multi-line content and special characters.
+
+1. Write the PR body to a temp file (e.g., `/tmp/pr-body-{uuid}.txt`)
+2. Pass the file path to finalize
+
+```bash
+# Write PR body to temp file first (using Write tool or similar)
+# Then run finalize with the file path:
+dot-agent run gt pr-submit finalize \
+    --pr-number {pr_number} \
+    --pr-title "{pr_title}" \
+    --pr-body-file "/tmp/pr-body-{uuid}.txt" \
+    --diff-file "{diff_file}" 2>&1
+```
+
+**Alternative** (for simple, single-line PR bodies without special characters):
 
 ```bash
 dot-agent run gt pr-submit finalize \

@@ -98,6 +98,10 @@ def pr_land(ctx: ErkContext, script: bool) -> None:
         # Trunk has no worktree, use root repo
         dest_path = repo.root
 
+    # Change to destination before deleting current worktree
+    # This prevents "cwd no longer exists" errors if user doesn't source activation script
+    ctx.git.safe_chdir(dest_path)
+
     # Step 3: Delete current branch and worktree
     delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 

@@ -401,3 +401,59 @@ def test_pr_land_error_pr_not_open() -> None:
             result = runner.invoke(pr_group, ["land"], obj=test_ctx, catch_exceptions=False)
 
         assert_cli_error(result, 1, "Pull request is not open")
+
+
+def test_pr_land_changes_directory_before_deletion() -> None:
+    """Test pr land changes to trunk before deleting current worktree.
+
+    This prevents "cwd no longer exists" errors when the user doesn't source
+    the activation script after landing a PR that deletes their current worktree.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
+        )
+
+        land_success = LandPrSuccess(
+            success=True,
+            pr_number=123,
+            branch_name="feature-1",
+            child_branch=None,
+            message="Successfully merged PR #123",
+        )
+
+        with patch("erk.cli.commands.pr.land_cmd.execute_land_pr", return_value=land_success):
+            result = runner.invoke(
+                pr_group, ["land", "--script"], obj=test_ctx, catch_exceptions=False
+            )
+
+        assert result.exit_code == 0
+
+        # Verify safe_chdir was called to trunk (repo root) before deletion
+        assert len(git_ops.chdir_history) >= 1, "Should chdir to trunk before deletion"
+        assert env.cwd in git_ops.chdir_history, "Should chdir to trunk (repo root)"

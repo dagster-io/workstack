@@ -1,7 +1,7 @@
 """List workflow runs command."""
 
 import click
-from erk_shared.github.emoji import get_checks_status_emoji, get_issue_state_emoji
+from erk_shared.github.emoji import get_checks_status_emoji
 from erk_shared.output.output import user_output
 from rich.console import Console
 from rich.table import Table
@@ -89,7 +89,6 @@ def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
     table.add_column("status", no_wrap=True, width=14)
     table.add_column("submitted", no_wrap=True, width=11)
     table.add_column("plan", no_wrap=True)
-    table.add_column("state", no_wrap=True, width=4)
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
@@ -124,7 +123,6 @@ def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
         if issue_num is None:
             # Legacy format - can't extract issue linkage
             plan_cell = "[dim]X[/dim]"
-            state_cell = "[dim]X[/dim]"
             title_cell = "[dim]X[/dim]"
             pr_cell = "[dim]X[/dim]"
             checks_cell = "[dim]X[/dim]"
@@ -139,12 +137,9 @@ def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
             else:
                 plan_cell = f"[cyan]#{issue_num}[/cyan]"
 
-            # Get title and state from issue map
+            # Get title from issue map
             if issue_num in issue_map:
                 issue = issue_map[issue_num]
-
-                # Get state emoji
-                state_cell = get_issue_state_emoji(issue.state)
 
                 title = issue.title
                 # Truncate to 50 characters
@@ -152,7 +147,6 @@ def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
                     title = title[:47] + "..."
                 title_cell = title
             else:
-                state_cell = "[dim]-[/dim]"
                 title_cell = "[dim]-[/dim]"
 
             # Format PR column
@@ -175,7 +169,6 @@ def _list_runs(ctx: ErkContext, show_all: bool = False) -> None:
             status_cell,
             submitted_cell,
             plan_cell,
-            state_cell,
             title_cell,
             pr_cell,
             checks_cell,

@@ -13,17 +13,20 @@ Remove the "state" column entirely. The plan column already provides a link to t
 ### 1. `src/erk/cli/commands/run/list_cmd.py`
 
 **Remove column definition (line 92):**
+
 ```python
 table.add_column("state", no_wrap=True, width=4)  # DELETE THIS LINE
 ```
 
 **Remove state_cell assignments and usage:**
+
 - Line 127: `state_cell = "[dim]X[/dim]"` - DELETE
 - Line 147: `state_cell = get_issue_state_emoji(issue.state)` - DELETE
 - Line 155: `state_cell = "[dim]-[/dim]"` - DELETE
 - Line 178: `state_cell,` from `table.add_row()` - DELETE
 
 **Remove unused import (line 4):**
+
 ```python
 from erk_shared.github.emoji import get_checks_status_emoji, get_issue_state_emoji
 # Change to:
@@ -41,6 +44,7 @@ This test verifies legacy runs show "X" in the state column. Since we're removin
 ## Verification
 
 Run scoped tests:
+
 ```bash
 uv run pytest tests/commands/run/test_list.py
 ```

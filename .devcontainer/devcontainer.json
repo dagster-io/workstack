@@ -1,0 +1,12 @@
+{
+  "name": "erk-planning",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "npm install -g @anthropic-ai/claude-code && pip install uv && uv sync",
+  "secrets": [
+    "ANTHROPIC_API_KEY"
+  ]
+}

@@ -115,7 +115,8 @@ Parse the result and display:
 ```
 ✅ Plan created and saved to GitHub
 
-**Issue:** [issue_url]
+**Issue:** [issue_title]
+           [issue_url]
 
 **Next steps:**
 
@@ -125,10 +126,10 @@ View the plan:
 Implement the plan:
     erk implement [issue_number]
 
-Implement with plan with --dangerously-skip-permissions:
+Implement the plan interactively with --dangerously-skip-permissions:
     erk implement [issue_number] --dangerous
 
-Implement with plan with --dangerous and then submit as pr:
+Implement the plan non-interactively with --dangerously-skip-permissions and submit pr:
     erk implement [issue_number] --yolo
 ```
 

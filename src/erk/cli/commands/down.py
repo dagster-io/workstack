@@ -9,7 +9,7 @@ from erk.cli.commands.navigation_helpers import (
     ensure_graphite_enabled,
     render_activation_script,
     resolve_down_navigation,
-    verify_pr_merged,
+    verify_pr_closed_or_merged,
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.ensure import Ensure
@@ -63,7 +63,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     # Safety checks before navigation (if --delete-current flag is set)
     if delete_current:
         check_clean_working_tree(ctx)
-        verify_pr_merged(ctx, repo.root, current_branch)
+        verify_pr_closed_or_merged(ctx, repo.root, current_branch)
 
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git.list_worktrees(repo.root)

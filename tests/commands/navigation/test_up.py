@@ -541,8 +541,8 @@ def test_up_delete_current_uncommitted_changes() -> None:
         assert len(git_ops.deleted_branches) == 0
 
 
-def test_up_delete_current_pr_not_merged() -> None:
-    """Test --delete-current blocks when PR not merged."""
+def test_up_delete_current_pr_open() -> None:
+    """Test --delete-current blocks when PR is still open."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.setup_repo_structure()
@@ -566,7 +566,7 @@ def test_up_delete_current_pr_not_merged() -> None:
             }
         )
 
-        # PR for feature-1 is OPEN (not merged)
+        # PR for feature-1 is OPEN (active work in progress)
         from erk_shared.github.types import PullRequestInfo
 
         from erk.core.github.fake import FakeGitHub
@@ -602,17 +602,95 @@ def test_up_delete_current_pr_not_merged() -> None:
             cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
         )
 
-        # Assert: Command failed with error about PR not merged
+        # Assert: Command failed with error about PR being open
         assert_cli_error(
             result,
             1,
-            "Pull request for branch 'feature-1' is not merged",
-            "Only merged branches can be deleted",
+            "Pull request for branch 'feature-1' is still open",
+            "Only closed or merged branches can be deleted",
         )
 
         # Assert: No worktrees or branches were deleted
         assert len(git_ops.removed_worktrees) == 0
         assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_pr_closed() -> None:
+    """Test --delete-current allows deletion when PR is closed (abandoned/rejected)."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
+
+        # PR for feature-1 is CLOSED (abandoned/rejected work)
+        from erk_shared.github.types import PullRequestInfo
+
+        from erk.core.github.fake import FakeGitHub
+
+        github_ops = FakeGitHub(
+            prs={
+                "feature-1": PullRequestInfo(
+                    number=123,
+                    state="CLOSED",
+                    url="https://github.com/owner/repo/pull/123",
+                    is_draft=False,
+                    title="Feature 1",
+                    checks_passing=None,
+                    owner="owner",
+                    repo="repo",
+                    has_conflicts=None,
+                ),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, github=github_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command succeeded - closed PRs are allowed
+        assert result.exit_code == 0
+
+        # Assert: Navigated to feature-2
+        script_path = Path(result.stdout.strip())
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
+        assert str(repo_dir / "worktrees" / "feature-2") in script_content
+
+        # Assert: feature-1 worktree was removed
+        feature_1_path = repo_dir / "worktrees" / "feature-1"
+        assert feature_1_path in git_ops.removed_worktrees, "feature-1 worktree should be removed"
+
+        # Assert: feature-1 branch was deleted
+        assert "feature-1" in git_ops.deleted_branches
 
 
 def test_up_delete_current_no_pr() -> None:

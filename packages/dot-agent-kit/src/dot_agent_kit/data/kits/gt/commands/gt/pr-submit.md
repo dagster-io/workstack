@@ -116,13 +116,3 @@ Display:
 ### Finalize Errors
 
 - `pr_update_failed`: Non-fatal, PR already submitted
-
-## Backwards Compatibility
-
-The existing `orchestrate` command is preserved for backwards compatibility:
-
-```bash
-dot-agent run gt pr-submit orchestrate
-```
-
-This still works but has a 30+ second startup delay due to subprocess-based AI invocation.

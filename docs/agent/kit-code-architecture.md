@@ -65,12 +65,14 @@ packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/
 """Re-export from erk-shared."""
 
 from erk_shared.integrations.gt.kit_cli_commands.gt.submit_branch import (
-    execute_post_analysis,
+    execute_finalize,
     execute_pre_analysis,
+    execute_preflight,
+    get_diff_context,
     pr_submit,
 )
 
-__all__ = ["execute_pre_analysis", "execute_post_analysis", "pr_submit"]
+__all__ = ["execute_pre_analysis", "execute_preflight", "execute_finalize", "get_diff_context", "pr_submit"]
 ```
 
 ## Architecture Diagram

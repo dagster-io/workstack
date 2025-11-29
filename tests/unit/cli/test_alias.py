@@ -157,8 +157,8 @@ def test_help_formatter_shows_aliases_inline() -> None:
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
 
-    # Should show "checkout / co" format
-    assert "checkout / co" in result.output
+    # Should show "checkout, co" format
+    assert "checkout, co" in result.output
 
 
 def test_help_formatter_hides_alias_as_separate_entry() -> None:

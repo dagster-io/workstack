@@ -33,6 +33,7 @@ class GitState:
     add_success: bool = True
     trunk_branch: str = "main"
     tracked_files: list[str] = field(default_factory=list)
+    repo_root: str = "/fake/repo/root"
 
 
 @dataclass(frozen=True)
@@ -156,7 +157,7 @@ class FakeGitGtKitOps(GitGtKit):
 
     def get_repository_root(self) -> str:
         """Fake repository root."""
-        return "/fake/repo/root"
+        return self._state.repo_root
 
     def get_diff_to_parent(self, parent_branch: str) -> str:
         """Fake diff output."""
@@ -428,6 +429,19 @@ class FakeGtKitOps(GtKit):
         """
         git_state = self._git.get_state()
         self._git._state = replace(git_state, uncommitted_files=files)
+        return self
+
+    def with_repo_root(self, repo_root: str) -> "FakeGtKitOps":
+        """Set the repository root path.
+
+        Args:
+            repo_root: Path to repository root
+
+        Returns:
+            Self for chaining
+        """
+        git_state = self._git.get_state()
+        self._git._state = replace(git_state, repo_root=repo_root)
         return self
 
     def with_commits(self, count: int) -> "FakeGtKitOps":

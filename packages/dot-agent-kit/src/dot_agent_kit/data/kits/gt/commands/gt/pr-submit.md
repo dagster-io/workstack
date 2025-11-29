@@ -31,11 +31,16 @@ Executes the complete submit-branch workflow in 3 phases:
 
 ### Step 1: Run Preflight Phase
 
-Execute the preflight command to do all deterministic work:
+Execute the preflight command to do all deterministic work.
+
+**Session ID extraction**: Look for the `SESSION_CONTEXT` reminder in your context (injected by hooks). It contains `session_id=<uuid>`. Extract this value and pass it to preflight.
 
 ```bash
-dot-agent run gt pr-submit preflight
+# Extract session_id from SESSION_CONTEXT reminder and pass to preflight:
+dot-agent run gt pr-submit preflight --session-id "<session-id>"
 ```
+
+The `--session-id` is **required**. The diff file is written to `.tmp/<session-id>/` in the repo root, which is accessible to subagents without permission prompts.
 
 This returns JSON with:
 

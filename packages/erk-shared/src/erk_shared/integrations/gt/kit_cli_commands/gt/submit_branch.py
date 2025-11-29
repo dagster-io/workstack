@@ -900,11 +900,19 @@ def _execute_submit_only(
 
 def execute_preflight(
     ops: GtKit | None = None,
+    *,
+    session_id: str,
 ) -> PreflightResult | PreAnalysisError | PostAnalysisError:
     """Execute preflight phase: auth, squash, submit, get diff.
 
     This combines pre-analysis + submit + diff extraction into a single phase
     for use by the slash command orchestration.
+
+    Args:
+        ops: Optional GtKit for dependency injection.
+        session_id: Claude session ID for scratch file isolation. Writes diff
+            to .tmp/<session_id>/ in repo root (readable by subagents without
+            permission prompts).
 
     Returns:
         PreflightResult on success, or PreAnalysisError/PostAnalysisError on failure
@@ -943,20 +951,24 @@ def execute_preflight(
     if was_truncated:
         click.echo("  ⚠️  Diff truncated for size", err=True)
 
-    # Write diff to temp file
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".diff", delete=False, dir="/tmp", encoding="utf-8"
-    ) as f:
-        diff_file = f.name
-        f.write(diff_content)
-    click.echo(f"✓ Diff written to {diff_file}", err=True)
-
-    # Get repo root and branch info for AI prompt
+    # Get repo root and branch info for AI prompt (needed before writing diff)
     repo_root = ops.git().get_repository_root()
     current_branch = ops.git().get_current_branch() or branch_name
     parent_branch = ops.graphite().get_parent_branch() or "main"
+
+    # Write diff to scratch file in repo .tmp/<session_id>/
+    from erk_shared.scratch.scratch import write_scratch_file
+
+    diff_file = str(
+        write_scratch_file(
+            diff_content,
+            session_id=session_id,
+            suffix=".diff",
+            prefix="pr-diff-",
+            repo_root=Path(repo_root),
+        )
+    )
+    click.echo(f"✓ Diff written to {diff_file}", err=True)
 
     # Get issue reference if present
     cwd = Path.cwd()
@@ -1060,14 +1072,20 @@ def pr_submit() -> None:
 
 
 @click.command()
-def preflight() -> None:
+@click.option(
+    "--session-id",
+    required=True,
+    help="Claude session ID for scratch file isolation. "
+    "Writes diff to .tmp/<session-id>/ in repo root.",
+)
+def preflight(session_id: str) -> None:
     """Execute preflight phase: auth, squash, submit, get diff.
 
     Returns JSON with PR info and path to temp diff file for AI analysis.
     This is phase 1 of the 3-phase workflow for slash command orchestration.
     """
     try:
-        result = execute_preflight()
+        result = execute_preflight(session_id=session_id)
         click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, (PreAnalysisError, PostAnalysisError)):

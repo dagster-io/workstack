@@ -60,6 +60,7 @@ class PlanListService:
         state: str | None = None,
         limit: int | None = None,
         skip_workflow_runs: bool = False,
+        skip_pr_linkages: bool = False,
     ) -> PlanListData:
         """Batch fetch all data needed for plan listing.
 
@@ -74,6 +75,7 @@ class PlanListService:
             state: Filter by state ("open", "closed", or None for all)
             limit: Maximum number of issues to return (None for no limit)
             skip_workflow_runs: If True, skip fetching workflow runs (for performance)
+            skip_pr_linkages: If True, skip fetching PR linkages (for performance)
 
         Returns:
             PlanListData containing issues, PR linkages, and workflow runs
@@ -84,8 +86,10 @@ class PlanListService:
         # Extract issue numbers for batch operations
         issue_numbers = [issue.number for issue in issues]
 
-        # Batch fetch PR linkages for all issues
-        pr_linkages = self._github.get_prs_linked_to_issues(repo_root, issue_numbers)
+        # Conditionally fetch PR linkages (skip for performance when not needed)
+        pr_linkages: dict[int, list[PullRequestInfo]] = {}
+        if not skip_pr_linkages:
+            pr_linkages = self._github.get_prs_linked_to_issues(repo_root, issue_numbers)
 
         # Conditionally fetch workflow runs (skip for performance when not needed)
         workflow_runs: dict[int, WorkflowRun | None] = {}

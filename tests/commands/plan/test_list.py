@@ -1181,8 +1181,8 @@ def test_list_plans_pr_column_open_pr() -> None:
         github = FakeGitHub(pr_issue_linkages={100: [pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1230,8 +1230,8 @@ def test_list_plans_pr_column_draft_pr() -> None:
         github = FakeGitHub(pr_issue_linkages={101: [pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1279,8 +1279,8 @@ def test_list_plans_pr_column_merged_pr() -> None:
         github = FakeGitHub(pr_issue_linkages={102: [pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1328,8 +1328,8 @@ def test_list_plans_pr_column_closed_pr() -> None:
         github = FakeGitHub(pr_issue_linkages={103: [pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1377,8 +1377,8 @@ def test_list_plans_pr_column_with_conflicts() -> None:
         github = FakeGitHub(pr_issue_linkages={104: [pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1441,8 +1441,8 @@ def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
         github = FakeGitHub(pr_issue_linkages={105: [open_pr, closed_pr]})
         ctx = build_workspace_test_context(env, issues=issues, github=github)
 
-        # Act
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        # Act - Use --prs flag to show PR columns
+        result = runner.invoke(cli, ["list", "--prs"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0

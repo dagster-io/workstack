@@ -117,36 +117,34 @@ def format_checks_cell(pr: PullRequestInfo | None) -> str:
     return get_checks_status_emoji(pr)
 
 
-def format_worktree_cell(
-    worktree_name: str,
-    exists_locally: bool,
-    last_local_impl_at: str | None,
-) -> str:
-    """Format worktree cell with status indicators using Rich markup.
+def format_worktree_name_cell(worktree_name: str, exists_locally: bool) -> str:
+    """Format worktree name with existence styling.
 
     Args:
         worktree_name: Name of the worktree
         exists_locally: Whether the worktree exists on the local machine
-        last_local_impl_at: ISO timestamp of last local implementation, or None
 
     Returns:
         Formatted string with Rich markup:
-        - Exists locally: "[yellow]name[/yellow] (2h ago)" or just "[yellow]name[/yellow]"
-        - Doesn't exist: "[dim strike]name[/dim strike]"
+        - Exists locally: "[yellow]name[/yellow]"
+        - Doesn't exist: "-"
     """
-    if not worktree_name:
-        return "-"
-
     if not exists_locally:
-        # Worktree doesn't exist locally - show dimmed with strikethrough
-        return f"[dim strike]{worktree_name}[/dim strike]"
+        return "-"
+    return f"[yellow]{worktree_name}[/yellow]"
 
-    # Worktree exists locally
+
+def format_local_run_cell(last_local_impl_at: str | None) -> str:
+    """Format last local implementation timestamp as relative time.
+
+    Args:
+        last_local_impl_at: ISO timestamp of last local implementation, or None
+
+    Returns:
+        Relative time string (e.g., "2h ago") or "-" if no timestamp
+    """
     relative_time = format_relative_time(last_local_impl_at)
-    if relative_time:
-        return f"[yellow]{worktree_name}[/yellow] ({relative_time})"
-    else:
-        return f"[yellow]{worktree_name}[/yellow]"
+    return relative_time if relative_time else "-"
 
 
 def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
@@ -278,7 +276,8 @@ def _list_plans_impl(
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
-    table.add_column("local-impl-wt", no_wrap=True)
+    table.add_column("local-wt", no_wrap=True)
+    table.add_column("local-run", no_wrap=True)
     if runs:
         table.add_column("run-id", no_wrap=True)
         table.add_column("run-state", no_wrap=True, width=12)
@@ -322,8 +321,9 @@ def _list_plans_impl(
             # Extract last_local_impl_at timestamp
             last_local_impl_at = extract_plan_header_local_impl_at(plan.body)
 
-        # Format the worktree cell with existence and timestamp info
-        worktree_cell = format_worktree_cell(worktree_name, exists_locally, last_local_impl_at)
+        # Format the worktree cells
+        worktree_name_cell = format_worktree_name_cell(worktree_name, exists_locally)
+        local_run_cell = format_local_run_cell(last_local_impl_at)
 
         # Get PR info for this issue
         pr_cell = "-"
@@ -370,7 +370,8 @@ def _list_plans_impl(
                 title,
                 pr_cell,
                 checks_cell,
-                worktree_cell,
+                worktree_name_cell,
+                local_run_cell,
                 run_id_cell,
                 run_outcome_cell,
             )
@@ -380,7 +381,8 @@ def _list_plans_impl(
                 title,
                 pr_cell,
                 checks_cell,
-                worktree_cell,
+                worktree_name_cell,
+                local_run_cell,
             )
 
     # Output table to stderr (consistent with user_output convention)

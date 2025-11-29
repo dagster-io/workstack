@@ -553,50 +553,34 @@ def create_wt(
             from_issue is not None,
         ]
     )
-    if flags_set > 1:
-        user_output(
-            "Cannot use multiple of: "
-            "--from-current-branch, --from-branch, --from-plan, --from-issue"
-        )
-        raise SystemExit(1)
+    Ensure.invariant(
+        flags_set <= 1,
+        "Cannot use multiple of: --from-current-branch, --from-branch, --from-plan, --from-issue",
+    )
 
     # Validate --json and --script are mutually exclusive
     Ensure.invariant(not (output_json and script), "Cannot use both --json and --script")
 
     # Validate --keep-plan requires --from-plan
-    if keep_plan and not from_plan:
-        user_output("Error: --keep-plan requires --from-plan")
-        raise SystemExit(1)
+    Ensure.invariant(not keep_plan or from_plan is not None, "--keep-plan requires --from-plan")
 
     # Validate --copy-plan and --from-plan/--from-issue are mutually exclusive
-    if copy_plan and (from_plan is not None or from_issue is not None):
-        user_output(
-            click.style("Error: ", fg="red")
-            + "--copy-plan and --from-plan/--from-issue are mutually exclusive. "
-            + "Use --copy-plan to copy from current worktree OR "
-            + "--from-plan <file> to use a plan file OR "
-            + "--from-issue <number> to use a GitHub issue."
-        )
-        raise SystemExit(1)
+    Ensure.invariant(
+        not (copy_plan and (from_plan is not None or from_issue is not None)),
+        "--copy-plan and --from-plan/--from-issue are mutually exclusive. "
+        "Use --copy-plan to copy from current worktree OR --from-plan <file> to use a plan "
+        "file OR --from-issue <number> to use a GitHub issue.",
+    )
 
     # Validate .impl directory exists if --copy-plan is used
     if copy_plan:
         impl_source_check = ctx.cwd / ".impl"
-        if not impl_source_check.exists():
-            user_output(
-                click.style("Error: ", fg="red")
-                + f"No .impl directory found in current worktree ({ctx.cwd}). "
-                + "Use 'erk create --from-plan <file>' to create a worktree "
-                + "with a plan from a file."
-            )
-            raise SystemExit(1)
-
-        if not impl_source_check.is_dir():
-            user_output(
-                click.style("Error: ", fg="red")
-                + f".impl exists but is not a directory ({impl_source_check})"
-            )
-            raise SystemExit(1)
+        Ensure.path_is_dir(
+            ctx,
+            impl_source_check,
+            f"No .impl directory found in current worktree ({ctx.cwd}). "
+            "Use 'erk create --from-plan <file>' to create a worktree with a plan from a file.",
+        )
 
     # Initialize variables used in conditional blocks (for type checking)
     issue_number_parsed: str | None = None
@@ -610,9 +594,9 @@ def create_wt(
         )
 
         # Set branch to current branch and derive name if not provided
-        if branch:
-            user_output("Cannot specify --branch with --from-current-branch (uses current branch).")
-            raise SystemExit(1)
+        Ensure.invariant(
+            not branch, "Cannot specify --branch with --from-current-branch (uses current branch)."
+        )
         branch = current_branch
 
         if not name:
@@ -620,9 +604,9 @@ def create_wt(
 
     # Handle --from-branch flag
     elif from_branch:
-        if branch:
-            user_output("Cannot specify --branch with --from-branch (uses the specified branch).")
-            raise SystemExit(1)
+        Ensure.invariant(
+            not branch, "Cannot specify --branch with --from-branch (uses the specified branch)."
+        )
         branch = from_branch
 
         if not name:
@@ -630,9 +614,9 @@ def create_wt(
 
     # Handle --from-plan flag
     elif from_plan:
-        if name:
-            user_output("Cannot specify both NAME and --from-plan. Use one or the other.")
-            raise SystemExit(1)
+        Ensure.invariant(
+            not name, "Cannot specify both NAME and --from-plan. Use one or the other."
+        )
         # Derive name from plan filename (strip extension)
         plan_stem = from_plan.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
@@ -642,9 +626,9 @@ def create_wt(
 
     # Handle --from-issue flag
     elif from_issue:
-        if name:
-            user_output("Cannot specify both NAME and --from-issue. Use one or the other.")
-            raise SystemExit(1)
+        Ensure.invariant(
+            not name, "Cannot specify both NAME and --from-issue. Use one or the other."
+        )
         # Parse issue number from URL or plain number
         issue_number_parsed = parse_issue_number(from_issue)
         # Note: name will be derived from issue title after fetching
@@ -717,9 +701,9 @@ def create_wt(
         name = sanitize_worktree_name(name)
 
     # Validate that name is not a reserved word
-    if name.lower() == "root":
-        user_output('Error: "root" is a reserved name and cannot be used for a worktree.')
-        raise SystemExit(1)
+    Ensure.invariant(
+        name.lower() != "root", '"root" is a reserved name and cannot be used for a worktree.'
+    )
 
     cfg = ctx.local_config
     trunk_branch = ctx.git.get_trunk_branch(repo.root)
@@ -782,16 +766,15 @@ def create_wt(
             to_branch = ctx.git.detect_default_branch(repo.root, trunk_branch)
 
         # Check for edge case: can't move main to worktree then switch to main
-        if current_branch == to_branch:
-            user_output(
-                f"Error: Cannot use --from-current-branch when on '{current_branch}'.\n"
-                f"The current branch cannot be moved to a worktree and then checked out again.\n\n"
-                f"Alternatives:\n"
-                f"  • Create a new branch: erk create {name}\n"
-                f"  • Switch to a feature branch first, then use --from-current-branch\n"
-                f"  • Use --from-branch to create from a different existing branch",
-            )
-            raise SystemExit(1)
+        Ensure.invariant(
+            current_branch != to_branch,
+            f"Cannot use --from-current-branch when on '{current_branch}'.\n"
+            f"The current branch cannot be moved to a worktree and then checked out again.\n\n"
+            f"Alternatives:\n"
+            f"  • Create a new branch: erk create {name}\n"
+            f"  • Switch to a feature branch first, then use --from-current-branch\n"
+            f"  • Use --from-branch to create from a different existing branch",
+        )
 
         # Check if target branch is available (not checked out in another worktree)
         checkout_path = ctx.git.is_branch_checked_out(repo.root, to_branch)

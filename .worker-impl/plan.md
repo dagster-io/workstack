@@ -37,12 +37,14 @@ if all_columns:
 #### 4. Make `pr` and `chks` columns conditional (lines 289-290)
 
 Move from unconditional:
+
 ```python
 table.add_column("pr", no_wrap=True)
 table.add_column("chks", no_wrap=True)
 ```
 
 To conditional (similar to `runs` pattern):
+
 ```python
 if prs:
     table.add_column("pr", no_wrap=True)
@@ -72,6 +74,7 @@ table.add_row(*row_values)
 #### 6. Update column order definition
 
 Reorder column additions to match the dynamic row building:
+
 ```python
 table.add_column("plan", style="cyan", no_wrap=True)
 table.add_column("title", no_wrap=True)
@@ -88,6 +91,7 @@ if runs:
 ## Testing
 
 Update tests in `tests/commands/test_plan_list.py` to verify:
+
 1. Default output has no `pr`/`chks` columns
 2. `--prs` adds `pr` and `chks` columns
 3. `--all` adds both PR and run columns

@@ -3,8 +3,8 @@ version: 0.1.0
 description: Graphite stack management with landing and submission commands
 license: See LICENSE.md
 kit_cli_commands:
-  - name: land-branch
-    path: kit_cli_commands/gt/land_branch.py
+  - name: land-pr
+    path: kit_cli_commands/gt/land_pr.py
     description: Land a single PR from Graphite stack without affecting upstack branches
   - name: pr-submit
     path: kit_cli_commands/gt/submit_branch.py

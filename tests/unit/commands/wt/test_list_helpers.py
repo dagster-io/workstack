@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
+from erk_shared.git.abc import BranchSyncInfo
 from erk_shared.github.types import PullRequestInfo
 
 from erk.cli.commands.wt.list_cmd import (
     _format_impl_cell,
     _format_pr_cell,
+    _format_sync_from_batch,
     _get_impl_issue,
     _get_sync_status,
 )
@@ -248,3 +250,78 @@ def test_format_impl_cell_none() -> None:
     result = _format_impl_cell(None, None)
 
     assert result == "-"
+
+
+def test_format_sync_from_batch_current() -> None:
+    """Test sync status from batch returns 'current' when branch is up-to-date."""
+    all_sync = {
+        "feature": BranchSyncInfo(branch="feature", upstream="origin/feature", ahead=0, behind=0)
+    }
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "current"
+
+
+def test_format_sync_from_batch_ahead_only() -> None:
+    """Test sync status from batch returns 'N↑' when ahead only."""
+    all_sync = {
+        "feature": BranchSyncInfo(branch="feature", upstream="origin/feature", ahead=3, behind=0)
+    }
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "3↑"
+
+
+def test_format_sync_from_batch_behind_only() -> None:
+    """Test sync status from batch returns 'N↓' when behind only."""
+    all_sync = {
+        "feature": BranchSyncInfo(branch="feature", upstream="origin/feature", ahead=0, behind=2)
+    }
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "2↓"
+
+
+def test_format_sync_from_batch_ahead_and_behind() -> None:
+    """Test sync status from batch returns 'N↑ M↓' when both ahead and behind."""
+    all_sync = {
+        "feature": BranchSyncInfo(branch="feature", upstream="origin/feature", ahead=5, behind=3)
+    }
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "5↑ 3↓"
+
+
+def test_format_sync_from_batch_none_branch() -> None:
+    """Test sync status from batch returns '-' when branch is None (detached HEAD)."""
+    all_sync: dict[str, BranchSyncInfo] = {}
+
+    result = _format_sync_from_batch(all_sync, None)
+
+    assert result == "-"
+
+
+def test_format_sync_from_batch_branch_not_found() -> None:
+    """Test sync status from batch returns '-' when branch not in dict."""
+    all_sync = {
+        "other-branch": BranchSyncInfo(
+            branch="other-branch", upstream="origin/other-branch", ahead=0, behind=0
+        )
+    }
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "-"
+
+
+def test_format_sync_from_batch_no_upstream() -> None:
+    """Test sync status from batch returns 'current' when no upstream tracking."""
+    all_sync = {"feature": BranchSyncInfo(branch="feature", upstream=None, ahead=0, behind=0)}
+
+    result = _format_sync_from_batch(all_sync, "feature")
+
+    assert result == "current"

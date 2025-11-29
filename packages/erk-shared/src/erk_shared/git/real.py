@@ -6,10 +6,11 @@ the main erk package and dot-agent-kit without circular dependencies.
 """
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
-from erk_shared.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import BranchSyncInfo, Git, WorktreeInfo
 from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
@@ -488,6 +489,52 @@ class RealGit(Git):
             return ahead, behind
 
         return 0, 0
+
+    def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]:
+        """Get sync status for all local branches via git for-each-ref."""
+        result = subprocess.run(
+            [
+                "git",
+                "for-each-ref",
+                "--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)",
+                "refs/heads/",
+            ],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return {}
+
+        sync_info: dict[str, BranchSyncInfo] = {}
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            parts = line.split("\t")
+            branch = parts[0]
+            upstream = parts[1] if len(parts) > 1 and parts[1] else None
+            track = parts[2] if len(parts) > 2 else ""
+
+            ahead, behind = 0, 0
+            if track:
+                # Parse "[ahead N, behind M]" or "[ahead N]" or "[behind M]"
+                ahead_match = re.search(r"ahead (\d+)", track)
+                behind_match = re.search(r"behind (\d+)", track)
+                if ahead_match:
+                    ahead = int(ahead_match.group(1))
+                if behind_match:
+                    behind = int(behind_match.group(1))
+
+            sync_info[branch] = BranchSyncInfo(
+                branch=branch,
+                upstream=upstream,
+                ahead=ahead,
+                behind=behind,
+            )
+
+        return sync_info
 
     def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
         """Get recent commit information."""

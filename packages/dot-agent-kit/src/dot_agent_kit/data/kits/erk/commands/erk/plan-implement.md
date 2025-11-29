@@ -308,14 +308,9 @@ After completing all implementation steps:
 
 4. **Address any failures** by returning to relevant implementation steps
 
-### Step 9: Run CI and Fix Issues Iteratively (if .worker-impl/ present)
+### Step 9: Run CI and Fix Issues Iteratively
 
-**CRITICAL: Only run this step if working in a .worker-impl/ folder (not .impl/)**
-
-Check if current directory contains `.worker-impl/` folder:
-
-- If yes: This is a remote submission, run iterative CI
-- If no: This is local implementation, skip to Step 11
+Run iterative CI to validate all changes before completion.
 
 **Iterative CI Process (max 5 attempts):**
 

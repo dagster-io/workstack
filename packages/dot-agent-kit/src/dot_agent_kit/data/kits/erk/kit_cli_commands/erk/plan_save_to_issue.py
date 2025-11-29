@@ -110,9 +110,10 @@ def plan_save_to_issue(ctx: click.Context, output_format: str, plan_file: Path |
             click.echo(json.dumps({"success": False, "error": error_msg}))
         raise SystemExit(1) from e
 
-    # Step 6: Create issue
+    # Step 6: Create issue (with [erk-plan] suffix for visibility)
+    issue_title = f"{title} [erk-plan]"
     try:
-        result = github.create_issue(repo_root, title, formatted_body, labels=["erk-plan"])
+        result = github.create_issue(repo_root, issue_title, formatted_body, labels=["erk-plan"])
     except RuntimeError as e:
         error_msg = f"Failed to create GitHub issue: {e}"
         if output_format == "display":

@@ -110,11 +110,12 @@ def create_plan(
         created_by=creator,
     )
 
-    # Create the issue
+    # Create the issue (add [erk-plan] suffix for visibility)
+    issue_title = f"{title} [erk-plan]"
     try:
         result = ctx.issues.create_issue(
             repo_root=repo_root,
-            title=title,
+            title=issue_title,
             body=issue_body,
             labels=labels,
         )

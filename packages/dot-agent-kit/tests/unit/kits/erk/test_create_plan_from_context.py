@@ -33,7 +33,7 @@ def test_create_plan_issue_success() -> None:
     # Verify behavior through fake's mutation tracking
     assert len(fake_gh.created_issues) == 1
     title, body, labels = fake_gh.created_issues[0]
-    assert title == "My Feature"
+    assert title == "My Feature [erk-plan]"
     assert "erk-plan" in labels
     assert "Step 1" in body
 
@@ -107,10 +107,10 @@ def test_create_plan_issue_h2_title() -> None:
     )
 
     assert result.exit_code == 0
-    # Verify issue was created with H2 title
+    # Verify issue was created with H2 title (with [erk-plan] suffix)
     assert len(fake_gh.created_issues) == 1
     title, _body, _labels = fake_gh.created_issues[0]
-    assert title == "Secondary Title"
+    assert title == "Secondary Title [erk-plan]"
 
 
 def test_create_plan_issue_preserves_body() -> None:

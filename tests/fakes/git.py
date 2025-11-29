@@ -84,6 +84,10 @@ class FakeGit(Git):
         tracking_branch_failures: dict[str, str] | None = None,
         dirty_worktrees: set[Path] | None = None,
         branch_issues: dict[str, int] | None = None,
+        commits: list[str] | None = None,
+        commit_count: int = 0,
+        diff_output: str = "",
+        has_merge_conflicts: bool = False,
     ) -> None:
         """Create FakeGit with pre-configured state.
 
@@ -109,6 +113,10 @@ class FakeGit(Git):
                 when create_tracking_branch is called for that branch
             dirty_worktrees: Set of worktree paths that have uncommitted/staged/untracked changes
             branch_issues: Mapping of branch name -> GitHub issue number
+            commits: List of commit messages for tracking commit() calls
+            commit_count: Number of commits to return from count_commits_in_branch
+            diff_output: Diff output to return from get_diff_to_parent
+            has_merge_conflicts: Whether check_merge_conflicts should return True
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -129,6 +137,10 @@ class FakeGit(Git):
         self._tracking_branch_failures = tracking_branch_failures or {}
         self._dirty_worktrees = dirty_worktrees or set()
         self._branch_issues = branch_issues or {}
+        self._commits = commits or []
+        self._commit_count = commit_count
+        self._diff_output = diff_output
+        self._has_merge_conflicts = has_merge_conflicts
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -604,3 +616,59 @@ class FakeGit(Git):
         """Fetch a PR ref into a local branch (tracks mutation)."""
         # Track similar to fetch_branch but with PR ref format
         self._fetched_branches.append((remote, f"pull/{pr_number}/head"))
+
+    def add_all(self, cwd: Path) -> bool:
+        """Stage all changes in the working directory (fake implementation).
+
+        Always returns True unless configured otherwise.
+        """
+        return True
+
+    def commit(self, cwd: Path, message: str) -> bool:
+        """Create a commit with the given message (fake implementation).
+
+        Tracks commit messages in _commits list for test assertions.
+        Always returns True unless configured otherwise.
+        """
+        self._commits.append(message)
+        return True
+
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """Amend the current commit with a new message (fake implementation).
+
+        Replaces the last commit message if any exist.
+        Always returns True unless configured otherwise.
+        """
+        if self._commits:
+            self._commits[-1] = message
+        else:
+            self._commits.append(message)
+        return True
+
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits in current branch since parent branch (fake implementation).
+
+        Returns the configured commit_count value.
+        """
+        return self._commit_count
+
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get the absolute path to the repository root (fake implementation).
+
+        Returns the string representation of cwd.
+        """
+        return str(cwd)
+
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD (fake implementation).
+
+        Returns the configured diff_output value.
+        """
+        return self._diff_output
+
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check if merging head into base would cause conflicts (fake implementation).
+
+        Returns the configured has_merge_conflicts value.
+        """
+        return self._has_merge_conflicts

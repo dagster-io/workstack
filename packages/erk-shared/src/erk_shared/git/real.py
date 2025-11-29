@@ -596,3 +596,92 @@ class RealGit(Git):
             operation_context=f"fetch PR #{pr_number} into branch '{local_branch}'",
             cwd=repo_root,
         )
+
+    def add_all(self, cwd: Path) -> bool:
+        """Stage all changes in the working directory."""
+        result = subprocess.run(
+            ["git", "add", "."],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+    def commit(self, cwd: Path, message: str) -> bool:
+        """Create a commit with the given message."""
+        result = subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """Amend the current commit with a new message."""
+        result = subprocess.run(
+            ["git", "commit", "--amend", "-m", message],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits in current branch since parent branch."""
+        result = subprocess.run(
+            ["git", "rev-list", "--count", f"{parent_branch}..HEAD"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return 0
+
+        count_str = result.stdout.strip()
+        if not count_str:
+            return 0
+
+        return int(count_str)
+
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get the absolute path to the repository root."""
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD."""
+        result = subprocess.run(
+            ["git", "diff", f"{parent_branch}...HEAD"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout
+
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check if merging head into base would cause conflicts."""
+        # Use modern --write-tree mode which properly reports conflicts
+        result = subprocess.run(
+            ["git", "merge-tree", "--write-tree", base_branch, head_branch],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,  # Don't raise on non-zero exit
+        )
+
+        # Modern merge-tree: returns non-zero exit code if conflicts exist
+        # Exit code 1 = conflicts, 0 = clean merge
+        return result.returncode != 0

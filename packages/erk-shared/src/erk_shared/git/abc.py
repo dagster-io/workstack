@@ -476,3 +476,93 @@ class Git(ABC):
             subprocess.CalledProcessError: If git command fails
         """
         ...
+
+    @abstractmethod
+    def add_all(self, cwd: Path) -> bool:
+        """Stage all changes in the working directory.
+
+        Args:
+            cwd: Working directory to run command in
+
+        Returns:
+            True if staging succeeded, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def commit(self, cwd: Path, message: str) -> bool:
+        """Create a commit with the given message.
+
+        Args:
+            cwd: Working directory to run command in
+            message: Commit message
+
+        Returns:
+            True if commit succeeded, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def amend_commit(self, cwd: Path, message: str) -> bool:
+        """Amend the current commit with a new message.
+
+        Args:
+            cwd: Working directory to run command in
+            message: New commit message
+
+        Returns:
+            True if amend succeeded, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def count_commits_in_branch(self, cwd: Path, parent_branch: str) -> int:
+        """Count commits in current branch since parent branch.
+
+        Args:
+            cwd: Working directory to run command in
+            parent_branch: Parent branch name to count from
+
+        Returns:
+            Number of commits since parent branch
+        """
+        ...
+
+    @abstractmethod
+    def get_repository_root(self, cwd: Path) -> str:
+        """Get the absolute path to the repository root.
+
+        Args:
+            cwd: Working directory to run command in
+
+        Returns:
+            Absolute path to repository root
+        """
+        ...
+
+    @abstractmethod
+    def get_diff_to_parent(self, cwd: Path, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD.
+
+        Args:
+            cwd: Working directory to run command in
+            parent_branch: Parent branch name to diff against
+
+        Returns:
+            Diff output as string
+        """
+        ...
+
+    @abstractmethod
+    def check_merge_conflicts(self, cwd: Path, base_branch: str, head_branch: str) -> bool:
+        """Check if merging head into base would cause conflicts.
+
+        Args:
+            cwd: Working directory to run command in
+            base_branch: Base branch name
+            head_branch: Head branch name to merge
+
+        Returns:
+            True if merge would have conflicts, False if clean merge
+        """
+        ...

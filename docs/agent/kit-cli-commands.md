@@ -614,7 +614,7 @@ Kit CLI commands are loaded lazily by `LazyKitGroup` in `dot_agent_kit/commands/
 Command names use **kebab-case**, function names use **snake_case**:
 
 | Command Name (kit.yaml) | Expected Function Name |
-|-------------------------|------------------------|
+| ----------------------- | ---------------------- |
 | `get-closing-text`      | `get_closing_text`     |
 | `plan-save-to-issue`    | `plan_save_to_issue`   |
 | `submit-branch`         | `submit_branch`        |
@@ -626,6 +626,7 @@ The loader converts hyphens to underscores automatically (line 133 in `group.py`
 When your CLI command function would collide with an imported function name, use an import alias:
 
 **Problem:**
+
 ```python
 from erk_shared.impl_folder import get_closing_text  # Collision!
 
@@ -635,6 +636,7 @@ def get_closing_text() -> None:  # Same name as import
 ```
 
 **Solution - use import alias:**
+
 ```python
 from erk_shared.impl_folder import get_closing_text as get_closing_text_impl
 

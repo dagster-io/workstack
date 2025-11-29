@@ -324,7 +324,14 @@ class FakeGitHubGtKitOps(GitHubGtKit):
         pr_number = self._state.pr_numbers[self._current_branch]
         return self._state.pr_titles.get(pr_number)
 
-    def merge_pr(self, *, subject: str | None = None) -> bool:
+    def get_pr_body(self) -> str | None:
+        """Get the body of the PR for the current branch."""
+        if self._current_branch not in self._state.pr_numbers:
+            return None
+        pr_number = self._state.pr_numbers[self._current_branch]
+        return self._state.pr_bodies.get(pr_number)
+
+    def merge_pr(self, *, subject: str | None = None, body: str | None = None) -> bool:
         """Merge the PR with configurable success/failure."""
         if self._current_branch not in self._state.pr_numbers:
             return False
@@ -447,7 +454,13 @@ class FakeGtKitOps(GtKit):
         return self
 
     def with_pr(
-        self, number: int, url: str | None = None, state: str = "OPEN", title: str | None = None
+        self,
+        number: int,
+        *,
+        url: str | None = None,
+        state: str = "OPEN",
+        title: str | None = None,
+        body: str | None = None,
     ) -> "FakeGtKitOps":
         """Set PR for current branch.
 
@@ -456,6 +469,7 @@ class FakeGtKitOps(GtKit):
             url: PR URL (auto-generated if None)
             state: PR state (default: OPEN)
             title: PR title (optional)
+            body: PR body (optional)
 
         Returns:
             Self for chaining
@@ -470,8 +484,11 @@ class FakeGtKitOps(GtKit):
         new_pr_urls = {**gh_state.pr_urls, branch: url}
         new_pr_states = {**gh_state.pr_states, branch: state}
         new_pr_titles = gh_state.pr_titles
+        new_pr_bodies = gh_state.pr_bodies
         if title is not None:
             new_pr_titles = {**gh_state.pr_titles, number: title}
+        if body is not None:
+            new_pr_bodies = {**gh_state.pr_bodies, number: body}
 
         self._github._state = replace(
             gh_state,
@@ -479,6 +496,7 @@ class FakeGtKitOps(GtKit):
             pr_urls=new_pr_urls,
             pr_states=new_pr_states,
             pr_titles=new_pr_titles,
+            pr_bodies=new_pr_bodies,
         )
         return self
 

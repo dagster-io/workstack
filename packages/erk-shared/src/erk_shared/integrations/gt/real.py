@@ -410,11 +410,28 @@ class RealGitHubGtKit(GitHubGtKit):
             return None
         return title
 
-    def merge_pr(self, *, subject: str | None = None) -> bool:
+    def get_pr_body(self) -> str | None:
+        """Get the body of the PR for the current branch."""
+        result = subprocess.run(
+            ["gh", "pr", "view", "--json", "body", "-q", ".body"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        body = result.stdout.strip()
+        if not body:
+            return None
+        return body
+
+    def merge_pr(self, *, subject: str | None = None, body: str | None = None) -> bool:
         """Merge the PR using squash merge with gh pr merge."""
         cmd = ["gh", "pr", "merge", "-s"]
         if subject is not None:
             cmd.extend(["--subject", subject])
+        if body is not None:
+            cmd.extend(["--body", body])
         result = subprocess.run(
             cmd,
             capture_output=True,

@@ -13,6 +13,7 @@ Design:
 
 from abc import ABC, abstractmethod
 
+from erk_shared.integrations.graphite.abc import Graphite
 from erk_shared.integrations.gt.types import CommandResult
 
 
@@ -355,4 +356,12 @@ class GtKit(ABC):
 
         Returns:
             GitHubGtKitOps implementation
+        """
+
+    @abstractmethod
+    def main_graphite(self) -> Graphite:
+        """Get the main Graphite operations interface.
+
+        Returns:
+            Graphite implementation for full graphite operations
         """

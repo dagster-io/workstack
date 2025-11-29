@@ -9,8 +9,7 @@ from erk_shared.integrations.gt import (
     CommandResult,
     GitGtKit,
     GitHubGtKit,
-    GraphiteGtKit,
     GtKit,
 )
 
-__all__ = ["GtKit", "GitGtKit", "GraphiteGtKit", "GitHubGtKit", "CommandResult"]
+__all__ = ["GtKit", "GitGtKit", "GitHubGtKit", "CommandResult"]

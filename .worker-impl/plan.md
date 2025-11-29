@@ -113,6 +113,7 @@ def submit_stack(
 **File:** `packages/erk-shared/src/erk_shared/integrations/graphite/fake.py`
 
 Add to `__init__`:
+
 ```python
 self._squash_branch_raises: Exception | None = None
 self._squash_branch_calls: list[tuple[Path, bool]] = []
@@ -121,6 +122,7 @@ self._submit_stack_calls: list[tuple[Path, bool, bool, bool]] = []
 ```
 
 Add methods:
+
 ```python
 def squash_branch(self, repo_root: Path, *, quiet: bool = False) -> None:
     """Track squash_branch calls and optionally raise."""
@@ -170,9 +172,11 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
 **File 1:** `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/submit_branch.py`
 
 - Line 328: Change `result = ops.graphite().squash_commits()` to:
+
   ```python
   ops.main_graphite().squash_branch(repo_root, quiet=False)
   ```
+
   Remove the `if not result.success` error handling (now exception-based).
 
 - Line 444: Change `result_holder.append(ops.graphite().submit(...))` to:
@@ -184,6 +188,7 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
 **File 2:** `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/simple_submit.py`
 
 - Line 255: Change `squash_result = ops.graphite().squash_commits()` to:
+
   ```python
   ops.main_graphite().squash_branch(repo_root, quiet=False)
   ```
@@ -203,12 +208,14 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
 ### Step 6: Delete GraphiteGtKit Infrastructure
 
 **Delete from ABC:**
+
 - `packages/erk-shared/src/erk_shared/integrations/gt/abc.py`:
   - Remove `GraphiteGtKit` class (lines 169-190)
   - Remove `graphite()` method from `GtKit` ABC (lines 341-346)
   - Remove `CommandResult` import if no longer used
 
 **Delete implementations:**
+
 - `packages/erk-shared/src/erk_shared/integrations/gt/real.py`:
   - Remove `RealGraphiteGtKit` class (lines 252-297)
   - Remove `_graphite` field and `graphite()` method from `RealGtKit`
@@ -220,6 +227,7 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
   - Remove declarative setup methods: `with_squash_failure()`, `with_submit_failure()`, `with_submit_success_but_nothing_submitted()`, `with_restack_failure()`
 
 **Delete exports:**
+
 - `packages/erk-shared/src/erk_shared/integrations/gt/__init__.py`:
   - Remove `GraphiteGtKit` from exports
   - Remove `GraphiteState` from exports
@@ -229,6 +237,7 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
   - Remove re-exports of deleted classes
 
 **Delete types if unused:**
+
 - `packages/erk-shared/src/erk_shared/integrations/gt/types.py`:
   - Check if `CommandResult` is still used elsewhere; if not, delete it
 
@@ -256,28 +265,29 @@ Update 3 command files to use `ops.main_graphite()` instead of `ops.graphite()`:
 
 ## Files to Modify
 
-| File | Action |
-|------|--------|
-| `packages/erk-shared/src/erk_shared/integrations/graphite/abc.py` | Add 2 methods |
-| `packages/erk-shared/src/erk_shared/integrations/graphite/real.py` | Add 2 methods |
-| `packages/erk-shared/src/erk_shared/integrations/graphite/fake.py` | Add 2 methods + tracking |
-| `packages/erk-shared/src/erk_shared/integrations/graphite/dry_run.py` | Add 2 no-op methods |
-| `packages/erk-shared/src/erk_shared/integrations/gt/abc.py` | Delete GraphiteGtKit |
-| `packages/erk-shared/src/erk_shared/integrations/gt/real.py` | Delete RealGraphiteGtKit |
-| `packages/erk-shared/src/erk_shared/integrations/gt/fake.py` | Delete FakeGraphiteGtKitOps |
-| `packages/erk-shared/src/erk_shared/integrations/gt/__init__.py` | Update exports |
-| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/submit_branch.py` | Update calls |
-| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/simple_submit.py` | Update calls |
-| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/pr_update.py` | Update calls |
-| `packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/ops.py` | Update re-exports |
-| `packages/dot-agent-kit/tests/unit/kits/gt/test_submit_branch.py` | Update tests |
-| `packages/dot-agent-kit/tests/unit/kits/gt/test_simple_submit.py` | Update tests |
-| `packages/dot-agent-kit/tests/unit/kits/gt/test_pr_update.py` | Update tests |
-| `packages/dot-agent-kit/tests/unit/kits/gt/test_real_ops.py` | Update/remove tests |
+| File                                                                                      | Action                      |
+| ----------------------------------------------------------------------------------------- | --------------------------- |
+| `packages/erk-shared/src/erk_shared/integrations/graphite/abc.py`                         | Add 2 methods               |
+| `packages/erk-shared/src/erk_shared/integrations/graphite/real.py`                        | Add 2 methods               |
+| `packages/erk-shared/src/erk_shared/integrations/graphite/fake.py`                        | Add 2 methods + tracking    |
+| `packages/erk-shared/src/erk_shared/integrations/graphite/dry_run.py`                     | Add 2 no-op methods         |
+| `packages/erk-shared/src/erk_shared/integrations/gt/abc.py`                               | Delete GraphiteGtKit        |
+| `packages/erk-shared/src/erk_shared/integrations/gt/real.py`                              | Delete RealGraphiteGtKit    |
+| `packages/erk-shared/src/erk_shared/integrations/gt/fake.py`                              | Delete FakeGraphiteGtKitOps |
+| `packages/erk-shared/src/erk_shared/integrations/gt/__init__.py`                          | Update exports              |
+| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/submit_branch.py` | Update calls                |
+| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/simple_submit.py` | Update calls                |
+| `packages/erk-shared/src/erk_shared/integrations/gt/kit_cli_commands/gt/pr_update.py`     | Update calls                |
+| `packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/ops.py`        | Update re-exports           |
+| `packages/dot-agent-kit/tests/unit/kits/gt/test_submit_branch.py`                         | Update tests                |
+| `packages/dot-agent-kit/tests/unit/kits/gt/test_simple_submit.py`                         | Update tests                |
+| `packages/dot-agent-kit/tests/unit/kits/gt/test_pr_update.py`                             | Update tests                |
+| `packages/dot-agent-kit/tests/unit/kits/gt/test_real_ops.py`                              | Update/remove tests         |
 
 ## Verification
 
 After implementation:
+
 1. Run `uv run pytest packages/dot-agent-kit/tests/unit/kits/gt/` - all GT kit tests pass
 2. Run `uv run pyright packages/erk-shared packages/dot-agent-kit` - no type errors
 3. Run `uv run ruff check packages/erk-shared packages/dot-agent-kit` - no lint errors

@@ -164,6 +164,43 @@ class Graphite(ABC):
         """
         ...
 
+    @abstractmethod
+    def squash_branch(self, repo_root: Path, *, quiet: bool = False) -> None:
+        """Squash all commits on the current branch into one.
+
+        Uses `gt squash` to consolidate commits. This is typically called
+        before submitting a PR to create a clean single-commit branch.
+
+        Args:
+            repo_root: Repository root directory
+            quiet: If True, suppress output
+
+        Raises:
+            RuntimeError: If gt squash fails
+        """
+        ...
+
+    @abstractmethod
+    def submit_stack(
+        self, repo_root: Path, *, publish: bool = False, restack: bool = False, quiet: bool = False
+    ) -> None:
+        """Submit the current stack to create or update PRs.
+
+        Uses `gt submit` to push branches and create/update GitHub PRs.
+        This differs from submit_branch() which only pushes a single branch
+        without PR creation.
+
+        Args:
+            repo_root: Repository root directory
+            publish: If True, mark PRs as ready for review (not draft)
+            restack: If True, restack before submitting
+            quiet: If True, suppress output
+
+        Raises:
+            RuntimeError: If gt submit fails or times out
+        """
+        ...
+
     def get_parent_branch(self, git_ops: Git, repo_root: Path, branch: str) -> str | None:
         """Get parent branch name for a given branch.
 

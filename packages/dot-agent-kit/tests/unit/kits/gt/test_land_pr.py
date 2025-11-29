@@ -90,7 +90,6 @@ class TestLandPrExecution:
         ops = FakeGtKitOps()
         # Don't set parent relationship, so get_parent_branch returns None
         ops.git()._state = replace(ops.git().get_state(), current_branch="orphan-branch")
-        ops.graphite().set_current_branch("orphan-branch")
         ops.github().set_current_branch("orphan-branch")
 
         result = execute_land_pr(ops)

@@ -69,16 +69,6 @@ from erk_shared.impl_folder import (
 )
 from erk_shared.integrations.gt.abc import GtKit
 from erk_shared.integrations.gt.real import RealGtKit
-from erk_shared.integrations.gt.types import CommandResult
-
-
-class SubmitResult(NamedTuple):
-    """Result from running gt submit command."""
-
-    success: bool
-    stdout: str
-    stderr: str
-
 
 PreAnalysisErrorType = Literal[
     "gt_not_authenticated",
@@ -325,10 +315,14 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
     squashed = False
     if commit_count >= 2:
         click.echo(f"  ↳ Squashing {commit_count} commits... (gt squash --no-edit)", err=True)
-        result = ops.graphite().squash_commits()
-        if not result.success:
+        try:
+            ops.main_graphite().squash_branch(repo_root, quiet=False)
+            squashed = True
+            click.echo(f"  ✓ Squashed {commit_count} commits into 1", err=True)
+        except subprocess.CalledProcessError as e:
             # Check if failure was due to merge conflict
-            combined_output = result.stdout + result.stderr
+            stderr = e.stderr if hasattr(e, "stderr") else ""
+            combined_output = (e.stdout if hasattr(e, "stdout") else "") + stderr
             if "conflict" in combined_output.lower() or "merge conflict" in combined_output.lower():
                 return PreAnalysisError(
                     success=False,
@@ -337,8 +331,8 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
                     details={
                         "branch_name": branch_name,
                         "commit_count": str(commit_count),
-                        "stdout": result.stdout,
-                        "stderr": result.stderr,
+                        "stdout": e.stdout if hasattr(e, "stdout") else "",
+                        "stderr": stderr,
                     },
                 )
 
@@ -350,12 +344,10 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
                 details={
                     "branch_name": branch_name,
                     "commit_count": str(commit_count),
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
+                    "stdout": e.stdout if hasattr(e, "stdout") else "",
+                    "stderr": stderr,
                 },
             )
-        squashed = True
-        click.echo(f"  ✓ Squashed {commit_count} commits into 1", err=True)
 
     # Build success message
     message_parts = [f"Pre-analysis complete for branch: {branch_name}"]
@@ -427,7 +419,14 @@ def build_pr_metadata_section(
     return "\n".join(metadata_parts)
 
 
-def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:
+class _SubmitResult(NamedTuple):
+    """Result from running submit_stack in background thread."""
+
+    success: bool
+    error: RuntimeError | None = None
+
+
+def _run_gt_submit_with_progress(ops: GtKit, repo_root: Path) -> _SubmitResult:
     """Run gt submit with descriptive progress markers.
 
     Displays periodic progress updates during the submit operation.
@@ -435,13 +434,21 @@ def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:
 
     Args:
         ops: GtKit operations interface
+        repo_root: Repository root directory
+
+    Returns:
+        _SubmitResult with success status and optional error
     """
     start_time = time.time()
-    result_holder: list[CommandResult] = []
+    result_holder: list[_SubmitResult] = []
 
     # Run submit in background thread
     def run_submit():
-        result_holder.append(ops.graphite().submit(publish=True, restack=False))
+        try:
+            ops.main_graphite().submit_stack(repo_root, publish=True, restack=False, quiet=False)
+            result_holder.append(_SubmitResult(success=True))
+        except RuntimeError as e:
+            result_holder.append(_SubmitResult(success=False, error=e))
 
     thread = threading.Thread(target=run_submit, daemon=True)
     thread.start()
@@ -472,7 +479,7 @@ def _run_gt_submit_with_progress(ops: GtKit) -> CommandResult:
         # Check every second
         thread.join(timeout=1.0)
 
-    return result_holder[0]
+    return result_holder[0] if result_holder else _SubmitResult(success=False)
 
 
 def _execute_submit_only(
@@ -528,67 +535,64 @@ def _execute_submit_only(
 
     # Phase 2: Submit to GitHub (with progress markers)
     click.echo("  ↳ Pushing branches and creating PR... (gt submit --publish)", err=True)
-    result = _run_gt_submit_with_progress(ops)
-
-    # Check for empty parent branch
-    combined_output = result.stdout + result.stderr
-    nothing_to_submit = "Nothing to submit!" in combined_output
-    no_changes = "does not introduce any changes" in combined_output
-    if nothing_to_submit or no_changes:
-        return PostAnalysisError(
-            success=False,
-            error_type="submit_empty_parent",
-            message=(
-                "Stack contains an empty parent branch that was already merged. "
-                "Run 'gt track --parent <trunk>' to reparent this branch, then 'gt restack'."
-            ),
-            details={
-                "branch_name": branch_name,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-            },
-        )
+    result = _run_gt_submit_with_progress(ops, repo_root)
 
     if not result.success:
-        combined_lower = combined_output.lower()
+        # Extract error message for categorization
+        error_message = str(result.error) if result.error else ""
+        error_lower = error_message.lower()
 
-        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+        # Check for empty parent branch
+        nothing_to_submit = "Nothing to submit!" in error_message
+        no_changes = "does not introduce any changes" in error_message
+        if nothing_to_submit or no_changes:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_empty_parent",
+                message=(
+                    "Stack contains an empty parent branch that was already merged. "
+                    "Run 'gt track --parent <trunk>' to reparent this branch, then 'gt restack'."
+                ),
+                details={
+                    "branch_name": branch_name,
+                    "error": error_message,
+                },
+            )
+
+        if "conflict" in error_lower or "merge conflict" in error_lower:
             return PostAnalysisError(
                 success=False,
                 error_type="submit_conflict",
                 message="Merge conflicts detected during branch submission",
                 details={
                     "branch_name": branch_name,
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
+                    "error": error_message,
                 },
             )
 
-        if "merged but the merged commits are not contained" in combined_output:
+        if "merged but the merged commits are not contained" in error_message:
             return PostAnalysisError(
                 success=False,
                 error_type="submit_merged_parent",
                 message="Parent branches have been merged but are not in main trunk",
                 details={
                     "branch_name": branch_name,
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
+                    "error": error_message,
                 },
             )
 
-        if "updated remotely" in combined_lower or "must sync" in combined_lower:
+        if "updated remotely" in error_lower or "must sync" in error_lower:
             return PostAnalysisError(
                 success=False,
                 error_type="submit_diverged",
                 message="Branch has diverged from remote - manual sync required",
                 details={
                     "branch_name": branch_name,
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
+                    "error": error_message,
                 },
             )
 
-        if "timed out after 120 seconds" in result.stderr:
+        if "timed out after 120 seconds" in error_message:
             return PostAnalysisError(
                 success=False,
                 error_type="submit_timeout",
@@ -598,8 +602,7 @@ def _execute_submit_only(
                 ),
                 details={
                     "branch_name": branch_name,
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
+                    "error": error_message,
                 },
             )
 
@@ -609,8 +612,7 @@ def _execute_submit_only(
             message="Failed to submit branch with gt submit",
             details={
                 "branch_name": branch_name,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
+                "error": error_message,
             },
         )
 
@@ -798,6 +800,8 @@ def execute_finalize(
 
     # Build metadata section and combine with AI body
     metadata_section = build_pr_metadata_section(impl_dir, pr_number=pr_number)
+    # pr_body is guaranteed non-None here (either passed in or read from file, validated above)
+    assert pr_body is not None
     final_body = pr_body + metadata_section
 
     # Update PR metadata

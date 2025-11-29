@@ -72,9 +72,10 @@ def execute_update_pr(ops: GtKit | None = None) -> dict:
         }
 
     # 3. Submit update
-    result = ops.graphite().submit(publish=True, restack=False)
-    if not result.success:
-        return {"success": False, "error": f"Failed to submit update: {result.stderr}"}
+    try:
+        ops.main_graphite().submit_stack(repo_root, publish=True, restack=False, quiet=False)
+    except RuntimeError as e:
+        return {"success": False, "error": f"Failed to submit update: {e}"}
 
     # 4. Fetch PR info after submission
     pr_info = ops.github().get_pr_info()

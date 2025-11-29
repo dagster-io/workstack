@@ -7,19 +7,16 @@ tests/integration/kits/gt/test_real_git_ops.py.
 
 Test organization:
 - TestRealGitGtKitOps: Git operations (6 methods, mocked subprocess)
-- TestRealGraphiteGtKitOps: Graphite operations (6 methods, mocked subprocess)
 - TestRealGitHubGtKitOps: GitHub operations (4 methods, mocked subprocess)
-- TestRealGtKitOps: Composite operations (3 accessor methods)
+- TestRealGtKitOps: Composite operations (2 accessor methods)
 """
 
 import subprocess
 from unittest.mock import Mock, patch
 
 from erk_shared.integrations.gt import (
-    CommandResult,
     RealGitGtKit,
     RealGitHubGtKit,
-    RealGraphiteGtKit,
     RealGtKit,
 )
 
@@ -151,111 +148,6 @@ class TestRealGitGtKitOps:
 
         # Verify output parsing
         assert count == 3
-
-
-class TestRealGraphiteGtKitOps:
-    """Unit tests for RealGraphiteGtKit with mocked subprocess calls."""
-
-    def test_squash_commits(self) -> None:
-        """Test squash_commits returns CommandResult and calls correct command."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ) as mock_run:
-            ops = RealGraphiteGtKit()
-            result = ops.squash_commits()
-
-            # Verify correct command was called
-            mock_run.assert_called_once_with(
-                ["gt", "squash", "--no-edit", "--no-interactive"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            # Verify return type matches interface contract
-            assert isinstance(result, CommandResult)
-            assert result.success is True
-
-        # Test failure case
-        mock_result.returncode = 1
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ):
-            ops = RealGraphiteGtKit()
-            result = ops.squash_commits()
-            assert isinstance(result, CommandResult)
-            assert result.success is False
-
-    def test_submit(self) -> None:
-        """Test submit returns CommandResult and calls correct command."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "PR created successfully"
-        mock_result.stderr = ""
-
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ) as mock_run:
-            ops = RealGraphiteGtKit()
-            result = ops.submit(publish=False, restack=False)
-
-            # Verify correct command was called
-            mock_run.assert_called_once_with(
-                ["gt", "submit", "--no-edit", "--no-interactive"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=120,
-            )
-
-            # Verify return type matches interface contract
-            assert isinstance(result, CommandResult)
-            assert isinstance(result.success, bool)
-            assert isinstance(result.stdout, str)
-            assert isinstance(result.stderr, str)
-            assert result.success is True
-            assert result.stdout == "PR created successfully"
-            assert result.stderr == ""
-
-        # Test with publish=True, restack=True
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ) as mock_run:
-            ops = RealGraphiteGtKit()
-            result = ops.submit(publish=True, restack=True)
-
-            # Verify flags are added
-            mock_run.assert_called_once_with(
-                ["gt", "submit", "--no-edit", "--no-interactive", "--publish", "--restack"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=120,
-            )
-
-    def test_submit_timeout(self) -> None:
-        """Test submit handles TimeoutExpired exception correctly."""
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd=["gt", "submit"], timeout=120),
-        ):
-            ops = RealGraphiteGtKit()
-            result = ops.submit(publish=True, restack=True)
-
-            # Verify error is handled gracefully
-            assert isinstance(result, CommandResult)
-            assert result.success is False
-            assert "timed out after 120 seconds" in result.stderr
-            assert result.stdout == ""
 
 
 class TestRealGitHubGtKitOps:
@@ -454,16 +346,6 @@ class TestRealGtKitOps:
 
         # Verify return type matches interface contract
         assert isinstance(git_ops, RealGitGtKit)
-
-    def test_graphite(self) -> None:
-        """Test graphite() returns RealGraphiteGtKit instance."""
-        ops = RealGtKit()
-
-        # Get graphite operations interface
-        graphite_ops = ops.graphite()
-
-        # Verify return type matches interface contract
-        assert isinstance(graphite_ops, RealGraphiteGtKit)
 
     def test_github(self) -> None:
         """Test github() returns RealGitHubGtKit instance."""

@@ -300,7 +300,6 @@ class TestPreAnalysisExecution:
         from dataclasses import replace
 
         ops.git()._state = replace(ops.git().get_state(), current_branch="orphan-branch")
-        ops.graphite().set_current_branch("orphan-branch")
         ops.github().set_current_branch("orphan-branch")
         # main_graphite has no branches tracked, so get_parent_branch returns None
 
@@ -524,7 +523,7 @@ class TestExecutePreflight:
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
-            .with_submit_failure(stdout="", stderr="submit failed")
+            .with_submit_failure(stderr="submit failed")
         )
 
         result = execute_preflight(ops, session_id="test-session-123")

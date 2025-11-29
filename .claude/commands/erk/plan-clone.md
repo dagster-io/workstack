@@ -343,6 +343,64 @@ gh issue comment "$new_issue_number" --body-file "$temp_comment"
 rm "$temp_comment"
 ```
 
+### Step 8.5: Close Associated PR (if exists)
+
+Check if there's an open PR associated with the original issue and close it before closing the issue.
+
+**Derive branch name from title:**
+
+The branch name is derived using the same logic as `sanitize_branch_component()` in `naming.py`:
+
+```bash
+# Derive branch name from title (matching naming.py logic)
+branch_name=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._/-]/-/g' | sed 's/-\+/-/g' | sed 's/^[-\/]*//;s/[-\/]*$//')
+
+# Truncate to 31 characters and strip trailing hyphens
+if [ ${#branch_name} -gt 31 ]; then
+    branch_name="${branch_name:0:31}"
+    branch_name=$(echo "$branch_name" | sed 's/-*$//')
+fi
+
+# Use "work" if empty
+if [ -z "$branch_name" ]; then
+    branch_name="work"
+fi
+```
+
+**Check if PR exists and close if open:**
+
+```bash
+# Check if PR exists for this branch
+pr_check=$(gh pr view "$branch_name" --json state,number 2>&1)
+
+if [ $? -eq 0 ]; then
+    # PR exists - extract state and number
+    pr_state=$(echo "$pr_check" | jq -r '.state')
+    pr_number=$(echo "$pr_check" | jq -r '.number')
+
+    if [ "$pr_state" = "OPEN" ]; then
+        # Close the PR with explanatory comment
+        gh pr close "$branch_name" --comment "Closing PR - issue cloned to #$new_issue_number with new worktree name: \`$new_worktree_name\`"
+        echo "Closed associated PR #$pr_number for branch: $branch_name"
+    else
+        echo "Associated PR #$pr_number is already $pr_state (no action needed)"
+    fi
+else
+    # No PR exists for this branch (this is normal)
+    echo "No PR found for branch: $branch_name (continuing)"
+fi
+```
+
+**Error handling:**
+
+If the PR close operation fails, log a warning but continue with issue closure:
+
+```bash
+if ! gh pr close "$branch_name" --comment "..." 2>&1; then
+    echo "Warning: Failed to close PR for branch $branch_name (continuing anyway)"
+fi
+```
+
 ### Step 9: Close Original Issue
 
 Close the original issue with a comment linking to the new one:

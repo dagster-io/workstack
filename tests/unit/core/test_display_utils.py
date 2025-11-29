@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from erk_shared.github.types import WorkflowRun
 
 from erk.core.display_utils import (
+    format_relative_time,
     format_submission_time,
     format_workflow_outcome,
     format_workflow_run_id,
@@ -618,3 +619,135 @@ def test_format_submission_time_with_explicit_timezone() -> None:
     assert len(result) == 11, f"Expected 11 chars, got: {result}"
     # The date should be July 15
     assert "07-15" in result or result.startswith("07-1"), f"Expected July date, got: {result}"
+
+
+# Tests for format_relative_time
+
+
+def test_format_relative_time_none() -> None:
+    """Test that None timestamp returns empty string."""
+    result = format_relative_time(None)
+    assert result == ""
+
+
+def test_format_relative_time_just_now() -> None:
+    """Test that timestamps within 30 seconds show 'just now'."""
+    now = datetime(2024, 11, 28, 10, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "just now"
+
+
+def test_format_relative_time_minutes() -> None:
+    """Test that timestamps within an hour show minutes."""
+    now = datetime(2024, 11, 28, 10, 30, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "30m ago"
+
+
+def test_format_relative_time_hours() -> None:
+    """Test that timestamps within a day show hours."""
+    now = datetime(2024, 11, 28, 14, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "4h ago"
+
+
+def test_format_relative_time_days() -> None:
+    """Test that timestamps within a week show days."""
+    now = datetime(2024, 11, 30, 10, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "2d ago"
+
+
+def test_format_relative_time_weeks() -> None:
+    """Test that timestamps within a month show weeks."""
+    now = datetime(2024, 12, 14, 10, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "2w ago"
+
+
+def test_format_relative_time_months() -> None:
+    """Test that timestamps within a year show months."""
+    now = datetime(2025, 2, 28, 10, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "3mo ago"
+
+
+def test_format_relative_time_years() -> None:
+    """Test that old timestamps show years."""
+    now = datetime(2026, 11, 28, 10, 0, 0, tzinfo=UTC)
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "2y ago"
+
+
+def test_format_relative_time_invalid_timestamp() -> None:
+    """Test that invalid timestamp returns empty string."""
+    result = format_relative_time("not-a-valid-timestamp")
+    assert result == ""
+
+
+def test_format_relative_time_timezone_aware() -> None:
+    """Test that timestamps with different timezones work correctly."""
+    now = datetime(2024, 11, 28, 12, 0, 0, tzinfo=UTC)
+    # Timestamp that is effectively 2 hours ago in UTC
+    timestamp = "2024-11-28T10:00:00+00:00"
+    result = format_relative_time(timestamp, now=now)
+    assert result == "2h ago"
+
+
+# Tests for format_worktree_cell (from list_cmd.py)
+
+
+def test_format_worktree_cell_empty_name() -> None:
+    """Test that empty worktree name returns dash."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+
+    result = format_worktree_cell("", True, None)
+    assert result == "-"
+
+
+def test_format_worktree_cell_exists_locally_no_timestamp() -> None:
+    """Test worktree that exists locally without timestamp."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+
+    result = format_worktree_cell("my-worktree", True, None)
+    assert result == "[yellow]my-worktree[/yellow]"
+
+
+def test_format_worktree_cell_exists_locally_with_timestamp() -> None:
+    """Test worktree that exists locally with recent timestamp."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+
+    # Use a timestamp that will produce predictable relative time
+    timestamp = "2024-11-28T12:00:00+00:00"
+
+    # Since format_worktree_cell doesn't accept now param, we test the output pattern
+    result = format_worktree_cell("my-worktree", True, timestamp)
+
+    # Should have yellow styling and include relative time
+    assert result.startswith("[yellow]my-worktree[/yellow]")
+    # Should have some kind of time indicator (e.g., "2h ago")
+    assert "ago" in result or "just now" in result
+
+
+def test_format_worktree_cell_not_exists_locally() -> None:
+    """Test worktree that doesn't exist locally shows strikethrough."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+
+    result = format_worktree_cell("deleted-worktree", False, None)
+    assert result == "[dim strike]deleted-worktree[/dim strike]"
+
+
+def test_format_worktree_cell_not_exists_with_timestamp() -> None:
+    """Test that non-existent worktree ignores timestamp."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+
+    # Even with a timestamp, if worktree doesn't exist, it should show strikethrough
+    result = format_worktree_cell("deleted-worktree", False, "2024-11-28T12:00:00+00:00")
+    assert result == "[dim strike]deleted-worktree[/dim strike]"

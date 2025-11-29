@@ -454,3 +454,72 @@ def format_submission_time(created_at: datetime | None) -> str:
 
     # Format as MM-DD HH:MM
     return local_time.strftime("%m-%d %H:%M")
+
+
+def format_relative_time(iso_timestamp: str | None, now: datetime | None = None) -> str:
+    """Format ISO timestamp as human-readable relative time.
+
+    Args:
+        iso_timestamp: ISO 8601 timestamp string, or None
+        now: Optional current time for testing (defaults to datetime.now(UTC))
+
+    Returns:
+        Relative time string like "just now", "5m ago", "2h ago", "3d ago"
+        Returns empty string if iso_timestamp is None or invalid
+    """
+    from datetime import UTC
+
+    if iso_timestamp is None:
+        return ""
+
+    # Parse ISO timestamp
+    try:
+        # Handle ISO format with timezone (e.g., "2025-01-15T10:30:00+00:00")
+        dt = datetime.fromisoformat(iso_timestamp)
+        # Ensure timezone-aware
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+    except ValueError:
+        return ""
+
+    # Get current time
+    current_time = now if now is not None else datetime.now(UTC)
+
+    # Calculate difference
+    delta = current_time - dt
+
+    # Format based on magnitude
+    total_seconds = int(delta.total_seconds())
+
+    # Handle future timestamps or very recent (within 30 seconds)
+    if total_seconds < 30:
+        return "just now"
+
+    # Minutes
+    if total_seconds < 3600:
+        minutes = total_seconds // 60
+        return f"{minutes}m ago"
+
+    # Hours
+    if total_seconds < 86400:
+        hours = total_seconds // 3600
+        return f"{hours}h ago"
+
+    # Days
+    if total_seconds < 604800:  # 7 days
+        days = total_seconds // 86400
+        return f"{days}d ago"
+
+    # Weeks
+    if total_seconds < 2592000:  # 30 days
+        weeks = total_seconds // 604800
+        return f"{weeks}w ago"
+
+    # Months (approximate)
+    months = total_seconds // 2592000
+    if months < 12:
+        return f"{months}mo ago"
+
+    # Years
+    years = total_seconds // 31536000
+    return f"{years}y ago"

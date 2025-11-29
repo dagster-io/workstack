@@ -53,7 +53,6 @@ Examples:
 """
 
 import json
-import sys
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -90,7 +89,6 @@ PreAnalysisErrorType = Literal[
     "no_commits",
     "squash_failed",
     "squash_conflict",
-    "pr_has_conflicts",
 ]
 
 PostAnalysisErrorType = Literal[
@@ -118,6 +116,8 @@ class PreAnalysisResult:
     squashed: bool
     uncommitted_changes_committed: bool
     message: str
+    has_conflicts: bool = False
+    conflict_details: dict[str, str] | None = None
 
 
 @dataclass
@@ -265,47 +265,49 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
             details={"branch_name": branch_name},
         )
 
-    # Step 2.5: Check for merge conflicts EARLY
+    # Step 2.5: Check for merge conflicts (informational only, does not block)
     # First try GitHub API if PR exists (most accurate), then fallback to local git merge-tree
     pr_number, pr_url = ops.github().get_pr_status(branch_name)
+
+    # Track conflict info (will be included in success result)
+    has_conflicts = False
+    conflict_details: dict[str, str] | None = None
 
     if pr_number is not None:
         # PR exists - check mergeability
         mergeable, merge_state = ops.github().get_pr_mergeability(pr_number)
 
         if mergeable == "CONFLICTING":
-            return PreAnalysisError(
-                success=False,
-                error_type="pr_has_conflicts",
-                message=f"PR #{pr_number} has merge conflicts with {parent_branch}",
-                details={
-                    "branch_name": branch_name,
-                    "pr_number": str(pr_number),
-                    "parent_branch": parent_branch,
-                    "merge_state": merge_state,
-                    "detection_method": "github_api",
-                },
+            has_conflicts = True
+            conflict_details = {
+                "pr_number": str(pr_number),
+                "parent_branch": parent_branch,
+                "merge_state": merge_state,
+                "detection_method": "github_api",
+            }
+            click.echo(
+                f"  ↳ PR #{pr_number} has merge conflicts with {parent_branch}",
+                err=True,
             )
 
         # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
-        if mergeable == "UNKNOWN":
-            print(
-                "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
-                file=sys.stderr,
+        elif mergeable == "UNKNOWN":
+            click.echo(
+                "  ↳ PR mergeability status is UNKNOWN, proceeding anyway",
+                err=True,
             )
 
     else:
         # No PR yet - fallback to local git merge-tree check
         if ops.git().check_merge_conflicts(parent_branch, branch_name):
-            return PreAnalysisError(
-                success=False,
-                error_type="pr_has_conflicts",
-                message=f"Branch has local merge conflicts with {parent_branch}",
-                details={
-                    "branch_name": branch_name,
-                    "parent_branch": parent_branch,
-                    "detection_method": "git_merge_tree",
-                },
+            has_conflicts = True
+            conflict_details = {
+                "parent_branch": parent_branch,
+                "detection_method": "git_merge_tree",
+            }
+            click.echo(
+                f"  ↳ Branch has local merge conflicts with {parent_branch}",
+                err=True,
             )
 
     # Step 3: Count commits in branch
@@ -376,6 +378,8 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
         squashed=squashed,
         uncommitted_changes_committed=uncommitted_changes_committed,
         message=message,
+        has_conflicts=has_conflicts,
+        conflict_details=conflict_details,
     )
 
 

@@ -2,7 +2,7 @@
 description: Create a plan using Plan Mode and save to GitHub issue
 ---
 
-# /erk:plan-craft
+# /erk:craft-plan
 
 ## Goal
 
@@ -17,7 +17,7 @@ This command orchestrates the full planning workflow:
 
 ## Command Instructions
 
-You are executing `/erk:plan-craft`. Follow these phases:
+You are executing `/erk:craft-plan`. Follow these phases:
 
 ### Phase 1: Enter Plan Mode
 

@@ -395,10 +395,28 @@ class RealGitHubGtKit(GitHubGtKit):
         )
         return result.returncode == 0
 
-    def merge_pr(self) -> bool:
-        """Merge the PR using squash merge with gh pr merge."""
+    def get_pr_title(self) -> str | None:
+        """Get the title of the PR for the current branch."""
         result = subprocess.run(
-            ["gh", "pr", "merge", "-s"],
+            ["gh", "pr", "view", "--json", "title", "-q", ".title"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        title = result.stdout.strip()
+        if not title:
+            return None
+        return title
+
+    def merge_pr(self, *, subject: str | None = None) -> bool:
+        """Merge the PR using squash merge with gh pr merge."""
+        cmd = ["gh", "pr", "merge", "-s"]
+        if subject is not None:
+            cmd.extend(["--subject", subject])
+        result = subprocess.run(
+            cmd,
             capture_output=True,
             text=True,
             check=False,

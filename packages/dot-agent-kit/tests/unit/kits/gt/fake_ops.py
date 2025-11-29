@@ -323,7 +323,14 @@ class FakeGitHubGtKitOps(GitHubGtKit):
         # In the fake, marking as ready always succeeds if PR exists
         return True
 
-    def merge_pr(self) -> bool:
+    def get_pr_title(self) -> str | None:
+        """Get the title of the PR for the current branch."""
+        if self._current_branch not in self._state.pr_numbers:
+            return None
+        pr_number = self._state.pr_numbers[self._current_branch]
+        return self._state.pr_titles.get(pr_number)
+
+    def merge_pr(self, *, subject: str | None = None) -> bool:
         """Merge the PR with configurable success/failure."""
         if self._current_branch not in self._state.pr_numbers:
             return False
@@ -458,13 +465,16 @@ class FakeGtKitOps(GtKit):
         self._git._state = replace(git_state, commits=commits)
         return self
 
-    def with_pr(self, number: int, url: str | None = None, state: str = "OPEN") -> "FakeGtKitOps":
+    def with_pr(
+        self, number: int, url: str | None = None, state: str = "OPEN", title: str | None = None
+    ) -> "FakeGtKitOps":
         """Set PR for current branch.
 
         Args:
             number: PR number
             url: PR URL (auto-generated if None)
             state: PR state (default: OPEN)
+            title: PR title (optional)
 
         Returns:
             Self for chaining
@@ -478,12 +488,16 @@ class FakeGtKitOps(GtKit):
         new_pr_numbers = {**gh_state.pr_numbers, branch: number}
         new_pr_urls = {**gh_state.pr_urls, branch: url}
         new_pr_states = {**gh_state.pr_states, branch: state}
+        new_pr_titles = gh_state.pr_titles
+        if title is not None:
+            new_pr_titles = {**gh_state.pr_titles, number: title}
 
         self._github._state = replace(
             gh_state,
             pr_numbers=new_pr_numbers,
             pr_urls=new_pr_urls,
             pr_states=new_pr_states,
+            pr_titles=new_pr_titles,
         )
         return self
 

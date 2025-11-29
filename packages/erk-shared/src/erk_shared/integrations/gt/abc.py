@@ -236,8 +236,20 @@ class GitHubGtKit(ABC):
         """
 
     @abstractmethod
-    def merge_pr(self) -> bool:
+    def get_pr_title(self) -> str | None:
+        """Get the title of the PR for the current branch.
+
+        Returns:
+            PR title string, or None if no PR exists
+        """
+
+    @abstractmethod
+    def merge_pr(self, *, subject: str | None = None) -> bool:
         """Merge the PR using squash merge.
+
+        Args:
+            subject: Optional commit message subject for squash merge.
+                     If provided, overrides GitHub's default behavior.
 
         Returns:
             True on success, False on failure

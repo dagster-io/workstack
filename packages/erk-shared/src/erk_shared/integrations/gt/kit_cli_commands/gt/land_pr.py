@@ -1,13 +1,13 @@
 """Land a single PR from Graphite stack without affecting upstack branches.
 
-This script safely lands a single branch from a Graphite stack by:
+This script safely lands a single PR from a Graphite stack by:
 1. Validating the branch is exactly one level up from trunk
 2. Checking an open pull request exists
 3. Squash-merging the PR to trunk
 4. Navigating to the child branch if exactly one exists (skips navigation if multiple children)
 
 Usage:
-    dot-agent run gt land-branch
+    dot-agent run gt land-pr
 
 Output:
     JSON object with either success or error information:
@@ -40,7 +40,7 @@ Error Types:
     - merge_failed: PR merge operation failed
 
 Examples:
-    $ dot-agent run gt land-branch
+    $ dot-agent run gt land-pr
     {"success": true, "pr_number": 123, ...}
 """
 
@@ -62,8 +62,8 @@ ErrorType = Literal[
 
 
 @dataclass
-class LandBranchSuccess:
-    """Success result from landing a branch."""
+class LandPrSuccess:
+    """Success result from landing a PR."""
 
     success: bool
     pr_number: int
@@ -73,8 +73,8 @@ class LandBranchSuccess:
 
 
 @dataclass
-class LandBranchError:
-    """Error result from landing a branch."""
+class LandPrError:
+    """Error result from landing a PR."""
 
     success: bool
     error_type: ErrorType
@@ -82,8 +82,8 @@ class LandBranchError:
     details: dict[str, str | int | list[str]]
 
 
-def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBranchError:
-    """Execute the land-branch workflow. Returns success or error result."""
+def execute_land_pr(ops: GtKit | None = None) -> LandPrSuccess | LandPrError:
+    """Execute the land-pr workflow. Returns success or error result."""
     kit_ops: GtKit = ops if ops is not None else RealGtKit()
 
     # Step 1: Get current branch
@@ -95,7 +95,7 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
     parent = kit_ops.graphite().get_parent_branch()
 
     if parent is None:
-        return LandBranchError(
+        return LandPrError(
             success=False,
             error_type="parent_not_trunk",
             message=f"Could not determine parent branch for: {branch_name}",
@@ -105,7 +105,7 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
     # Step 3: Validate parent is trunk
     trunk = kit_ops.git().get_trunk_branch()
     if parent != trunk:
-        return LandBranchError(
+        return LandPrError(
             success=False,
             error_type="parent_not_trunk",
             message=(
@@ -123,7 +123,7 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
     # Step 4: Check PR exists and is open
     pr_info = kit_ops.github().get_pr_state()
     if pr_info is None:
-        return LandBranchError(
+        return LandPrError(
             success=False,
             error_type="no_pr_found",
             message=(
@@ -134,7 +134,7 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
 
     pr_number, pr_state = pr_info
     if pr_state != "OPEN":
-        return LandBranchError(
+        return LandPrError(
             success=False,
             error_type="pr_not_open",
             message=(
@@ -151,9 +151,10 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
     # Step 5: Get children branches
     children = kit_ops.graphite().get_children_branches()
 
-    # Step 6: Merge the PR
-    if not kit_ops.github().merge_pr():
-        return LandBranchError(
+    # Step 6: Get PR title and merge the PR
+    pr_title = kit_ops.github().get_pr_title()
+    if not kit_ops.github().merge_pr(subject=pr_title):
+        return LandPrError(
             success=False,
             error_type="merge_failed",
             message=(f"Failed to merge PR #{pr_number}\n\nPlease resolve the issue and try again."),
@@ -191,7 +192,7 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
             f"Run 'gt up' to navigate to a child branch"
         )
 
-    return LandBranchSuccess(
+    return LandPrSuccess(
         success=True,
         pr_number=pr_number,
         branch_name=branch_name,
@@ -201,21 +202,21 @@ def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBra
 
 
 @click.command()
-def land_branch() -> None:
+def land_pr() -> None:
     """Land a single PR from Graphite stack without affecting upstack branches."""
     try:
-        result = execute_land_branch()
+        result = execute_land_pr()
         # Single line summary instead of formatted JSON
-        if isinstance(result, LandBranchSuccess):
+        if isinstance(result, LandPrSuccess):
             click.echo(f"✓ Merged PR #{result.pr_number} [{result.branch_name}]")
         else:
             click.echo(f"✗ Failed to merge: {result.message}")
 
-        if isinstance(result, LandBranchError):
+        if isinstance(result, LandPrError):
             raise SystemExit(1)
 
     except Exception as e:
-        error = LandBranchError(
+        error = LandPrError(
             success=False,
             error_type="merge_failed",
             message=f"Unexpected error: {e}",

@@ -458,9 +458,15 @@ def process_data(data: dict) -> Result:
     return new_process(data)
 ```
 
-### Code in `__init__.py` and `__all__` Exports
+### No Re-Exports: One Canonical Import Path
 
-**Core Principle:** One canonical location for every import.
+**Core Principle:** Every symbol has exactly one import path. Never re-export.
+
+This rule applies to:
+
+- `__all__` exports in `__init__.py`
+- Re-exporting symbols from other modules
+- Shim modules that import and expose symbols from elsewhere
 
 ```python
 # ❌ WRONG: __all__ exports create duplicate import paths
@@ -470,8 +476,18 @@ __all__ = ["Process"]
 
 # Now Process can be imported two ways - breaks grepability
 
-# ✅ CORRECT: Empty __init__.py, import directly
+# ❌ WRONG: Re-exporting symbols in a shim module
+# myapp/compat.py
+from myapp.core import Process, Config, execute
+# These can now be imported from myapp.compat OR myapp.core
+
+# ✅ CORRECT: Empty __init__.py, import from canonical location
 # from myapp.core import Process
+
+# ✅ CORRECT: Shim imports only what it needs for its own use
+# myapp/cli_entry.py (needs the click command for CLI registration)
+from myapp.core import main_command  # Only import what this module uses
+# Other code imports Process, Config from myapp.core directly
 ```
 
 **Why prohibited:**
@@ -480,6 +496,22 @@ __all__ = ["Process"]
 2. Confuses static analysis tools
 3. Impairs refactoring safety
 4. Violates explicit > implicit
+5. Creates confusion about canonical import location
+
+**Shim modules:** When a module must exist as an entry point (e.g., for plugin systems or CLI registration), import only the minimum symbols needed for that purpose. Document that other symbols should be imported from the canonical location.
+
+**When re-exports ARE required:** Some systems (like kit CLI entry points) require a module to exist at a specific path and expose a specific symbol. In these cases, use the explicit `import X as X` syntax to signal intentional re-export:
+
+```python
+# ✅ CORRECT: Explicit re-export syntax for required entry points
+# This shim exists because the kit CLI system expects a module at this path
+from myapp.core.feature import my_function as my_function
+
+# ❌ WRONG: Plain import looks like unused import to linters
+from myapp.core.feature import my_function  # ruff will flag as F401
+```
+
+The `as X` syntax is the PEP 484 standard for indicating intentional re-exports. It tells both linters and readers that this import is meant to be consumed from this module.
 
 ### Speculative Tests
 
@@ -583,3 +615,12 @@ Benefits:
 - [ ] Have I documented why the inline import is needed?
 
 **Default: Module-level imports**
+
+### Before importing/re-exporting symbols:
+
+- [ ] Is there already a canonical location for this symbol?
+- [ ] Am I creating a second import path for the same symbol?
+- [ ] If this is a shim module, am I importing only what's needed for this module's purpose?
+- [ ] Have I avoided `__all__` exports?
+
+**Default: Import from canonical location, never re-export**

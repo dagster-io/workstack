@@ -175,6 +175,13 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
         help="Show workflow run columns (run-id, run-state)",
     )(f)
     f = click.option(
+        "--prs",
+        "-P",
+        is_flag=True,
+        default=False,
+        help="Show PR columns (pr, chks) - requires additional API calls",
+    )(f)
+    f = click.option(
         "--limit",
         type=int,
         help="Maximum number of results to return",
@@ -188,13 +195,14 @@ def _list_plans_impl(
     state: str | None,
     run_state: str | None,
     runs: bool,
+    prs: bool,
     limit: int | None,
 ) -> None:
     """Implementation logic for listing plans with optional filters.
 
     Uses PlanListService to batch all API calls into 3 total:
     1. Single GraphQL query for issues
-    2. Single GraphQL query for PRs
+    2. Single GraphQL query for PRs (only if --prs flag is set)
     3. REST API calls for workflow runs (one per issue with run_id)
     """
     repo = discover_repo_context(ctx, ctx.cwd)
@@ -209,6 +217,7 @@ def _list_plans_impl(
 
     # Use PlanListService for batched API calls
     # Skip workflow runs when not needed for better performance
+    # Skip PR linkages when --prs flag is not set for better performance
     try:
         plan_data = ctx.plan_list_service.get_plan_list_data(
             repo_root=repo_root,
@@ -216,6 +225,7 @@ def _list_plans_impl(
             state=state,
             limit=limit,
             skip_workflow_runs=not needs_workflow_runs,
+            skip_pr_linkages=not prs,
         )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
@@ -331,8 +341,8 @@ def _list_plans_impl(
         pr_cell = "-"
         checks_cell = "-"
         if isinstance(issue_number, int) and issue_number in pr_linkages:
-            prs = pr_linkages[issue_number]
-            selected_pr = select_display_pr(prs)
+            issue_prs = pr_linkages[issue_number]
+            selected_pr = select_display_pr(issue_prs)
             if selected_pr is not None:
                 graphite_url = ctx.graphite.get_graphite_url(
                     selected_pr.owner, selected_pr.repo, selected_pr.number
@@ -405,6 +415,7 @@ def list_plans(
     state: str | None,
     run_state: str | None,
     runs: bool,
+    prs: bool,
     limit: int | None,
 ) -> None:
     """List plans with optional filters.
@@ -416,5 +427,6 @@ def list_plans(
         erk plan list --run-state in_progress
         erk plan list --run-state success --state open
         erk plan list --runs
+        erk plan list --prs
     """
-    _list_plans_impl(ctx, label, state, run_state, runs, limit)
+    _list_plans_impl(ctx, label, state, run_state, runs, prs, limit)

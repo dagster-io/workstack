@@ -37,10 +37,12 @@ Execute the preflight command to do all deterministic work.
 
 ```bash
 # Extract session_id from SESSION_CONTEXT reminder and pass to preflight:
-dot-agent run gt pr-submit preflight --session-id "<session-id>"
+dot-agent run gt pr-submit preflight --session-id "<session-id>" 2>&1
 ```
 
 The `--session-id` is **required**. The diff file is written to `.tmp/<session-id>/` in the repo root, which is accessible to subagents without permission prompts.
+
+**IMPORTANT**: The `2>&1` redirection combines stderr and stdout so progress messages are visible. Display the full command output to the user first (this shows real-time progress), then extract and parse the JSON object from the end of the output.
 
 This returns JSON with:
 
@@ -93,7 +95,7 @@ dot-agent run gt pr-submit finalize \
     --pr-number {pr_number} \
     --pr-title "{pr_title}" \
     --pr-body "{pr_body}" \
-    --diff-file "{diff_file}"
+    --diff-file "{diff_file}" 2>&1
 ```
 
 ### Step 4: Report Results

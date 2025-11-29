@@ -245,9 +245,6 @@ jobs:
             echo "✅ PR already exists for branch $BRANCH_NAME"
           else
             cat > pr_body.md <<EOF
-          **Author:** @$SUBMITTED_BY
-          **Plan:** #$ISSUE_NUMBER
-
           **Status:** Queued for implementation
 
           This PR will be marked ready for review after implementation completes.
@@ -434,11 +431,8 @@ jobs:
           # Get standardized metadata footer from get-pr-metadata
           pr_metadata=$(dot-agent run erk get-pr-metadata --pr-number "$PR_NUMBER" 2>/dev/null || echo "")
 
-          # Build PR body: header + summary + footer
+          # Build PR body: summary + footer
           cat > pr_body.md <<BODY_EOF
-          **Author:** @$SUBMITTED_BY
-          **Plan:** #$ISSUE_NUMBER
-
           ## Summary
 
           $commit_body

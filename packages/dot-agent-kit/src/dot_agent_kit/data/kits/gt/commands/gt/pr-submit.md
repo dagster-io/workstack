@@ -106,18 +106,52 @@ Display:
 
 ## Error Handling
 
-### Preflight Errors
+### Preflight Errors - CRITICAL
 
-- `gt_not_authenticated` / `gh_not_authenticated`: Auth issues
-- `no_branch` / `no_parent` / `no_commits`: Branch state issues
-- `squash_conflict` / `pr_has_conflicts`: Merge conflicts
-- `submit_failed` / `submit_timeout`: Submission issues
+**When preflight returns `success: false`, IMMEDIATELY ABORT the entire command.** Do NOT attempt to auto-resolve any preflight errors. Display the error clearly and let the user fix it manually.
 
-### AI Errors (handled in this command)
+Display format for ALL preflight failures:
+
+```
+❌ PR submission failed: {error_type}
+
+{message}
+
+Error details:
+{details as formatted JSON or bullet points}
+```
+
+**Do NOT:**
+
+- Try to run `gt sync`, `gt restack`, or any recovery commands
+- Attempt to fix merge conflicts automatically
+- Continue to the AI summarization step
+- Suggest running additional commands in the same session
+
+**DO:**
+
+- Display the error message from the JSON response
+- Include the `error_type` and `details` fields
+- Stop execution immediately
+- Let the user resolve the issue and re-run `/gt:pr-submit`
+
+#### Common Error Types
+
+| Error Type                             | Cause                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `submit_merged_parent`                 | Parent branch merged but not in local trunk. User needs to run `gt sync --force`, `gt track --parent master`, then `gt restack`. |
+| `gt_not_authenticated`                 | Not logged into Graphite CLI                                                                                                     |
+| `gh_not_authenticated`                 | Not logged into GitHub CLI                                                                                                       |
+| `no_branch` / `no_parent`              | Not on a valid Graphite branch                                                                                                   |
+| `no_commits`                           | No commits to submit                                                                                                             |
+| `squash_conflict` / `pr_has_conflicts` | Merge conflicts need manual resolution                                                                                           |
+| `submit_failed` / `submit_timeout`     | Graphite submission failed                                                                                                       |
+
+### AI Errors
 
 - Invalid output (missing marker): Fall back to branch name as title
 - Task tool failure: Report error and stop
 
 ### Finalize Errors
 
-- `pr_update_failed`: Non-fatal, PR already submitted
+- `pr_update_failed`: Non-fatal, PR was already submitted successfully

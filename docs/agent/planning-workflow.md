@@ -33,19 +33,15 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 
 Create a plan using Claude's ExitPlanMode tool. This stores the plan in session logs.
 
-### 2. Save to GitHub Issue
+### 2. Create Plan as GitHub Issue
 
-Save the plan to a GitHub issue:
+Use `/erk:craft-plan` to create a plan and save it directly to a GitHub issue:
 
 ```bash
-# Quick save (no enrichment)
-/erk:plan-save
-
-# Enriched save (adds semantic context and interactive clarifications)
-/erk:plan-save-enriched
+/erk:craft-plan
 ```
 
-Both commands create a GitHub issue with the plan content and the `erk-plan` label. The issue becomes the source of truth.
+This command guides you through creating a plan and saves it as a GitHub issue with the `erk-plan` label. The issue becomes the source of truth.
 
 ### 4. Implement from Issue
 
@@ -193,14 +189,9 @@ gh run watch
 
 ## Commands Reference
 
-### Plan Saving
+### Plan Creation
 
-- `/erk:plan-save` - Save plan from `~/.claude/plans/` to GitHub issue (no enrichment)
-- `/erk:plan-save-enriched` - Enrich plan from `~/.claude/plans/` with context extraction, then save to NEW GitHub issue
-
-### Plan Enrichment (Optional)
-
-- `/erk:plan-enrich <issue>` - Enrich plan from GitHub issue and UPDATE it in place
+- `/erk:craft-plan` - Create a plan interactively and save to GitHub issue
 
 ### Implementation (Issue-Based)
 

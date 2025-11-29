@@ -4,9 +4,6 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: See LICENSE.md
 artifacts:
   command:
-    - commands/erk/plan-save.md
-    - commands/erk/plan-enrich.md
-    - commands/erk/plan-save-enriched.md
     - commands/erk/plan-implement.md
     - commands/erk/merge-conflicts-fix.md
     - commands/erk/plan-submit.md
@@ -24,9 +21,6 @@ artifacts:
     - docs/erk/includes/validate-github-cli.md
     - docs/erk/includes/validate-plan-structure.md
 kit_cli_commands:
-  - name: plan-save-to-issue
-    path: kit_cli_commands/erk/plan_save_to_issue.py
-    description: Extract plan from ~/.claude/plans/ and create GitHub issue in one operation
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
@@ -116,5 +110,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:plan-save is invoked
+    description: Injects session ID into conversation context for plan-related commands
     timeout: 30

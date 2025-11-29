@@ -272,33 +272,22 @@ Worries, uncertainties, or potential issues identified.
 - **Performance**: Bulk operations might timeout with current 30s limit
 - **Security**: API keys stored in plain text in dev config
 
-## Command Comparison
+## Using Plan Enrichment
 
-Three commands provide different levels of plan enrichment:
+Plan enrichment is now integrated into the `/erk:craft-plan` workflow. When creating a plan:
 
-| Command                   | When to Use                        | Enrichment            | Interactivity              | Target         |
-| ------------------------- | ---------------------------------- | --------------------- | -------------------------- | -------------- |
-| `/erk:plan-save`          | Quick save, no context             | None                  | No                         | NEW issue      |
-| `/erk:plan-save-enriched` | Complex plan, preserve discoveries | Full (3-step process) | Yes (clarifying questions) | NEW issue      |
-| `/erk:plan-enrich`        | Update existing issue              | Full (3-step process) | Yes (clarifying questions) | EXISTING issue |
+1. Use `/erk:craft-plan` to start the planning process
+2. The command will guide you through plan creation with interactive enrichment
+3. Answer clarifying questions to add context
+4. The enriched plan is saved directly to a GitHub issue
+5. Implement: `erk implement <issue-number>`
 
-**Workflow examples:**
+**Workflow:**
 
 ```bash
-# Scenario 1: Simple task, no enrichment needed
-1. Create plan with EnterPlanMode/ExitPlanMode
-2. Run: /erk:plan-save
-3. Implement: erk implement <issue-number>
-
-# Scenario 2: Complex task, enrich from start
-1. Create plan with EnterPlanMode/ExitPlanMode
-2. Run: /erk:plan-save-enriched
-3. Answer clarifying questions
-4. Implement: erk implement <issue-number>
-
-# Scenario 3: Saved raw, realize needs enrichment
-1. Already saved with: /erk:plan-save
-2. Run: /erk:plan-enrich <issue-number>
+# Create and save enriched plan
+1. Run: /erk:craft-plan
+2. Follow the interactive prompts
 3. Answer clarifying questions
 4. Implement: erk implement <issue-number>
 ```
@@ -316,7 +305,7 @@ Three commands provide different levels of plan enrichment:
 - No discoveries made
 - Obvious implementation
 
-**Command:** `/erk:plan-save`
+**Approach:** Skip enrichment during `/erk:craft-plan` by answering minimally
 
 ### Example 2: Complex Plan (Enrichment Required)
 
@@ -337,7 +326,7 @@ Three commands provide different levels of plan enrichment:
 - **Complex Reasoning**: Rejected synchronous confirmation
 - **Known Pitfalls**: Zero-amount events, storage anti-patterns
 
-**Command:** `/erk:plan-save-enriched`
+**Approach:** Use `/erk:craft-plan` and thoroughly answer clarifying questions
 
 **Value:** Implementing agent knows WHY async is required, what NOT to do, and edge cases to handle.
 
@@ -441,7 +430,7 @@ Plans describe WHAT to do, not HOW to code it.
 
 - After enrichment, review the Context & Understanding sections
 - Manually add missing discoveries using GitHub issue editing
-- Consider using `/erk:plan-enrich` again with explicit guidance about what to add
+- Re-run `/erk:craft-plan` with explicit guidance about what to add
 
 ---
 

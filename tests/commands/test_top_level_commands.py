@@ -194,32 +194,3 @@ def test_top_level_close_command_works() -> None:
         # Assert
         assert result.exit_code == 0
         assert store.closed_plans == ["456"]
-
-
-def test_top_level_retry_command_works() -> None:
-    """Test that 'erk plan retry' command works."""
-    # Arrange
-    issue1 = Plan(
-        plan_identifier="789",
-        title="Plan to Retry",
-        body="",
-        state=PlanState.OPEN,
-        url="https://github.com/owner/repo/issues/789",
-        labels=["erk-plan", "erk-queue"],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
-        metadata={"number": 789},
-    )
-
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"789": issue1})
-        ctx = build_workspace_test_context(env, plan_store=store)
-
-        # Act - Use plan retry command
-        result = runner.invoke(cli, ["plan", "retry", "789"], obj=ctx)
-
-        # Assert - Verify command executed (exit code 0 or specific behavior)
-        # The retry command may have different success criteria
-        assert result.exit_code in (0, 1)  # Allow for workflow trigger failures in test env

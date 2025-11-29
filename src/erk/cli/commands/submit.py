@@ -125,7 +125,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
             click.style("Error: ", fg="red")
             + f"Issue #{issue_number} does not have {ERK_PLAN_LABEL} label\n\n"
             "Cannot submit non-plan issues for automated implementation.\n"
-            "To create a plan, use: erk plan save"
+            "To create a plan, use: /erk:craft-plan"
         )
         raise SystemExit(1)
 

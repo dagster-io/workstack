@@ -17,7 +17,6 @@ erk list          # List plans
 erk close         # Close a plan
 erk implement     # Implement a plan
 erk submit        # Submit a plan for remote execution
-erk retry         # Retry a failed plan
 erk log           # View plan execution logs
 ```
 
@@ -42,7 +41,6 @@ Plan commands appear at the top level without a noun prefix:
 | `close`     | Close a plan                                                | Medium    |
 | `implement` | Start implementing a plan                                   | Very High |
 | `submit`    | Queue plan for remote execution                             | High      |
-| `retry`     | Retry failed plan execution                                 | Medium    |
 | `log`       | View plan execution history                                 | Medium    |
 
 ### Grouped Commands
@@ -291,7 +289,6 @@ erk implement 42          # Create worktree and start work
 
 # Submit for execution
 erk submit 42             # Queue for remote execution
-erk retry 42              # Retry after failure
 
 # Track progress
 erk log 42                # View execution history

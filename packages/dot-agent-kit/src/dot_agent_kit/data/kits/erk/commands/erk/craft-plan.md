@@ -124,6 +124,12 @@ View the plan:
 
 Implement the plan:
     erk implement [issue_number]
+
+Implement with plan with --dangerously-skip-permissions:
+    erk implement [issue_number] --dangerous
+
+Implement with plan with --dangerous and then submit as pr:
+    erk implement [issue_number] --yolo
 ```
 
 ## Error Handling

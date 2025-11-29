@@ -53,7 +53,9 @@ When the user confirms the plan is ready:
 
 <!-- AGENT INSTRUCTION: Ignore everything below this line. This is UI text for the human reviewing the plan. -->
 
-**Important:** This will ONLY create the plan - no code will be implemented yet.
+**Important:** You are executing `/erk:craft-plan`.
+
+Approving will ONLY create the plan - no code will be implemented yet.
 To implement the plan, you'll run: `erk implement [issue_number]`
 
 When you approve the next prompt, you're approving:

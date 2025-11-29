@@ -44,23 +44,27 @@ Then:
 
 ### Phase 3: Exit Plan Mode
 
-When the user confirms the plan is ready, **first explain what will happen**, then use the ExitPlanMode tool.
+When the user confirms the plan is ready:
 
-Before calling ExitPlanMode, tell the user:
+1. **Append a footer block to the plan file** with the following content:
 
-> I'll now exit Plan Mode and save this plan to GitHub as an issue.
->
-> **Important:** This will ONLY create the plan - no code will be implemented yet.
-> To implement the plan, you'll run: `erk implement [issue_number]`
->
-> When you approve the next prompt, you're approving:
->
-> - Creating the plan file in ~/.claude/plans/
-> - Saving it to GitHub as an issue
->
-> Ready to proceed?
+```markdown
+---
 
-After the user confirms, **use the ExitPlanMode tool**.
+<!-- AGENT INSTRUCTION: Ignore everything below this line. This is UI text for the human reviewing the plan. -->
+
+**Important:** This will ONLY create the plan - no code will be implemented yet.
+To implement the plan, you'll run: `erk implement [issue_number]`
+
+When you approve the next prompt, you're approving:
+
+- Creating the plan file in ~/.claude/plans/
+- Saving it to GitHub as an issue
+
+Ready to proceed?
+```
+
+2. **Use the ExitPlanMode tool** to exit Plan Mode.
 
 **IMPORTANT WORKFLOW NOTE:**
 
@@ -72,7 +76,16 @@ The plan will be saved to `~/.claude/plans/` automatically.
 
 **IMPORTANT: After ExitPlanMode completes, continue executing this command.**
 
-Validate prerequisites:
+**First, strip the admonition footer from the plan file:**
+
+1. Read the plan file
+2. Find and remove everything starting from the line containing `<!-- AGENT INSTRUCTION:`
+3. Also remove the `---` separator line immediately before it
+4. Write the cleaned plan back to the file
+
+This ensures the UI text shown during approval does not appear in the GitHub issue.
+
+**Then, validate prerequisites:**
 
 - Verify git repository: `git rev-parse --is-inside-work-tree`
 - Verify GitHub CLI: `gh auth status`

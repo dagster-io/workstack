@@ -6,7 +6,7 @@ artifacts:
   command:
     - commands/erk/plan-implement.md
     - commands/erk/merge-conflicts-fix.md
-    - commands/erk/plan-submit.md
+    - commands/erk/submit-plan.md
   agent:
     - agents/erk/issue-wt-creator.md
     - agents/erk/plan-extractor.md

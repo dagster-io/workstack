@@ -54,6 +54,7 @@ docs/
 | Your Task                         | Start Here                                                                                                     |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Understanding erk terminology     | [glossary.md](glossary.md)                                                                                     |
+| Understanding plan lifecycle      | [plan-lifecycle.md](plan-lifecycle.md)                                                                         |
 | Understanding plan enrichment     | [plan-enrichment.md](plan-enrichment.md)                                                                       |
 | Cleaning up branches/worktrees    | [erk/branch-cleanup.md](erk/branch-cleanup.md)                                                                 |
 | Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |

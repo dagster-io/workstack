@@ -22,8 +22,7 @@ packages/erk-shared/src/erk_shared/integrations/gt/
     └── gt/
         ├── submit_branch.py         # ACTUAL implementation (1000+ lines)
         ├── land_branch.py
-        ├── pr_update.py
-        └── simple_submit.py
+        └── pr_update.py
 ```
 
 **Rules**:
@@ -45,8 +44,7 @@ packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/
 │   └── gt/
 │       ├── submit_branch.py         # Shim (imports from erk-shared)
 │       ├── land_branch.py           # Shim
-│       ├── pr_update.py             # Shim
-│       └── simple_submit.py         # Shim
+│       └── pr_update.py             # Shim
 ├── agents/                          # Agent definitions
 ├── commands/                        # Command definitions
 └── skills/                          # Skill definitions

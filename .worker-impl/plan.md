@@ -7,6 +7,7 @@
 ## Solution
 
 Two-pronged approach:
+
 1. **Enable batch marking**: Modify `mark-step` to accept multiple step numbers in a single invocation
 2. **Add prompting**: Document that this command should NOT be parallelized
 
@@ -17,6 +18,7 @@ Two-pronged approach:
 **File**: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/mark_step.py`
 
 - Change Click argument from single to variadic:
+
   ```python
   # Before
   @click.argument("step_num", type=int)
@@ -30,6 +32,7 @@ Two-pronged approach:
 - Add validation for empty tuple (require at least one step)
 
 - Add validation pass before any modifications (fail fast on invalid step):
+
   ```python
   # Validate all steps first
   for step_num in step_nums:
@@ -53,16 +56,19 @@ Two-pronged approach:
 
 Add warning near mark-step usage (around line 215):
 
-```markdown
+````markdown
 6. **Mark phase as completed** when done:
    ```bash
    dot-agent run erk mark-step <step_number>
    ```
+````
 
-   **IMPORTANT - Sequential Execution Required:**
-   - **NEVER** run multiple `mark-step` commands in parallel
-   - This command modifies `.impl/progress.md` and parallel execution causes lost updates
-   - If marking multiple steps, use a single command: `dot-agent run erk mark-step 1 2 3`
+**IMPORTANT - Sequential Execution Required:**
+
+- **NEVER** run multiple `mark-step` commands in parallel
+- This command modifies `.impl/progress.md` and parallel execution causes lost updates
+- If marking multiple steps, use a single command: `dot-agent run erk mark-step 1 2 3`
+
 ```
 
 ### 3. Update kit.yaml description
@@ -92,3 +98,4 @@ Add tests for:
 
 - Single-step usage unchanged: `mark-step 5` still works (tuple of one)
 - JSON output changes from `step_num` (int) to `step_nums` (array) - breaking change but internal tooling only
+```

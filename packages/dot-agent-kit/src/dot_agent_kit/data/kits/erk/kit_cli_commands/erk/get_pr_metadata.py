@@ -64,18 +64,15 @@ def get_pr_metadata(pr_number: int | None) -> None:
     This command is designed for use in PR creation workflows where metadata
     is optional functionality that should degrade gracefully.
     """
-    from erk_shared.impl_folder import (
-        has_issue_reference,
-        read_issue_reference,
-    )
+    from erk_shared.impl_folder import get_closing_text
 
     impl_dir = Path.cwd() / ".impl"
 
-    # Read issue reference
-    issue_ref = read_issue_reference(impl_dir) if has_issue_reference(impl_dir) else None
+    # Get closing text using canonical function
+    closing_text = get_closing_text(impl_dir)
 
     # Only build metadata if we have an issue reference
-    if issue_ref is None:
+    if not closing_text:
         return
 
     metadata_parts: list[str] = []
@@ -92,8 +89,8 @@ def get_pr_metadata(pr_number: int | None) -> None:
         f"```\n"
     )
 
-    # Closes #N
-    metadata_parts.append(f"\nCloses #{issue_ref.issue_number}\n")
+    # Closes #N - use canonical closing text
+    metadata_parts.append(f"\n{closing_text}\n")
 
     # Output metadata section
     output = "\n".join(metadata_parts)

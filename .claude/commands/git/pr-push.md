@@ -105,9 +105,19 @@ Push the branch to origin with upstream tracking:
 git push -u origin "$(git branch --show-current)"
 ```
 
-### Step 6: Create GitHub PR
+### Step 6: Get Closing Text
 
-Extract PR title (first line) and body (remaining lines) from commit message, then create PR:
+Get the issue closing text if this worktree was created from a GitHub issue:
+
+```bash
+closing_text=$(dot-agent run erk get-closing-text 2>/dev/null || echo "")
+```
+
+This reads `.impl/issue.json` and returns `Closes #N` if an issue reference exists.
+
+### Step 7: Create GitHub PR
+
+Extract PR title (first line) and body (remaining lines) from commit message, then create PR with closing text appended:
 
 ```bash
 # Get the commit message
@@ -117,13 +127,22 @@ commit_msg=$(git log -1 --pretty=%B)
 pr_title=$(echo "$commit_msg" | head -n 1)
 
 # Extract remaining lines as body (skip empty first line after title)
-pr_body=$(echo "$commit_msg" | tail -n +2)
+commit_body=$(echo "$commit_msg" | tail -n +2)
+
+# Append closing text if present
+if [ -n "$closing_text" ]; then
+    pr_body="${commit_body}
+
+${closing_text}"
+else
+    pr_body="${commit_body}"
+fi
 
 # Create PR using GitHub CLI
 gh pr create --title "$pr_title" --body "$pr_body"
 ```
 
-### Step 7: Report Results
+### Step 8: Report Results
 
 Display a clear summary:
 
@@ -136,11 +155,14 @@ Display a clear summary:
 ✓ Created commit with AI-generated message
 ✓ Pushed branch to origin with upstream tracking
 ✓ Created GitHub PR
+✓ Linked to issue #N (will auto-close on merge)  [only if closing_text was present]
 
 ### View PR
 
 [PR URL from gh pr create output]
 ```
+
+**Conditional line:** The "Linked to issue" line should only appear if `closing_text` was non-empty (i.e., an issue reference existed in `.impl/issue.json`).
 
 **CRITICAL**: The PR URL MUST be the absolute last line of your output. Do not add any text after it.
 

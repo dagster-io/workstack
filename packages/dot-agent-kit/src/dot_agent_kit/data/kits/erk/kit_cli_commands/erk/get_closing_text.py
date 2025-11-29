@@ -36,7 +36,7 @@ import click
 
 
 @click.command(name="get-closing-text")
-def get_closing_text() -> None:
+def get_closing_text_cmd() -> None:
     """Get GitHub issue closing text for PR body.
 
     Checks for `.impl/issue.json` in current directory and returns the "Closes #N"
@@ -46,21 +46,15 @@ def get_closing_text() -> None:
     is optional functionality that should degrade gracefully.
     """
     # Import here to avoid loading when not needed
-    from erk_shared.impl_folder import has_issue_reference, read_issue_reference
+    from erk_shared.impl_folder import get_closing_text
 
     impl_dir = Path.cwd() / ".impl"
 
-    # Check if issue reference exists
-    if not has_issue_reference(impl_dir):
+    # Get closing text using canonical function
+    closing_text = get_closing_text(impl_dir)
+    if not closing_text:
         # No issue reference - return empty (no output)
         return
 
-    # Read issue reference
-    issue_ref = read_issue_reference(impl_dir)
-    if issue_ref is None:
-        # Issue file exists but couldn't be read - return empty
-        return
-
     # Output closing text (with trailing newlines for PR body formatting)
-    closing_text = f"Closes #{issue_ref.issue_number}\n\n"
-    click.echo(closing_text, nl=False)
+    click.echo(f"{closing_text}\n\n", nl=False)

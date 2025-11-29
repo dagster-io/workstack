@@ -58,4 +58,6 @@ def init_codespace(force: bool) -> None:
     user_output("  1. Commit the .devcontainer/devcontainer.json file")
     user_output("  2. Set your ANTHROPIC_API_KEY as a GitHub Codespaces secret:")
     user_output("     gh secret set ANTHROPIC_API_KEY --user")
-    user_output("  3. Create a Codespace: erk codespace plan <description>")
+    user_output("  3. Ensure gh CLI has codespace scope:")
+    user_output("     gh auth refresh -h github.com -s codespace")
+    user_output("  4. Create a Codespace: erk codespace plan <description>")

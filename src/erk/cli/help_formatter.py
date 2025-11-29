@@ -105,14 +105,14 @@ class GroupedCommandGroup(click.Group):
         """Format a list of commands with their help text.
 
         Commands with aliases (declared via @alias decorator) are displayed
-        as 'primary / alias1 / alias2'.
+        as 'checkout, co'.
         """
         rows = []
         for name, cmd in commands:
             # Get aliases for this command and format display name
             aliases = get_aliases(cmd)
             if aliases:
-                display_name = f"{name} / {' / '.join(aliases)}"
+                display_name = f"{name}, {', '.join(aliases)}"
             else:
                 display_name = name
 

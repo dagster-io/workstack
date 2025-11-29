@@ -12,9 +12,11 @@ Design:
 """
 
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 
 from erk_shared.integrations.graphite.abc import Graphite
 from erk_shared.integrations.graphite.fake import FakeGraphite
+from erk_shared.integrations.graphite.types import BranchMetadata
 from erk_shared.integrations.gt import (
     CommandResult,
     GitGtKit,
@@ -185,6 +187,20 @@ class FakeGitGtKitOps(GitGtKit):
             self._simulated_conflicts: set[tuple[str, str]] = set()
         self._simulated_conflicts.add((base_branch, head_branch))
 
+    def get_git_common_dir(self, cwd: Path) -> Path | None:
+        """Fake git common directory - returns a path based on repo_root."""
+        return Path(self._state.repo_root) / ".git"
+
+    def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
+        """Fake branch head - returns a static SHA for testing."""
+        # Return a fake SHA based on branch name for deterministic testing
+        return f"fake-sha-for-{branch}"
+
+    def checkout_branch(self, branch: str) -> bool:
+        """Fake branch checkout - updates current branch state."""
+        self._state = replace(self._state, current_branch=branch)
+        return True
+
 
 class FakeGraphiteGtKitOps(GraphiteGtKit):
     """Fake Graphite operations with in-memory state."""
@@ -202,24 +218,6 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
         """Get current state (for testing assertions)."""
         return self._state
 
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Return pre-configured authentication status."""
-        if not self._state.authenticated:
-            return (False, None, None)
-        return (True, self._state.auth_username, self._state.auth_repo_info)
-
-    def get_parent_branch(self) -> str | None:
-        """Get the parent branch for current branch."""
-        if self._current_branch not in self._state.branch_parents:
-            return None
-        return self._state.branch_parents[self._current_branch]
-
-    def get_children_branches(self) -> list[str]:
-        """Get list of child branches for current branch."""
-        if self._current_branch not in self._state.branch_children:
-            return []
-        return self._state.branch_children[self._current_branch]
-
     def squash_commits(self) -> CommandResult:
         """Run gt squash with configurable success/failure."""
         return CommandResult(
@@ -235,22 +233,6 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
             stdout=self._state.submit_stdout,
             stderr=self._state.submit_stderr,
         )
-
-    def restack(self) -> CommandResult:
-        """Run gt restack with configurable success/failure."""
-        return CommandResult(
-            success=self._state.restack_success,
-            stdout=self._state.restack_stdout,
-            stderr=self._state.restack_stderr,
-        )
-
-    def navigate_to_child(self) -> bool:
-        """Navigate to child branch (always succeeds in fake)."""
-        children = self.get_children_branches()
-        if len(children) == 1:
-            self._current_branch = children[0]
-            return True
-        return False
 
 
 class FakeGitHubGtKitOps(GitHubGtKit):
@@ -438,6 +420,13 @@ class FakeGtKitOps(GtKit):
         # Update github state
         self._github.set_current_branch(branch)
 
+        # Also configure main_graphite fake to track the same parent relationship
+        if hasattr(self._main_graphite, "track_branch"):
+            from pathlib import Path
+
+            repo_root = Path(self._git.get_state().repo_root)
+            self._main_graphite.track_branch(repo_root, branch, parent)
+
         return self
 
     def with_uncommitted_files(self, files: list[str]) -> "FakeGtKitOps":
@@ -541,6 +530,15 @@ class FakeGtKitOps(GtKit):
 
         new_children = {**gt_state.branch_children, branch: children}
         self._graphite._state = replace(gt_state, branch_children=new_children)
+
+        # Also track children relationships in main_graphite for each child
+        if hasattr(self._main_graphite, "track_branch"):
+            from pathlib import Path
+
+            repo_root = Path(self._git.get_state().repo_root)
+            for child in children:
+                self._main_graphite.track_branch(repo_root, child, branch)
+
         return self
 
     def with_submit_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
@@ -569,9 +567,24 @@ class FakeGtKitOps(GtKit):
         Returns:
             Self for chaining
         """
+        import subprocess
+
         gt_state = self._graphite.get_state()
         self._graphite._state = replace(
             gt_state, restack_success=False, restack_stdout=stdout, restack_stderr=stderr
+        )
+
+        # Also configure main_graphite to raise CalledProcessError for restack
+        # Preserve existing branch metadata from previous FakeGraphite
+        error = subprocess.CalledProcessError(returncode=1, cmd=["gt", "restack"])
+        error.stdout = stdout
+        error.stderr = stderr
+        existing_branches: dict[str, BranchMetadata] = {}
+        if isinstance(self._main_graphite, FakeGraphite):
+            existing_branches = self._main_graphite._branches
+        self._main_graphite = FakeGraphite(
+            restack_raises=error,
+            branches=existing_branches,
         )
         return self
 
@@ -673,6 +686,18 @@ class FakeGtKitOps(GtKit):
             authenticated=False,
             auth_username=None,
             auth_repo_info=None,
+        )
+
+        # Also configure main_graphite to return unauthenticated status
+        # Preserve existing branch metadata from previous FakeGraphite
+        existing_branches: dict[str, BranchMetadata] = {}
+        if isinstance(self._main_graphite, FakeGraphite):
+            existing_branches = self._main_graphite._branches
+        self._main_graphite = FakeGraphite(
+            authenticated=False,
+            auth_username=None,
+            auth_repo_info=None,
+            branches=existing_branches,
         )
         return self
 

@@ -16,7 +16,6 @@ from pathlib import Path
 
 from erk_shared.integrations.gt import (
     RealGitGtKit,
-    RealGraphiteGtKit,
 )
 
 
@@ -313,26 +312,3 @@ class TestRealGraphiteOperations:
     These tests call real gt commands and verify they don't crash.
     Tests may fail if gt is not installed, which is expected behavior.
     """
-
-    def test_get_parent_branch(self) -> None:
-        """Test get_parent_branch returns str or None with real gt command."""
-        ops = RealGraphiteGtKit()
-
-        # Call the method - may return None if not in gt repo or gt not installed
-        result = ops.get_parent_branch()
-
-        # Verify return type matches interface contract
-        assert result is None or isinstance(result, str)
-
-    def test_get_children_branches(self) -> None:
-        """Test get_children_branches returns list with real gt command."""
-        ops = RealGraphiteGtKit()
-
-        # Call the method - may return empty list if not in gt repo or gt not installed
-        result = ops.get_children_branches()
-
-        # Verify return type matches interface contract
-        assert isinstance(result, list)
-        # All elements should be strings if present
-        if result:
-            assert all(isinstance(branch, str) for branch in result)

@@ -11,7 +11,9 @@ Design goals:
 """
 
 import json
+import subprocess
 import sys
+from pathlib import Path
 
 import click
 
@@ -43,9 +45,12 @@ def execute_update_pr(ops: GtKit | None = None) -> dict:
             return {"success": False, "error": "Failed to commit changes"}
 
     # 2. Restack with conflict detection
-    restack_result = ops.graphite().restack()
-    if not restack_result.success:
-        combined_output = restack_result.stdout + restack_result.stderr
+    try:
+        repo_root = Path(ops.git().get_repository_root())
+        ops.main_graphite().restack(repo_root, no_interactive=True, quiet=False)
+    except subprocess.CalledProcessError as e:
+        has_output = hasattr(e, "stdout") and hasattr(e, "stderr")
+        combined_output = e.stdout + e.stderr if has_output else str(e)
         combined_lower = combined_output.lower()
 
         if "conflict" in combined_lower or "merge conflict" in combined_lower:
@@ -56,14 +61,14 @@ def execute_update_pr(ops: GtKit | None = None) -> dict:
                     "Merge conflict detected during restack. "
                     "Resolve conflicts manually or run 'gt restack --continue' after fixing."
                 ),
-                "details": {"stderr": restack_result.stderr},
+                "details": {"stderr": e.stderr if hasattr(e, "stderr") else str(e)},
             }
 
         return {
             "success": False,
             "error_type": "restack_failed",
             "error": "Failed to restack branch",
-            "details": {"stderr": restack_result.stderr},
+            "details": {"stderr": e.stderr if hasattr(e, "stderr") else str(e)},
         }
 
     # 3. Submit update

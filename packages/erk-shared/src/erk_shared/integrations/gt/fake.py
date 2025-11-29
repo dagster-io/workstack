@@ -196,24 +196,6 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
         """Get current state (for testing assertions)."""
         return self._state
 
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Return pre-configured authentication status."""
-        if not self._state.authenticated:
-            return (False, None, None)
-        return (True, self._state.auth_username, self._state.auth_repo_info)
-
-    def get_parent_branch(self) -> str | None:
-        """Get the parent branch for current branch."""
-        if self._current_branch not in self._state.branch_parents:
-            return None
-        return self._state.branch_parents[self._current_branch]
-
-    def get_children_branches(self) -> list[str]:
-        """Get list of child branches for current branch."""
-        if self._current_branch not in self._state.branch_children:
-            return []
-        return self._state.branch_children[self._current_branch]
-
     def squash_commits(self) -> CommandResult:
         """Run gt squash with configurable success/failure."""
         return CommandResult(
@@ -229,22 +211,6 @@ class FakeGraphiteGtKitOps(GraphiteGtKit):
             stdout=self._state.submit_stdout,
             stderr=self._state.submit_stderr,
         )
-
-    def restack(self) -> CommandResult:
-        """Run gt restack with configurable success/failure."""
-        return CommandResult(
-            success=self._state.restack_success,
-            stdout=self._state.restack_stdout,
-            stderr=self._state.restack_stderr,
-        )
-
-    def navigate_to_child(self) -> bool:
-        """Navigate to child branch (always succeeds in fake)."""
-        children = self.get_children_branches()
-        if len(children) == 1:
-            self._current_branch = children[0]
-            return True
-        return False
 
 
 class FakeGitHubGtKitOps(GitHubGtKit):

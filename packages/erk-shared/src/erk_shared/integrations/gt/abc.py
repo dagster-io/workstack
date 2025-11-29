@@ -12,6 +12,7 @@ Design:
 """
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from erk_shared.integrations.graphite.abc import Graphite
 from erk_shared.integrations.gt.types import CommandResult
@@ -127,25 +128,46 @@ class GitGtKit(ABC):
             True if conflicts detected, False otherwise
         """
 
+    @abstractmethod
+    def get_git_common_dir(self, cwd: Path) -> Path | None:
+        """Get the common git directory for a path.
+
+        For regular repos, this is the .git directory.
+        For worktrees, this is the shared .git directory (not the worktree's .git file).
+
+        Args:
+            cwd: Path within the repository
+
+        Returns:
+            Path to the common git directory, or None if not in a git repo
+        """
+
+    @abstractmethod
+    def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
+        """Get the commit SHA at the head of a branch.
+
+        Args:
+            repo_root: Repository root directory
+            branch: Branch name
+
+        Returns:
+            Commit SHA or None if branch doesn't exist
+        """
+
+    @abstractmethod
+    def checkout_branch(self, branch: str) -> bool:
+        """Switch to a different branch.
+
+        Args:
+            branch: Branch name to checkout
+
+        Returns:
+            True on success, False on failure
+        """
+
 
 class GraphiteGtKit(ABC):
     """Graphite (gt) operations interface for GT kit commands."""
-
-    @abstractmethod
-    def get_parent_branch(self) -> str | None:
-        """Get the parent branch using gt parent.
-
-        Returns:
-            Parent branch name or None if command fails
-        """
-
-    @abstractmethod
-    def get_children_branches(self) -> list[str]:
-        """Get list of child branches using gt children.
-
-        Returns:
-            List of child branch names, empty list if command fails
-        """
 
     @abstractmethod
     def squash_commits(self) -> CommandResult:
@@ -165,33 +187,6 @@ class GraphiteGtKit(ABC):
 
         Returns:
             CommandResult with success status and output
-        """
-
-    @abstractmethod
-    def restack(self) -> CommandResult:
-        """Run gt restack in no-interactive mode.
-
-        Returns:
-            CommandResult with success status and output
-        """
-
-    @abstractmethod
-    def navigate_to_child(self) -> bool:
-        """Navigate to child branch using gt up.
-
-        Returns:
-            True on success, False on failure
-        """
-
-    @abstractmethod
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Check Graphite authentication status.
-
-        Returns:
-            Tuple of (is_authenticated, username, repo_info):
-            - is_authenticated: True if gt is authenticated
-            - username: Authenticated username or None
-            - repo_info: Repository info string or None
         """
 
 

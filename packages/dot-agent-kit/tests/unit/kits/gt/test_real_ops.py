@@ -156,44 +156,6 @@ class TestRealGitGtKitOps:
 class TestRealGraphiteGtKitOps:
     """Unit tests for RealGraphiteGtKit with mocked subprocess calls."""
 
-    @patch("erk_shared.integrations.gt.real.subprocess.run")
-    def test_get_parent_branch(self, mock_run: Mock) -> None:
-        """Test get_parent_branch constructs command and parses output."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "main\n"
-        mock_run.return_value = mock_result
-
-        ops = RealGraphiteGtKit()
-        result = ops.get_parent_branch()
-
-        # Verify correct command was called
-        mock_run.assert_called_once()
-        args = mock_run.call_args[0][0]
-        assert args == ["gt", "parent"]
-
-        # Verify output parsing
-        assert result == "main"
-
-    @patch("erk_shared.integrations.gt.real.subprocess.run")
-    def test_get_children_branches(self, mock_run: Mock) -> None:
-        """Test get_children_branches constructs command and parses output."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "feature-1\nfeature-2\n"
-        mock_run.return_value = mock_result
-
-        ops = RealGraphiteGtKit()
-        result = ops.get_children_branches()
-
-        # Verify correct command was called
-        mock_run.assert_called_once()
-        args = mock_run.call_args[0][0]
-        assert args == ["gt", "children"]
-
-        # Verify output parsing
-        assert result == ["feature-1", "feature-2"]
-
     def test_squash_commits(self) -> None:
         """Test squash_commits returns CommandResult and calls correct command."""
         mock_result = Mock()
@@ -294,77 +256,6 @@ class TestRealGraphiteGtKitOps:
             assert result.success is False
             assert "timed out after 120 seconds" in result.stderr
             assert result.stdout == ""
-
-    def test_restack(self) -> None:
-        """Test restack returns CommandResult and calls correct command."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "Restacked successfully"
-        mock_result.stderr = ""
-
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ) as mock_run:
-            ops = RealGraphiteGtKit()
-            result = ops.restack()
-
-            # Verify correct command was called
-            mock_run.assert_called_once_with(
-                ["gt", "restack", "--no-interactive"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            # Verify return type matches interface contract
-            assert result.success is True
-            assert result.stdout == "Restacked successfully"
-            assert result.stderr == ""
-
-        # Test failure case
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-        mock_result.stderr = "Failed to restack"
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ):
-            ops = RealGraphiteGtKit()
-            result = ops.restack()
-            assert result.success is False
-            assert result.stderr == "Failed to restack"
-
-    def test_navigate_to_child(self) -> None:
-        """Test navigate_to_child returns bool and calls correct command."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ) as mock_run:
-            ops = RealGraphiteGtKit()
-            result = ops.navigate_to_child()
-
-            # Verify correct command was called
-            mock_run.assert_called_once_with(
-                ["gt", "up"], capture_output=True, text=True, check=False
-            )
-
-            # Verify return type matches interface contract
-            assert isinstance(result, bool)
-            assert result is True
-
-        # Test failure case
-        mock_result.returncode = 1
-        with patch(
-            "erk_shared.integrations.gt.real.subprocess.run",
-            return_value=mock_result,
-        ):
-            ops = RealGraphiteGtKit()
-            result = ops.navigate_to_child()
-            assert result is False
 
 
 class TestRealGitHubGtKitOps:

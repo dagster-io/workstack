@@ -46,6 +46,7 @@ Examples:
 
 import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal
 
 import click
@@ -92,7 +93,8 @@ def execute_land_pr(ops: GtKit | None = None) -> LandPrSuccess | LandPrError:
         branch_name = "unknown"
 
     # Step 2: Get parent branch
-    parent = kit_ops.graphite().get_parent_branch()
+    repo_root = Path(kit_ops.git().get_repository_root())
+    parent = kit_ops.main_graphite().get_parent_branch(kit_ops.git(), repo_root, branch_name)
 
     if parent is None:
         return LandPrError(
@@ -149,7 +151,7 @@ def execute_land_pr(ops: GtKit | None = None) -> LandPrSuccess | LandPrError:
         )
 
     # Step 5: Get children branches
-    children = kit_ops.graphite().get_children_branches()
+    children = kit_ops.main_graphite().get_child_branches(kit_ops.git(), repo_root, branch_name)
 
     # Step 6: Get PR title and body for merge commit message
     pr_title = kit_ops.github().get_pr_title()
@@ -171,7 +173,8 @@ def execute_land_pr(ops: GtKit | None = None) -> LandPrSuccess | LandPrError:
     # Step 7: Navigate to child if exactly one exists
     child_branch = None
     if len(children) == 1:
-        if kit_ops.graphite().navigate_to_child():
+        # Use git checkout to switch to the child branch
+        if kit_ops.git().checkout_branch(children[0]):
             child_branch = children[0]
 
     # Build success message with navigation info

@@ -12,6 +12,7 @@ Design goals:
 """
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -131,12 +132,14 @@ def _restack_branch(ops: GtKit, logger: DebugLogger) -> dict | None:
     Returns None if successful, error dict if failed.
     """
     logger.log("Restacking branch...")
-    result = ops.graphite().restack()
-    if not result.success:
+    try:
+        repo_root = Path(ops.git().get_repository_root())
+        ops.main_graphite().restack(repo_root, no_interactive=True, quiet=False)
+        logger.log("Restack successful")
+        return None
+    except subprocess.CalledProcessError:
         logger.log("Restack failed")
         return {"success": False, "error": "Failed to restack branch"}
-    logger.log("Restack successful")
-    return None
 
 
 def _get_branch_info(ops: GtKit, logger: DebugLogger) -> tuple[str, str] | tuple[None, dict]:
@@ -152,7 +155,8 @@ def _get_branch_info(ops: GtKit, logger: DebugLogger) -> tuple[str, str] | tuple
     logger.log(f"Current branch = {branch}")
 
     logger.log("Getting parent branch...")
-    parent = ops.graphite().get_parent_branch()
+    repo_root = Path(ops.git().get_repository_root())
+    parent = ops.main_graphite().get_parent_branch(ops.git(), repo_root, branch)
     if not parent:
         logger.log("Could not determine parent branch")
         return None, {"success": False, "error": "Could not determine parent branch"}
@@ -233,7 +237,11 @@ def _squash_if_needed(ops: GtKit, logger: DebugLogger, should_squash: bool) -> d
         return None
 
     logger.log("Checking if squashing is needed...")
-    parent = ops.graphite().get_parent_branch()
+    repo_root = Path(ops.git().get_repository_root())
+    current_branch = ops.git().get_current_branch()
+    if not current_branch:
+        return None
+    parent = ops.main_graphite().get_parent_branch(ops.git(), repo_root, current_branch)
     if not parent:
         return None
 

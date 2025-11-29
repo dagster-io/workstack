@@ -7,6 +7,7 @@
 ## Root Cause
 
 Two separate code paths:
+
 - `submit.py:157` uses `derive_branch_name_from_title()` - no date suffix
 - `implement.py` / `create_cmd.py` use `ensure_unique_worktree_name_with_date()` - has date suffix
 
@@ -19,6 +20,7 @@ Create a unified function for generating branch names with date suffix, and upda
 ### Step 1: Add new function to naming.py
 
 Add `derive_branch_name_with_date(title: str) -> str` to `packages/erk-shared/src/erk_shared/naming.py`:
+
 - Calls `derive_branch_name_from_title(title)` to get sanitized base name
 - Appends datetime suffix using `WORKTREE_DATE_SUFFIX_FORMAT`
 - Returns complete branch name
@@ -26,12 +28,14 @@ Add `derive_branch_name_with_date(title: str) -> str` to `packages/erk-shared/sr
 ### Step 2: Update submit.py
 
 In `src/erk/cli/commands/submit.py`:
+
 - Change import from `derive_branch_name_from_title` to `derive_branch_name_with_date`
 - Update line 157 to call the new function
 
 ### Step 3: Update dot-agent kit command
 
 In `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/derive_branch_name.py`:
+
 - Change to use `derive_branch_name_with_date`
 - Update docstring examples to show date suffix
 

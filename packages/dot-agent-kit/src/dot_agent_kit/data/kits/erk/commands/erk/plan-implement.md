@@ -211,9 +211,16 @@ For each phase in the plan:
      - Consult `fake-driven-testing` skill references for patterns, workflows, and anti-patterns
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done:
+
    ```bash
    dot-agent run erk mark-step <step_number>
    ```
+
+   **IMPORTANT - Sequential Execution Required:**
+   - **NEVER** run multiple `mark-step` commands in parallel
+   - This command modifies `.impl/progress.md` and parallel execution causes lost updates
+   - If marking multiple steps, use a single command: `dot-agent run erk mark-step 1 2 3`
+
 7. **Verify progress** (optional):
    ```bash
    dot-agent run erk get-progress

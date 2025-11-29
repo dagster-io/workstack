@@ -35,7 +35,7 @@ from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
 def _build_claude_command(slash_command: str, dangerous: bool) -> str:
-    """Build a Claude CLI invocation with appropriate flags.
+    """Build a Claude CLI invocation for interactive mode.
 
     Args:
         slash_command: The slash command to execute (e.g., "/erk:plan-implement")
@@ -44,7 +44,7 @@ def _build_claude_command(slash_command: str, dangerous: bool) -> str:
     Returns:
         Complete Claude CLI command string
     """
-    cmd = "claude --print --output-format stream-json --verbose"
+    cmd = "claude --permission-mode acceptEdits"
     if dangerous:
         cmd += " --dangerously-skip-permissions"
     cmd += f' "{slash_command}"'
@@ -95,7 +95,7 @@ def _build_command_sequence(submit: bool) -> list[str]:
 
 
 def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
-    """Build Claude command argument list.
+    """Build Claude command argument list for interactive script mode.
 
     Args:
         slash_command: The slash command to execute
@@ -104,7 +104,7 @@ def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
     Returns:
         List of command arguments suitable for subprocess
     """
-    args = ["claude", "--print", "--output-format", "stream-json", "--verbose"]
+    args = ["claude", "--permission-mode", "acceptEdits"]
     if dangerous:
         args.append("--dangerously-skip-permissions")
     args.append(slash_command)

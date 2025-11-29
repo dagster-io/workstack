@@ -15,6 +15,7 @@ Rename the slash command from `/clear-todos` to `/todos-clear`.
 ### 2. Update internal references
 
 Update the command name inside the file:
+
 - Line 5: `# /clear-todos` → `# /todos-clear`
 - Line 12: `/clear-todos` → `/todos-clear`
 

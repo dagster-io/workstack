@@ -9,6 +9,7 @@ from erk_shared.impl_folder import get_impl_path, read_issue_reference
 from rich.console import Console
 from rich.table import Table
 
+from erk.cli.alias import alias
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.display_utils import get_pr_status_emoji
@@ -274,6 +275,7 @@ def _list_worktrees(ctx: ErkContext) -> None:
     console.print(table)
 
 
+@alias("ls")
 @click.command("list")
 @click.pass_obj
 def list_wt(ctx: ErkContext) -> None:

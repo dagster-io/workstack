@@ -134,12 +134,16 @@ class TestExecuteSimpleSubmit:
 
     def test_prepare_fails_when_no_parent(self, tmp_path: Path) -> None:
         """Test error when parent branch cannot be determined."""
-        ops = FakeGtKitOps().with_branch("orphan-branch", parent="main")
-        # Remove parent relationship to simulate gt parent failure
+        # Create FakeGtKitOps without using with_branch to avoid having
+        # the parent relationship set up in main_graphite
         from dataclasses import replace
 
-        gt_state = ops.graphite().get_state()
-        ops.graphite()._state = replace(gt_state, branch_parents={})
+        ops = FakeGtKitOps()
+        # Manually set just the current branch without any parent relationship
+        ops.git()._state = replace(ops.git().get_state(), current_branch="orphan-branch")
+        ops.graphite().set_current_branch("orphan-branch")
+        ops.github().set_current_branch("orphan-branch")
+        # main_graphite has no branches tracked, so get_parent_branch returns None
 
         # Mock Path.cwd() to avoid picking up real .impl/issue.json
         patch_path = "erk_shared.integrations.gt.kit_cli_commands.gt.simple_submit.Path.cwd"

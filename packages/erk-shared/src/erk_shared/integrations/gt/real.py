@@ -13,6 +13,7 @@ Design:
 
 import json
 import subprocess
+from pathlib import Path
 
 from erk_shared.github.parsing import parse_gh_auth_status_output
 from erk_shared.integrations.graphite.abc import Graphite
@@ -193,14 +194,15 @@ class RealGitGtKit(GitGtKit):
         # Exit code 1 = conflicts, 0 = clean merge
         return result.returncode != 0
 
+    def get_git_common_dir(self, cwd: Path) -> Path | None:
+        """Get the common git directory for a path.
 
-class RealGraphiteGtKit(GraphiteGtKit):
-    """Real Graphite operations using subprocess."""
-
-    def get_parent_branch(self) -> str | None:
-        """Get the parent branch using gt parent."""
+        For regular repos, this is the .git directory.
+        For worktrees, this is the shared .git directory.
+        """
         result = subprocess.run(
-            ["gt", "parent"],
+            ["git", "rev-parse", "--git-common-dir"],
+            cwd=cwd,
             capture_output=True,
             text=True,
             check=False,
@@ -209,23 +211,46 @@ class RealGraphiteGtKit(GraphiteGtKit):
         if result.returncode != 0:
             return None
 
-        return result.stdout.strip()
+        common_dir = result.stdout.strip()
+        if not common_dir:
+            return None
 
-    def get_children_branches(self) -> list[str]:
-        """Get list of child branches using gt children."""
+        # Convert to absolute path if relative
+        common_path = Path(common_dir)
+        if not common_path.is_absolute():
+            common_path = (cwd / common_path).resolve()
+
+        return common_path
+
+    def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
+        """Get the commit SHA at the head of a branch."""
         result = subprocess.run(
-            ["gt", "children"],
+            ["git", "rev-parse", branch],
+            cwd=repo_root,
             capture_output=True,
             text=True,
             check=False,
         )
 
         if result.returncode != 0:
-            return []
+            return None
 
-        # gt children outputs one branch per line
-        children = [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
-        return children
+        sha = result.stdout.strip()
+        return sha if sha else None
+
+    def checkout_branch(self, branch: str) -> bool:
+        """Switch to a different branch."""
+        result = subprocess.run(
+            ["git", "checkout", branch],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+
+class RealGraphiteGtKit(GraphiteGtKit):
+    """Real Graphite operations using subprocess."""
 
     def squash_commits(self) -> CommandResult:
         """Run gt squash to consolidate commits."""
@@ -270,71 +295,6 @@ class RealGraphiteGtKit(GraphiteGtKit):
         return CommandResult(
             success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
         )
-
-    def restack(self) -> CommandResult:
-        """Run gt restack in no-interactive mode."""
-        result = subprocess.run(
-            ["gt", "restack", "--no-interactive"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        return CommandResult(
-            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
-        )
-
-    def navigate_to_child(self) -> bool:
-        """Navigate to child branch using gt up."""
-        result = subprocess.run(
-            ["gt", "up"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.returncode == 0
-
-    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
-        """Check Graphite authentication status.
-
-        Runs `gt auth` and parses the output to determine authentication status.
-        """
-        result = subprocess.run(
-            ["gt", "auth"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        # If command failed, not authenticated
-        if result.returncode != 0:
-            return (False, None, None)
-
-        output = result.stdout + result.stderr
-
-        # Look for success indicator (checkmark symbol or "Authenticated as:")
-        if "Authenticated as:" not in output and "✓" not in output:
-            return (False, None, None)
-
-        # Extract username from "Authenticated as: USERNAME"
-        username: str | None = None
-        for line in output.split("\n"):
-            if "Authenticated as:" in line:
-                parts = line.split("Authenticated as:")
-                if len(parts) >= 2:
-                    username = parts[1].strip()
-                break
-
-        # Extract repo info from "Ready to submit PRs to OWNER/REPO"
-        repo_info: str | None = None
-        for line in output.split("\n"):
-            if "Ready to submit PRs to" in line:
-                parts = line.split("Ready to submit PRs to")
-                if len(parts) >= 2:
-                    repo_info = parts[1].strip()
-                break
-
-        return (True, username, repo_info)
 
 
 class RealGitHubGtKit(GitHubGtKit):

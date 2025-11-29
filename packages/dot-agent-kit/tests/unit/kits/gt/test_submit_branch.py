@@ -293,12 +293,16 @@ class TestPreAnalysisExecution:
 
     def test_pre_analysis_no_parent(self) -> None:
         """Test error when parent branch cannot be determined."""
-        ops = FakeGtKitOps().with_branch("orphan-branch", parent="main")
-        # Remove parent relationship to simulate gt parent failure
+        # Create a fresh FakeGtKitOps without using with_branch
+        # to avoid having the parent relationship set up in main_graphite
+        ops = FakeGtKitOps()
+        # Manually set just the current branch without any parent relationship
         from dataclasses import replace
 
-        gt_state = ops.graphite().get_state()
-        ops.graphite()._state = replace(gt_state, branch_parents={})
+        ops.git()._state = replace(ops.git().get_state(), current_branch="orphan-branch")
+        ops.graphite().set_current_branch("orphan-branch")
+        ops.github().set_current_branch("orphan-branch")
+        # main_graphite has no branches tracked, so get_parent_branch returns None
 
         result = execute_pre_analysis(ops)
 

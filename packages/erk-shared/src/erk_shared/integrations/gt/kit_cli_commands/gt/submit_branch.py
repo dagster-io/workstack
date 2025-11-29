@@ -53,6 +53,7 @@ Examples:
 """
 
 import json
+import subprocess
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -190,7 +191,7 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
 
     # Step 0a: Check Graphite authentication FIRST (before any git operations)
     click.echo("  ↳ Checking Graphite authentication... (gt auth whoami)", err=True)
-    gt_authenticated, gt_username, _ = ops.graphite().check_auth_status()
+    gt_authenticated, gt_username, _ = ops.main_graphite().check_auth_status()
     if not gt_authenticated:
         return PreAnalysisError(
             success=False,
@@ -253,7 +254,8 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
         )
 
     # Step 2: Get parent branch
-    parent_branch = ops.graphite().get_parent_branch()
+    repo_root = Path(ops.git().get_repository_root())
+    parent_branch = ops.main_graphite().get_parent_branch(ops.git(), repo_root, branch_name)
 
     if parent_branch is None:
         return PreAnalysisError(
@@ -487,11 +489,13 @@ def _execute_submit_only(
     # Phase 1: Restack the stack
     click.echo("  ↳ Rebasing stack... (gt restack)", err=True)
     restack_start = time.time()
-    restack_result = ops.graphite().restack()
-
-    # Check for restack errors (conflicts, etc.)
-    if not restack_result.success:
-        combined_output = restack_result.stdout + restack_result.stderr
+    try:
+        repo_root = Path(ops.git().get_repository_root())
+        ops.main_graphite().restack(repo_root, no_interactive=True, quiet=False)
+    except subprocess.CalledProcessError as e:
+        # Check for restack errors (conflicts, etc.)
+        has_output = hasattr(e, "stdout") and hasattr(e, "stderr")
+        combined_output = e.stdout + e.stderr if has_output else str(e)
         combined_lower = combined_output.lower()
 
         # Check for merge conflicts
@@ -502,8 +506,8 @@ def _execute_submit_only(
                 message="Merge conflicts detected during stack rebase",
                 details={
                     "branch_name": branch_name,
-                    "stdout": restack_result.stdout,
-                    "stderr": restack_result.stderr,
+                    "stdout": e.stdout if hasattr(e, "stdout") else "",
+                    "stderr": e.stderr if hasattr(e, "stderr") else str(e),
                 },
             )
 
@@ -514,8 +518,8 @@ def _execute_submit_only(
             message="Failed to restack branch",
             details={
                 "branch_name": branch_name,
-                "stdout": restack_result.stdout,
-                "stderr": restack_result.stderr,
+                "stdout": e.stdout if hasattr(e, "stdout") else "",
+                "stderr": e.stderr if hasattr(e, "stderr") else str(e),
             },
         )
 
@@ -699,9 +703,11 @@ def execute_preflight(
         click.echo("  ⚠️  Diff truncated for size", err=True)
 
     # Get repo root and branch info for AI prompt (needed before writing diff)
-    repo_root = ops.git().get_repository_root()
+    repo_root = Path(ops.git().get_repository_root())
     current_branch = ops.git().get_current_branch() or branch_name
-    parent_branch = ops.graphite().get_parent_branch() or "main"
+    parent_branch = (
+        ops.main_graphite().get_parent_branch(ops.git(), repo_root, current_branch) or "main"
+    )
 
     # Write diff to scratch file in repo .tmp/<session_id>/
     from erk_shared.scratch.scratch import write_scratch_file
@@ -733,7 +739,7 @@ def execute_preflight(
         graphite_url=graphite_url,
         branch_name=branch_name,
         diff_file=diff_file,
-        repo_root=repo_root,
+        repo_root=str(repo_root),
         current_branch=current_branch,
         parent_branch=parent_branch,
         issue_number=issue_number,

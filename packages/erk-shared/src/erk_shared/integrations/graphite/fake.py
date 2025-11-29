@@ -143,8 +143,34 @@ class FakeGraphite(Graphite):
         """Fake track_branch operation.
 
         Tracks calls for verification and raises configured exception if set.
+        Also updates internal branch metadata so get_parent_branch() and
+        get_child_branches() work.
         """
         self._track_branch_calls.append((cwd, branch_name, parent_branch))
+
+        # Also update branch metadata so get_parent_branch() can find the parent
+        from erk_shared.integrations.graphite.types import BranchMetadata
+
+        self._branches[branch_name] = BranchMetadata(
+            name=branch_name,
+            parent=parent_branch,
+            children=[],
+            is_trunk=False,
+            commit_sha=None,
+        )
+
+        # Also update parent's children list so get_child_branches() works
+        if parent_branch in self._branches:
+            parent_metadata = self._branches[parent_branch]
+            if branch_name not in parent_metadata.children:
+                updated_children = [*parent_metadata.children, branch_name]
+                self._branches[parent_branch] = BranchMetadata(
+                    name=parent_metadata.name,
+                    parent=parent_metadata.parent,
+                    children=updated_children,
+                    is_trunk=parent_metadata.is_trunk,
+                    commit_sha=parent_metadata.commit_sha,
+                )
 
         if self._track_branch_raises is not None:
             raise self._track_branch_raises

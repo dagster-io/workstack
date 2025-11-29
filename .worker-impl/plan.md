@@ -8,12 +8,12 @@
 
 Current implementation in `list_cmd.py` makes sequential subprocess calls:
 
-| Operation | Subprocess Calls | Per Worktree |
-|-----------|-----------------|--------------|
-| `list_worktrees()` | 1 | No (once) |
-| `_get_sync_status()` → `get_ahead_behind()` | 2 | Yes |
-| `_get_impl_issue()` → `get_current_branch()` | 1 | Yes |
-| `_get_impl_issue()` → `get_branch_issue()` | 1 | Yes |
+| Operation                                    | Subprocess Calls | Per Worktree |
+| -------------------------------------------- | ---------------- | ------------ |
+| `list_worktrees()`                           | 1                | No (once)    |
+| `_get_sync_status()` → `get_ahead_behind()`  | 2                | Yes          |
+| `_get_impl_issue()` → `get_current_branch()` | 1                | Yes          |
+| `_get_impl_issue()` → `get_branch_issue()`   | 1                | Yes          |
 
 **With 5 worktrees:** 1 + (4 × 5) = **21 subprocess calls**
 
@@ -28,6 +28,7 @@ git for-each-ref --format='%(refname:short)	%(upstream:short)	%(upstream:track)'
 ```
 
 Output example:
+
 ```
 feature-1	origin/feature-1	[ahead 3, behind 1]
 feature-2	origin/feature-2
@@ -38,12 +39,12 @@ This parses to provide: branch name, upstream (or None), and ahead/behind counts
 
 ### Performance Impact
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Sync status calls | 2 × N worktrees | **1 total** |
-| Total subprocess calls (5 wt) | ~21 | ~6 |
-| Expected time | 2-4s | 600ms-1s |
-| **Improvement** | - | **3-5x faster** |
+| Metric                        | Before          | After           |
+| ----------------------------- | --------------- | --------------- |
+| Sync status calls             | 2 × N worktrees | **1 total**     |
+| Total subprocess calls (5 wt) | ~21             | ~6              |
+| Expected time                 | 2-4s            | 600ms-1s        |
+| **Improvement**               | -               | **3-5x faster** |
 
 ## Implementation Steps
 
@@ -136,6 +137,7 @@ def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]
 ### Step 4: Implement in `FakeGit`
 
 **Files:**
+
 - `src/erk/core/git/fake.py`
 - `tests/fakes/git.py`
 
@@ -153,6 +155,7 @@ def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]
 ### Step 5: Add pass-through in wrapper classes
 
 **Files:**
+
 - `src/erk/core/git/printing.py`
 - `src/erk/core/git/dry_run.py`
 
@@ -226,15 +229,15 @@ Then pass the known branch to avoid redundant subprocess calls.
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `packages/erk-shared/src/erk_shared/git/abc.py` | Add `BranchSyncInfo` dataclass, add abstract method |
-| `packages/erk-shared/src/erk_shared/git/real.py` | Implement `get_all_branch_sync_info()` |
-| `src/erk/core/git/fake.py` | Add fake implementation |
-| `src/erk/core/git/printing.py` | Add pass-through |
-| `src/erk/core/git/dry_run.py` | Add pass-through |
-| `tests/fakes/git.py` | Add fake implementation |
-| `src/erk/cli/commands/wt/list_cmd.py` | Use batch API, optimize `_get_impl_issue()` |
+| File                                             | Changes                                             |
+| ------------------------------------------------ | --------------------------------------------------- |
+| `packages/erk-shared/src/erk_shared/git/abc.py`  | Add `BranchSyncInfo` dataclass, add abstract method |
+| `packages/erk-shared/src/erk_shared/git/real.py` | Implement `get_all_branch_sync_info()`              |
+| `src/erk/core/git/fake.py`                       | Add fake implementation                             |
+| `src/erk/core/git/printing.py`                   | Add pass-through                                    |
+| `src/erk/core/git/dry_run.py`                    | Add pass-through                                    |
+| `tests/fakes/git.py`                             | Add fake implementation                             |
+| `src/erk/cli/commands/wt/list_cmd.py`            | Use batch API, optimize `_get_impl_issue()`         |
 
 ## Testing
 

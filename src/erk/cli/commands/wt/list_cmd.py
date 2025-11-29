@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import click
+from erk_shared.git.abc import BranchSyncInfo
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import get_impl_path, read_issue_reference
 from rich.console import Console
@@ -46,7 +47,37 @@ def _get_sync_status(ctx: ErkContext, worktree_path: Path, branch: str | None) -
     return " ".join(parts)
 
 
-def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> tuple[str | None, str | None]:
+def _format_sync_from_batch(all_sync: dict[str, BranchSyncInfo], branch: str | None) -> str:
+    """Format sync status from batch-fetched data.
+
+    Args:
+        all_sync: Dict mapping branch name to BranchSyncInfo
+        branch: Branch name, or None if detached HEAD
+
+    Returns:
+        Sync status: "current", "3↑", "2↓", "3↑ 2↓", or "-"
+    """
+    if branch is None:
+        return "-"
+
+    info = all_sync.get(branch)
+    if info is None:
+        return "-"
+
+    if info.ahead == 0 and info.behind == 0:
+        return "current"
+
+    parts = []
+    if info.ahead > 0:
+        parts.append(f"{info.ahead}↑")
+    if info.behind > 0:
+        parts.append(f"{info.behind}↓")
+    return " ".join(parts)
+
+
+def _get_impl_issue(
+    ctx: ErkContext, worktree_path: Path, branch: str | None = None
+) -> tuple[str | None, str | None]:
     """Get impl issue number and URL from local sources.
 
     Checks .impl/issue.json first, then git config fallback.
@@ -54,6 +85,7 @@ def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> tuple[str | None, s
     Args:
         ctx: Erk context with git operations
         worktree_path: Path to the worktree directory
+        branch: Optional branch name (avoids redundant git subprocess call if provided)
 
     Returns:
         Tuple of (issue number formatted as "#{number}", issue URL) or (None, None) if not found
@@ -67,7 +99,9 @@ def _get_impl_issue(ctx: ErkContext, worktree_path: Path) -> tuple[str | None, s
             return f"#{issue_ref.issue_number}", issue_ref.issue_url
 
     # Fallback to git config (no URL available from git config)
-    branch = ctx.git.get_current_branch(worktree_path)
+    # If branch not provided, fetch it (for backwards compatibility)
+    if branch is None:
+        branch = ctx.git.get_current_branch(worktree_path)
     if branch is not None:
         issue_num = ctx.git.get_branch_issue(worktree_path, branch)
         if issue_num is not None:
@@ -145,6 +179,9 @@ def _list_worktrees(ctx: ErkContext) -> None:
     # Get worktree info
     worktrees = ctx.git.list_worktrees(repo.root)
 
+    # Fetch all branch sync info in a single git call (batch operation for performance)
+    all_sync_info = ctx.git.get_all_branch_sync_info(repo.root)
+
     # Determine which worktree the user is currently in
     wt_info = find_current_worktree(worktrees, current_dir)
     current_worktree_path = wt_info.path if wt_info is not None else None
@@ -193,8 +230,8 @@ def _list_worktrees(ctx: ErkContext) -> None:
     root_pr_cell = _format_pr_cell(
         root_pr, use_graphite=use_graphite, graphite_url=root_graphite_url
     )
-    root_sync = _get_sync_status(ctx, repo.root, root_branch)
-    root_impl_text, root_impl_url = _get_impl_issue(ctx, repo.root)
+    root_sync = _format_sync_from_batch(all_sync_info, root_branch)
+    root_impl_text, root_impl_url = _get_impl_issue(ctx, repo.root, root_branch)
     root_impl_cell = _format_impl_cell(root_impl_text, root_impl_url)
 
     table.add_row(root_name, root_branch_display, root_pr_cell, root_sync, root_impl_cell)
@@ -224,10 +261,10 @@ def _list_worktrees(ctx: ErkContext) -> None:
         pr_cell = _format_pr_cell(pr, use_graphite=use_graphite, graphite_url=graphite_url)
 
         # Sync status
-        sync_cell = _get_sync_status(ctx, wt.path, branch)
+        sync_cell = _format_sync_from_batch(all_sync_info, branch)
 
         # Impl issue
-        impl_text, impl_url = _get_impl_issue(ctx, wt.path)
+        impl_text, impl_url = _get_impl_issue(ctx, wt.path, branch)
         impl_cell = _format_impl_cell(impl_text, impl_url)
 
         table.add_row(name_cell, branch_display, pr_cell, sync_cell, impl_cell)

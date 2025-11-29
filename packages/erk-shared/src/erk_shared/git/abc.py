@@ -23,6 +23,16 @@ class WorktreeInfo:
     is_root: bool = False
 
 
+@dataclass(frozen=True)
+class BranchSyncInfo:
+    """Sync status for a branch relative to its upstream."""
+
+    branch: str
+    upstream: str | None  # None if no tracking branch
+    ahead: int
+    behind: int
+
+
 def find_worktree_for_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
     """Find the path of the worktree that has the given branch checked out.
 
@@ -375,6 +385,20 @@ class Git(ABC):
 
         Returns:
             Tuple of (ahead, behind) counts
+        """
+        ...
+
+    @abstractmethod
+    def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]:
+        """Get sync status for all local branches in a single git call.
+
+        Uses git for-each-ref to batch-fetch upstream tracking information.
+
+        Args:
+            repo_root: Path to the git repository root
+
+        Returns:
+            Dict mapping branch name to BranchSyncInfo.
         """
         ...
 

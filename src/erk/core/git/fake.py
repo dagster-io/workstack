@@ -7,7 +7,7 @@ in its constructor. Construct instances directly with keyword arguments.
 from pathlib import Path
 
 import click
-from erk_shared.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import BranchSyncInfo, Git, WorktreeInfo
 
 
 class FakeGit(Git):
@@ -75,6 +75,7 @@ class FakeGit(Git):
         staged_repos: set[Path] | None = None,
         file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
         ahead_behind: dict[tuple[Path, str], tuple[int, int]] | None = None,
+        branch_sync_info: dict[str, BranchSyncInfo] | None = None,
         recent_commits: dict[Path, list[dict[str, str]]] | None = None,
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
@@ -98,6 +99,7 @@ class FakeGit(Git):
             staged_repos: Set of repo roots that should report staged changes
             file_statuses: Mapping of cwd -> (staged, modified, untracked) files
             ahead_behind: Mapping of (cwd, branch) -> (ahead, behind) counts
+            branch_sync_info: Mapping of branch name -> BranchSyncInfo for batch queries
             recent_commits: Mapping of cwd -> list of commit info dicts
             existing_paths: Set of paths that should be treated as existing (for pure mode)
             file_contents: Mapping of path -> file content (for commands that read files)
@@ -120,6 +122,7 @@ class FakeGit(Git):
         self._repos_with_staged_changes: set[Path] = staged_repos or set()
         self._file_statuses = file_statuses or {}
         self._ahead_behind = ahead_behind or {}
+        self._branch_sync_info = branch_sync_info or {}
         self._recent_commits = recent_commits or {}
         self._existing_paths = existing_paths or set()
         self._file_contents = file_contents or {}
@@ -383,6 +386,10 @@ class FakeGit(Git):
     def get_ahead_behind(self, cwd: Path, branch: str) -> tuple[int, int]:
         """Get number of commits ahead and behind tracking branch."""
         return self._ahead_behind.get((cwd, branch), (0, 0))
+
+    def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]:
+        """Get sync status for all local branches (fake implementation)."""
+        return self._branch_sync_info.copy()
 
     def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
         """Get recent commit information."""

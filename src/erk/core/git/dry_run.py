@@ -6,7 +6,7 @@ operations while delegating read-only operations to the wrapped implementation.
 
 from pathlib import Path
 
-from erk_shared.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import BranchSyncInfo, Git, WorktreeInfo
 from erk_shared.output.output import user_output
 
 # ============================================================================
@@ -180,6 +180,10 @@ class DryRunGit(Git):
     def get_ahead_behind(self, cwd: Path, branch: str) -> tuple[int, int]:
         """Get ahead/behind counts (read-only, delegates to wrapped)."""
         return self._wrapped.get_ahead_behind(cwd, branch)
+
+    def get_all_branch_sync_info(self, repo_root: Path) -> dict[str, BranchSyncInfo]:
+        """Get all branch sync info (read-only, delegates to wrapped)."""
+        return self._wrapped.get_all_branch_sync_info(repo_root)
 
     def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
         """Get recent commits (read-only, delegates to wrapped)."""

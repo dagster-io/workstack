@@ -431,23 +431,18 @@ jobs:
           # Get PR number for checkout instructions
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
 
-          # Create updated PR body preserving header
+          # Get standardized metadata footer from get-pr-metadata
+          pr_metadata=$(dot-agent run erk get-pr-metadata --pr-number "$PR_NUMBER" 2>/dev/null || echo "")
+
+          # Build PR body: header + summary + footer
           cat > pr_body.md <<BODY_EOF
           **Author:** @$SUBMITTED_BY
           **Plan:** #$ISSUE_NUMBER
 
-          To checkout this PR in a fresh worktree and environment locally, run:
-          \`\`\`
-          erk pr checkout $PR_NUMBER
-          \`\`\`
-
           ## Summary
 
           $commit_body
-
-          ---
-
-          Closes #$ISSUE_NUMBER
+          $pr_metadata
           BODY_EOF
 
           gh pr edit "$BRANCH_NAME" --body-file pr_body.md

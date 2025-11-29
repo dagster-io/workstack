@@ -6,6 +6,7 @@ Tests extraction functions that parse metadata blocks from issue bodies.
 
 from erk_shared.github.metadata import (
     extract_plan_header_dispatch_info,
+    extract_plan_header_local_impl_at,
     extract_plan_header_worktree_name,
 )
 
@@ -84,3 +85,79 @@ last_dispatched_at: '2024-01-15T11:00:00Z'
     assert worktree == "feature-branch-b-24-01-15"
     assert run_id == "1234567890"
     assert dispatched_at == "2024-01-15T11:00:00Z"
+
+
+def test_extract_plan_header_local_impl_at_found() -> None:
+    """Extract last_local_impl_at from plan-header block when present."""
+    issue_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+created_at: '2024-01-15T10:30:00Z'
+created_by: user123
+worktree_name: feature-branch-b-24-01-15
+last_dispatched_run_id: null
+last_dispatched_at: null
+last_local_impl_at: '2024-01-28T14:30:00Z'
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = extract_plan_header_local_impl_at(issue_body)
+    assert result == "2024-01-28T14:30:00Z"
+
+
+def test_extract_plan_header_local_impl_at_null() -> None:
+    """Return None when last_local_impl_at is explicitly null."""
+    issue_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+created_at: '2024-01-15T10:30:00Z'
+created_by: user123
+worktree_name: feature-branch-b-24-01-15
+last_dispatched_run_id: null
+last_dispatched_at: null
+last_local_impl_at: null
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = extract_plan_header_local_impl_at(issue_body)
+    assert result is None
+
+
+def test_extract_plan_header_local_impl_at_missing() -> None:
+    """Return None when last_local_impl_at field is missing."""
+    issue_body = """<!-- erk:metadata-block:plan-header -->
+<details>
+<summary><code>plan-header</code></summary>
+
+```yaml
+schema_version: '2'
+created_at: '2024-01-15T10:30:00Z'
+created_by: user123
+worktree_name: feature-branch-b-24-01-15
+last_dispatched_run_id: null
+last_dispatched_at: null
+```
+
+</details>
+<!-- /erk:metadata-block:plan-header -->"""
+
+    result = extract_plan_header_local_impl_at(issue_body)
+    assert result is None
+
+
+def test_extract_plan_header_local_impl_at_missing_block() -> None:
+    """Return None when plan-header block is missing."""
+    issue_body = """This is a plain issue body without any metadata blocks."""
+
+    result = extract_plan_header_local_impl_at(issue_body)
+    assert result is None

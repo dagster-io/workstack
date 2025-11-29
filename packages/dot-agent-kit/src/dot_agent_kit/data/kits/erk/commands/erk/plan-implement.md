@@ -158,6 +158,21 @@ This posts a comment containing:
 
 If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
 
+### Step 3.6: Update Local Implementation Timestamp
+
+Update the GitHub issue's plan-header metadata with the local implementation start time:
+
+```bash
+dot-agent run erk mark-impl-started 2>/dev/null || true
+```
+
+This updates:
+
+- `last_local_impl_at` field in the plan-header metadata block
+- Used by `erk ls` to show relative time since last local implementation
+
+If issue tracking is not enabled, this will exit gracefully.
+
 ### Step 4: Execute Each Phase Sequentially
 
 **🔴 MANDATORY: Tests Required With All Changes**

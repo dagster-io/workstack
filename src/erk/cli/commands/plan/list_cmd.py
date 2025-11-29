@@ -5,7 +5,10 @@ from collections.abc import Callable
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import IssueInfo
-from erk_shared.github.metadata import extract_plan_header_worktree_name
+from erk_shared.github.metadata import (
+    extract_plan_header_local_impl_at,
+    extract_plan_header_worktree_name,
+)
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
 from erk_shared.output.output import user_output
@@ -15,6 +18,7 @@ from rich.table import Table
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.display_utils import (
+    format_relative_time,
     format_workflow_outcome,
     format_workflow_run_id,
     get_workflow_run_state,
@@ -111,6 +115,38 @@ def format_checks_cell(pr: PullRequestInfo | None) -> str:
         Formatted string for table cell
     """
     return get_checks_status_emoji(pr)
+
+
+def format_worktree_cell(
+    worktree_name: str,
+    exists_locally: bool,
+    last_local_impl_at: str | None,
+) -> str:
+    """Format worktree cell with status indicators using Rich markup.
+
+    Args:
+        worktree_name: Name of the worktree
+        exists_locally: Whether the worktree exists on the local machine
+        last_local_impl_at: ISO timestamp of last local implementation, or None
+
+    Returns:
+        Formatted string with Rich markup:
+        - Exists locally: "[yellow]name[/yellow] (2h ago)" or just "[yellow]name[/yellow]"
+        - Doesn't exist: "[dim strike]name[/dim strike]"
+    """
+    if not worktree_name:
+        return "-"
+
+    if not exists_locally:
+        # Worktree doesn't exist locally - show dimmed with strikethrough
+        return f"[dim strike]{worktree_name}[/dim strike]"
+
+    # Worktree exists locally
+    relative_time = format_relative_time(last_local_impl_at)
+    if relative_time:
+        return f"[yellow]{worktree_name}[/yellow] ({relative_time})"
+    else:
+        return f"[yellow]{worktree_name}[/yellow]"
 
 
 def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
@@ -242,7 +278,7 @@ def _list_plans_impl(
     table.add_column("title", no_wrap=True)
     table.add_column("pr", no_wrap=True)
     table.add_column("chks", no_wrap=True)
-    table.add_column("impl-wt", style="yellow", no_wrap=True)
+    table.add_column("local-impl-wt", no_wrap=True)
     if runs:
         table.add_column("run-id", no_wrap=True)
         table.add_column("run-state", no_wrap=True, width=12)
@@ -268,15 +304,26 @@ def _list_plans_impl(
         # Query worktree status - check local .impl/issue.json first, then issue body
         issue_number = plan.metadata.get("number")
         worktree_name = ""
+        exists_locally = False
+        last_local_impl_at: str | None = None
 
-        # Check local mapping first
+        # Check local mapping first (worktree exists locally)
         if isinstance(issue_number, int) and issue_number in worktree_by_issue:
             worktree_name = worktree_by_issue[issue_number]
-        # Extract from issue body (schema v2 only)
-        elif plan.body:
+            exists_locally = True
+
+        # Extract from issue body (schema v2 only) - worktree may or may not exist locally
+        if plan.body:
             extracted = extract_plan_header_worktree_name(plan.body)
             if extracted:
-                worktree_name = extracted
+                # If we don't have a local name yet, use the one from issue body
+                if not worktree_name:
+                    worktree_name = extracted
+            # Extract last_local_impl_at timestamp
+            last_local_impl_at = extract_plan_header_local_impl_at(plan.body)
+
+        # Format the worktree cell with existence and timestamp info
+        worktree_cell = format_worktree_cell(worktree_name, exists_locally, last_local_impl_at)
 
         # Get PR info for this issue
         pr_cell = "-"
@@ -323,7 +370,7 @@ def _list_plans_impl(
                 title,
                 pr_cell,
                 checks_cell,
-                worktree_name,
+                worktree_cell,
                 run_id_cell,
                 run_outcome_cell,
             )
@@ -333,7 +380,7 @@ def _list_plans_impl(
                 title,
                 pr_cell,
                 checks_cell,
-                worktree_name,
+                worktree_cell,
             )
 
     # Output table to stderr (consistent with user_output convention)

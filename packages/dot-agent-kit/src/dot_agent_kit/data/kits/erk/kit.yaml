@@ -105,6 +105,9 @@ kit_cli_commands:
   - name: create-issue-from-session
     path: kit_cli_commands/erk/create_issue_from_session.py
     description: Extract plan from Claude session and create GitHub issue
+  - name: mark-impl-started
+    path: kit_cli_commands/erk/mark_impl_started.py
+    description: Update last_local_impl_at in GitHub issue plan-header metadata
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

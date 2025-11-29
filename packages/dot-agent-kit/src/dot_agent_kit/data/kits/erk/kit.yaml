@@ -48,9 +48,9 @@ kit_cli_commands:
   - name: get-closing-text
     path: kit_cli_commands/erk/get_closing_text.py
     description: Get GitHub issue closing text for PR body
-  - name: create-issue
-    path: kit_cli_commands/erk/create_issue.py
-    description: Create GitHub issue with body from stdin (no permission prompts)
+  - name: plan-save-to-issue
+    path: kit_cli_commands/erk/plan_save_to_issue.py
+    description: Extract plan from ~/.claude/plans/ and create GitHub issue with schema v2 format
   - name: wrap-plan-in-metadata-block
     path: kit_cli_commands/erk/wrap_plan_in_metadata_block.py
     description: Wrap plan content in collapsible GitHub metadata block

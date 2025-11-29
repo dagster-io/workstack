@@ -25,7 +25,6 @@ from erk_shared.github.metadata import (
     format_plan_content_comment,
     format_plan_header_body,
 )
-from erk_shared.naming import sanitize_worktree_name
 from erk_shared.plan_utils import extract_title_from_plan
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
@@ -88,13 +87,11 @@ def plan_save_to_issue(ctx: click.Context, output_format: str, plan_file: Path |
             click.echo(json.dumps({"success": False, "error": error_msg}))
         raise SystemExit(1)
 
-    # Step 4: Prepare metadata
-    worktree_name = sanitize_worktree_name(title)
+    # Step 4: Prepare metadata (no worktree_name until worktree is created)
     created_at = datetime.now(UTC).isoformat()
     formatted_body = format_plan_header_body(
         created_at=created_at,
         created_by=username,
-        worktree_name=worktree_name,
     )
 
     # Step 5: Ensure erk-plan label exists

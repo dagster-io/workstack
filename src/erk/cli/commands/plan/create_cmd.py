@@ -6,7 +6,6 @@ from pathlib import Path
 
 import click
 from erk_shared.github.metadata import format_plan_content_comment, format_plan_header_body
-from erk_shared.naming import sanitize_worktree_name
 from erk_shared.output.output import user_output
 from erk_shared.plan_utils import extract_title_from_plan
 
@@ -82,9 +81,6 @@ def create_plan(
         title.strip(), "Could not extract title from plan. Use --title to specify one."
     )
 
-    # Derive worktree name from title
-    worktree_name = sanitize_worktree_name(title)
-
     # Ensure erk-plan label exists
     try:
         ctx.issues.ensure_label_exists(
@@ -108,11 +104,10 @@ def create_plan(
     if not creator:
         creator = "unknown"
 
-    # Format issue body (Schema V2: metadata only)
+    # Format issue body (Schema V2: metadata only, worktree_name set later)
     issue_body = format_plan_header_body(
         created_at=timestamp,
         created_by=creator,
-        worktree_name=worktree_name,
     )
 
     # Create the issue

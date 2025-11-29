@@ -257,6 +257,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+from erk_shared.github.metadata import update_plan_header_worktree_name
 from erk_shared.impl_folder import save_issue_reference
 
 
@@ -493,6 +494,26 @@ def create_wt_from_issue(ctx: click.Context, issue_reference: str) -> None:
     worktree_path = worktree_details["worktree_path"]
     branch_name = worktree_details["branch_name"]
     issue_url = str(issue_data.get("url", ""))
+
+    # Step 6.5: Update issue with actual worktree name
+    try:
+        updated_body = update_plan_header_worktree_name(
+            issue_body=body,
+            worktree_name=worktree_name,
+        )
+        subprocess.run(
+            ["gh", "issue", "edit", str(issue_number), "--body", updated_body],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (ValueError, subprocess.CalledProcessError) as e:
+        # Non-fatal: warn but don't fail
+        click.echo(
+            click.style("Warning: ", fg="yellow")
+            + f"Failed to update issue with worktree name: {e}",
+            err=True,
+        )
 
     # Step 7: Save issue reference to .impl/issue.json
     impl_dir = Path(worktree_path) / ".impl"

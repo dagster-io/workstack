@@ -29,7 +29,6 @@ from erk_shared.github.metadata import (
     format_plan_content_comment,
     format_plan_header_body,
 )
-from erk_shared.naming import sanitize_worktree_name
 
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan
@@ -142,9 +141,6 @@ def create_issue_from_session(session_id: str | None) -> None:
         # Step 5: Extract title from plan
         title = extract_title_from_plan(plan_text)
 
-        # Derive worktree name from title
-        worktree_name = sanitize_worktree_name(title)
-
         # Generate timestamp
         created_at = datetime.now(UTC).isoformat()
 
@@ -163,11 +159,10 @@ def create_issue_from_session(session_id: str | None) -> None:
             click.echo(json.dumps(result))
             raise SystemExit(1) from None
 
-        # Step 7: Format metadata-only body (schema version 2)
+        # Step 7: Format metadata-only body (schema version 2, worktree_name set later)
         formatted_body = format_plan_header_body(
             created_at=created_at,
             created_by=username,
-            worktree_name=worktree_name,
         )
 
         # Step 8: Create GitHub issue with metadata body

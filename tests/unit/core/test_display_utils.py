@@ -725,10 +725,8 @@ def test_format_worktree_cell_exists_locally_with_timestamp() -> None:
     from erk.cli.commands.plan.list_cmd import format_worktree_cell
 
     # Use a timestamp that will produce predictable relative time
-    now = datetime(2024, 11, 28, 14, 0, 0, tzinfo=UTC)
     timestamp = "2024-11-28T12:00:00+00:00"
 
-    # Mock the now parameter in format_relative_time
     # Since format_worktree_cell doesn't accept now param, we test the output pattern
     result = format_worktree_cell("my-worktree", True, timestamp)
 

@@ -1,0 +1,5 @@
+{
+  "number": 1625,
+  "url": "https://github.com/dagster-io/erk/issues/1625",
+  "title": "Plan: Eliminate .worker-impl/ - Reconstruct .impl/ from GitHub Issue [erk-plan]"
+}

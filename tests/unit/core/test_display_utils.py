@@ -701,53 +701,28 @@ def test_format_relative_time_timezone_aware() -> None:
     assert result == "2h ago"
 
 
-# Tests for format_worktree_cell (from list_cmd.py)
+# Tests for format_worktree_name_cell (from list_cmd.py)
 
 
-def test_format_worktree_cell_empty_name() -> None:
-    """Test that empty worktree name returns dash."""
-    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+def test_format_worktree_name_cell_exists_locally() -> None:
+    """Test worktree that exists locally shows yellow name."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_name_cell
 
-    result = format_worktree_cell("", True, None)
-    assert result == "-"
-
-
-def test_format_worktree_cell_exists_locally_no_timestamp() -> None:
-    """Test worktree that exists locally without timestamp."""
-    from erk.cli.commands.plan.list_cmd import format_worktree_cell
-
-    result = format_worktree_cell("my-worktree", True, None)
+    result = format_worktree_name_cell("my-worktree", True)
     assert result == "[yellow]my-worktree[/yellow]"
 
 
-def test_format_worktree_cell_exists_locally_with_timestamp() -> None:
-    """Test worktree that exists locally with recent timestamp."""
-    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+def test_format_worktree_name_cell_not_exists_locally() -> None:
+    """Test worktree that doesn't exist locally shows dash."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_name_cell
 
-    # Use a timestamp that will produce predictable relative time
-    timestamp = "2024-11-28T12:00:00+00:00"
-
-    # Since format_worktree_cell doesn't accept now param, we test the output pattern
-    result = format_worktree_cell("my-worktree", True, timestamp)
-
-    # Should have yellow styling and include relative time
-    assert result.startswith("[yellow]my-worktree[/yellow]")
-    # Should have some kind of time indicator (e.g., "2h ago")
-    assert "ago" in result or "just now" in result
+    result = format_worktree_name_cell("deleted-worktree", False)
+    assert result == "-"
 
 
-def test_format_worktree_cell_not_exists_locally() -> None:
-    """Test worktree that doesn't exist locally shows strikethrough."""
-    from erk.cli.commands.plan.list_cmd import format_worktree_cell
+def test_format_worktree_name_cell_empty_name_not_exists() -> None:
+    """Test that empty worktree name with exists_locally=False returns dash."""
+    from erk.cli.commands.plan.list_cmd import format_worktree_name_cell
 
-    result = format_worktree_cell("deleted-worktree", False, None)
-    assert result == "[dim strike]deleted-worktree[/dim strike]"
-
-
-def test_format_worktree_cell_not_exists_with_timestamp() -> None:
-    """Test that non-existent worktree ignores timestamp."""
-    from erk.cli.commands.plan.list_cmd import format_worktree_cell
-
-    # Even with a timestamp, if worktree doesn't exist, it should show strikethrough
-    result = format_worktree_cell("deleted-worktree", False, "2024-11-28T12:00:00+00:00")
-    assert result == "[dim strike]deleted-worktree[/dim strike]"
+    result = format_worktree_name_cell("", False)
+    assert result == "-"

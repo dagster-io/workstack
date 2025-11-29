@@ -7,6 +7,7 @@ import click
 from erk_shared.output.output import user_output
 
 from erk.cli.activation import render_activation_script
+from erk.cli.alias import alias
 from erk.cli.commands.pr.parse_pr_reference import parse_pr_reference
 from erk.cli.core import worktree_path_for
 from erk.cli.ensure import Ensure
@@ -14,6 +15,7 @@ from erk.core.context import ErkContext
 from erk.core.repo_discovery import NoRepoSentinel, RepoContext
 
 
+@alias("co")
 @click.command("checkout")
 @click.argument("pr_reference")
 @click.option(

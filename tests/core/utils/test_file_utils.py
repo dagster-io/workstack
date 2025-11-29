@@ -120,6 +120,20 @@ More content.
         "Convert Subprocess CLI Tests to CliRunner",
         id="implementation_plan_mixed_case",
     ),
+    pytest.param(
+        "plan_prefix",
+        "plan.md",
+        "# Plan: Add User Authentication Feature\n\nContent.",
+        "Add User Authentication Feature",
+        id="plan_prefix",
+    ),
+    pytest.param(
+        "plan_prefix_case_insensitive",
+        "plan.md",
+        "# PLAN: Add Retry Logic\n\nContent.",
+        "Add Retry Logic",
+        id="plan_prefix_case_insensitive",
+    ),
 ]
 
 

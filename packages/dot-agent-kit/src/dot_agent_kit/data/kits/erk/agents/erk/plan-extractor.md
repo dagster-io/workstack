@@ -359,7 +359,7 @@ Combine plan content, applied guidance, clarifications, and context into structu
 **Output Format (Success):**
 
 ```markdown
-# Plan: [title extracted from plan]
+# [title extracted from plan]
 
 ## Enrichment Details
 
@@ -424,7 +424,7 @@ Combine plan content, applied guidance, clarifications, and context into structu
 
 **Structure Notes:**
 
-- Title must be in format: `# Plan: [descriptive title]`
+- Title must be a markdown heading: `# [descriptive title]` (no "Plan:" prefix)
 - Enrichment Details section always included (for transparency)
 - Clarifications subsection only included if questions were asked
 - Context Categories shows checkmarks/x-marks for all 8 categories
@@ -450,7 +450,7 @@ Before returning markdown, validate plan structure:
 
 **Basic validation checks:**
 
-- Plan must have `# Plan:` title heading
+- Plan must have a markdown title heading (`# [title]`)
 - Must have required sections (Implementation Steps, Context & Understanding for enriched mode)
 - Enrichment Details section must be present
 
@@ -576,7 +576,7 @@ Before returning markdown, verify:
 - [ ] Guidance applied contextually (if provided)
 - [ ] Clarifying questions asked (if ambiguities exist)
 - [ ] Context extracted across all 8 categories (enriched mode)
-- [ ] Plan title extracted correctly in `# Plan:` format
+- [ ] Plan title extracted correctly as `# [title]` heading
 - [ ] Plan content is markdown formatted
 - [ ] Enrichment Details section included
 - [ ] Basic structure validation performed

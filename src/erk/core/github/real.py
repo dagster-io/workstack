@@ -153,6 +153,26 @@ class RealGitHub(GitHub):
             # Caller is responsible for precondition validation
             pass
 
+    def update_pr_body(self, repo_root: Path, pr_number: int, body: str) -> None:
+        """Update body of a PR on GitHub.
+
+        Gracefully handles gh CLI availability issues (not installed, not authenticated).
+        The calling code should validate preconditions (PR exists, is open)
+        before calling this method.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability. Genuine command failures (invalid PR) should be
+        caught by precondition checks in the caller.
+        """
+        try:
+            cmd = ["gh", "pr", "edit", str(pr_number), "--body", body]
+            execute_gh_command(cmd, repo_root)
+        except (RuntimeError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed
+            # Graceful degradation - operation skipped
+            # Caller is responsible for precondition validation
+            pass
+
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Get PR mergeability status from GitHub via gh CLI.
 

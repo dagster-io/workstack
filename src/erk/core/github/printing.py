@@ -4,7 +4,13 @@ from pathlib import Path
 
 import click
 from erk_shared.github.abc import GitHub
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import (
+    PRCheckoutInfo,
+    PRInfo,
+    PRMergeability,
+    PullRequestInfo,
+    WorkflowRun,
+)
 from erk_shared.printing.base import PrintingBase
 
 
@@ -90,6 +96,11 @@ class PrintingGitHub(PrintingBase, GitHub):
         self._emit(self._format_command(f"gh pr edit {pr_number} --base {new_base}"))
         self._wrapped.update_pr_base_branch(repo_root, pr_number, new_base)
 
+    def update_pr_body(self, repo_root: Path, pr_number: int, body: str) -> None:
+        """Update PR body with printed output."""
+        self._emit(self._format_command(f"gh pr edit {pr_number} --body <body>"))
+        self._wrapped.update_pr_body(repo_root, pr_number, body)
+
     def merge_pr(
         self,
         repo_root: Path,
@@ -161,3 +172,17 @@ class PrintingGitHub(PrintingBase, GitHub):
         return self._wrapped.poll_for_workflow_run(
             repo_root, workflow, branch_name, timeout, poll_interval
         )
+
+    def get_pr_checkout_info(self, repo_root: Path, pr_number: int) -> PRCheckoutInfo | None:
+        """Get PR checkout info (read-only, no printing)."""
+        return self._wrapped.get_pr_checkout_info(repo_root, pr_number)
+
+    def get_workflow_runs_batch(
+        self, repo_root: Path, run_ids: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get workflow runs batch (read-only, no printing)."""
+        return self._wrapped.get_workflow_runs_batch(repo_root, run_ids)
+
+    def check_auth_status(self) -> tuple[bool, str | None, str | None]:
+        """Check auth status (read-only, no printing)."""
+        return self._wrapped.check_auth_status()

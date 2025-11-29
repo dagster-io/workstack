@@ -15,6 +15,8 @@ import json
 import subprocess
 
 from erk_shared.github.parsing import parse_gh_auth_status_output
+from erk_shared.integrations.graphite.abc import Graphite
+from erk_shared.integrations.graphite.real import RealGraphite
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
 from erk_shared.integrations.gt.types import CommandResult
 
@@ -546,6 +548,7 @@ class RealGtKit(GtKit):
         self._git = RealGitGtKit()
         self._graphite = RealGraphiteGtKit()
         self._github = RealGitHubGtKit()
+        self._main_graphite = RealGraphite()
 
     def git(self) -> GitGtKit:
         """Get the git operations interface."""
@@ -558,3 +561,7 @@ class RealGtKit(GtKit):
     def github(self) -> GitHubGtKit:
         """Get the GitHub operations interface."""
         return self._github
+
+    def main_graphite(self) -> Graphite:
+        """Get the main Graphite operations interface."""
+        return self._main_graphite

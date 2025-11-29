@@ -13,6 +13,8 @@ Design:
 
 from dataclasses import dataclass, field, replace
 
+from erk_shared.integrations.graphite.abc import Graphite
+from erk_shared.integrations.graphite.fake import FakeGraphite
 from erk_shared.integrations.gt.abc import GitGtKit, GitHubGtKit, GraphiteGtKit, GtKit
 from erk_shared.integrations.gt.types import CommandResult
 
@@ -381,11 +383,13 @@ class FakeGtKitOps(GtKit):
         git_state: GitState | None = None,
         graphite_state: GraphiteState | None = None,
         github_state: GitHubState | None = None,
+        main_graphite: Graphite | None = None,
     ) -> None:
         """Initialize with optional initial states."""
         self._git = FakeGitGtKitOps(git_state)
         self._graphite = FakeGraphiteGtKitOps(graphite_state)
         self._github = FakeGitHubGtKitOps(github_state)
+        self._main_graphite = main_graphite if main_graphite is not None else FakeGraphite()
 
     def git(self) -> FakeGitGtKitOps:
         """Get the git operations interface."""
@@ -398,6 +402,10 @@ class FakeGtKitOps(GtKit):
     def github(self) -> FakeGitHubGtKitOps:
         """Get the GitHub operations interface."""
         return self._github
+
+    def main_graphite(self) -> Graphite:
+        """Get the main Graphite operations interface."""
+        return self._main_graphite
 
     # Declarative setup methods
 

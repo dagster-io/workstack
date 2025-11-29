@@ -1141,7 +1141,7 @@ class PlanHeaderSchema(MetadataBlockSchema):
         schema_version: Always "2" for this format
         created_at: ISO 8601 timestamp of plan creation
         created_by: GitHub username of plan creator
-        worktree_name: Auto-derived from title (stable)
+        worktree_name: Set when worktree is created (nullable)
         last_dispatched_run_id: Updated by workflow, enables direct run lookup (nullable)
         last_dispatched_at: Updated by workflow (nullable)
         last_local_impl_at: Updated by local implementation, tracks last implement time (nullable)
@@ -1153,9 +1153,13 @@ class PlanHeaderSchema(MetadataBlockSchema):
             "schema_version",
             "created_at",
             "created_by",
-            "worktree_name",
         }
-        optional_fields = {"last_dispatched_run_id", "last_dispatched_at", "last_local_impl_at"}
+        optional_fields = {
+            "worktree_name",
+            "last_dispatched_run_id",
+            "last_dispatched_at",
+            "last_local_impl_at",
+        }
 
         # Check required fields exist
         missing = required_fields - set(data.keys())
@@ -1166,12 +1170,19 @@ class PlanHeaderSchema(MetadataBlockSchema):
         if data["schema_version"] != "2":
             raise ValueError(f"Invalid schema_version '{data['schema_version']}'. Must be '2'")
 
-        # Validate string fields
-        for field in ["created_at", "created_by", "worktree_name"]:
+        # Validate required string fields
+        for field in ["created_at", "created_by"]:
             if not isinstance(data[field], str):
                 raise ValueError(f"{field} must be a string")
             if len(data[field]) == 0:
                 raise ValueError(f"{field} must not be empty")
+
+        # Validate optional worktree_name field
+        if "worktree_name" in data and data["worktree_name"] is not None:
+            if not isinstance(data["worktree_name"], str):
+                raise ValueError("worktree_name must be a string or null")
+            if len(data["worktree_name"]) == 0:
+                raise ValueError("worktree_name must not be empty when provided")
 
         # Validate optional fields if present
         if "last_dispatched_run_id" in data:
@@ -1203,7 +1214,7 @@ def create_plan_header_block(
     *,
     created_at: str,
     created_by: str,
-    worktree_name: str,
+    worktree_name: str | None = None,
     last_dispatched_run_id: str | None = None,
     last_dispatched_at: str | None = None,
     last_local_impl_at: str | None = None,
@@ -1213,7 +1224,7 @@ def create_plan_header_block(
     Args:
         created_at: ISO 8601 timestamp of plan creation
         created_by: GitHub username of plan creator
-        worktree_name: Auto-derived worktree name from title
+        worktree_name: Optional worktree name (set when worktree is created)
         last_dispatched_run_id: Optional workflow run ID (set by workflow)
         last_dispatched_at: Optional dispatch timestamp (set by workflow)
         last_local_impl_at: Optional local implementation timestamp (set by plan-implement)
@@ -1226,11 +1237,13 @@ def create_plan_header_block(
         "schema_version": "2",
         "created_at": created_at,
         "created_by": created_by,
-        "worktree_name": worktree_name,
         "last_dispatched_run_id": last_dispatched_run_id,
         "last_dispatched_at": last_dispatched_at,
         "last_local_impl_at": last_local_impl_at,
     }
+    # Only include worktree_name if provided
+    if worktree_name is not None:
+        data["worktree_name"] = worktree_name
 
     return create_metadata_block(
         key=schema.get_key(),
@@ -1243,7 +1256,7 @@ def format_plan_header_body(
     *,
     created_at: str,
     created_by: str,
-    worktree_name: str,
+    worktree_name: str | None = None,
     last_dispatched_run_id: str | None = None,
     last_dispatched_at: str | None = None,
     last_local_impl_at: str | None = None,
@@ -1256,7 +1269,7 @@ def format_plan_header_body(
     Args:
         created_at: ISO 8601 timestamp of plan creation
         created_by: GitHub username of plan creator
-        worktree_name: Auto-derived worktree name from title
+        worktree_name: Optional worktree name (set when worktree is created)
         last_dispatched_run_id: Optional workflow run ID
         last_dispatched_at: Optional dispatch timestamp
         last_local_impl_at: Optional local implementation timestamp
@@ -1473,6 +1486,47 @@ def update_plan_header_local_impl(
     # Update local impl field
     updated_data = dict(block.data)
     updated_data["last_local_impl_at"] = local_impl_at
+
+    # Validate updated data
+    schema = PlanHeaderSchema()
+    schema.validate(updated_data)
+
+    # Create new block and render
+    new_block = MetadataBlock(key="plan-header", data=updated_data)
+    new_block_content = render_metadata_block(new_block)
+
+    # Replace block in full body
+    return replace_metadata_block_in_body(issue_body, "plan-header", new_block_content)
+
+
+def update_plan_header_worktree_name(
+    issue_body: str,
+    worktree_name: str,
+) -> str:
+    """Update worktree_name field in plan-header metadata block.
+
+    Uses Python YAML parsing for robustness (not regex).
+    This function reads the existing plan-header block, updates the
+    worktree_name field, and re-renders the entire body.
+
+    Args:
+        issue_body: Current issue body containing plan-header block
+        worktree_name: The actual worktree name to set
+
+    Returns:
+        Updated issue body with new worktree_name field
+
+    Raises:
+        ValueError: If plan-header block not found or invalid
+    """
+    # Extract existing plan-header block
+    block = find_metadata_block(issue_body, "plan-header")
+    if block is None:
+        raise ValueError("plan-header block not found in issue body")
+
+    # Update worktree_name field
+    updated_data = dict(block.data)
+    updated_data["worktree_name"] = worktree_name
 
     # Validate updated data
     schema = PlanHeaderSchema()

@@ -100,11 +100,11 @@ def test_check_missing_plan_header_fails() -> None:
 def test_check_missing_required_field_fails() -> None:
     """Test validating a plan with invalid plan-header (missing required field)."""
     # Arrange
-    # Missing worktree_name field
+    # Missing created_by field (worktree_name is optional, so test with a truly required field)
     plan_header_data = {
         "schema_version": "2",
         "created_at": "2024-01-01T00:00:00Z",
-        "created_by": "alice",
+        # created_by is missing
     }
     plan_header_block = render_metadata_block(MetadataBlock("plan-header", plan_header_data))
 
@@ -135,7 +135,7 @@ def test_check_missing_required_field_fails() -> None:
         assert result.exit_code == 1
         assert "[PASS] plan-header metadata block present" in result.output
         assert "[FAIL]" in result.output
-        assert "worktree_name" in result.output
+        assert "created_by" in result.output
         assert "Plan validation failed" in result.output
 
 

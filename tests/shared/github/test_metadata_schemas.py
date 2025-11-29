@@ -7,6 +7,7 @@ Tests all validator methods for all schema classes in metadata.py.
 import pytest
 from erk_shared.github.metadata import (
     ImplementationStatusSchema,
+    PlanHeaderSchema,
     PlanSchema,
     ProgressStatusSchema,
     StartStatusSchema,
@@ -519,3 +520,116 @@ class TestWorkflowStartedSchema:
         }
         with pytest.raises(ValueError, match="Unknown fields: unknown_field"):
             schema.validate(data)
+
+
+class TestPlanHeaderSchema:
+    """Test PlanHeaderSchema validation."""
+
+    def test_valid_without_worktree_name(self) -> None:
+        """Valid plan-header without worktree_name (new issues before worktree creation)."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+        }
+        schema.validate(data)  # Should not raise
+
+    def test_valid_with_worktree_name(self) -> None:
+        """Valid plan-header with worktree_name (after worktree creation)."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "worktree_name": "my-feature-25-11-28",
+        }
+        schema.validate(data)  # Should not raise
+
+    def test_valid_with_all_optional_fields(self) -> None:
+        """Valid plan-header with all optional fields."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "worktree_name": "my-feature-25-11-28",
+            "last_dispatched_run_id": "123456789",
+            "last_dispatched_at": "2024-01-15T11:00:00Z",
+            "last_local_impl_at": "2024-01-15T12:00:00Z",
+        }
+        schema.validate(data)  # Should not raise
+
+    def test_missing_required_field(self) -> None:
+        """Missing required field raises ValueError."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            # Missing created_by
+        }
+        with pytest.raises(ValueError, match="Missing required fields: created_by"):
+            schema.validate(data)
+
+    def test_invalid_schema_version(self) -> None:
+        """Invalid schema_version raises ValueError."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "1",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+        }
+        with pytest.raises(ValueError, match="Invalid schema_version '1'. Must be '2'"):
+            schema.validate(data)
+
+    def test_empty_worktree_name_raises(self) -> None:
+        """Empty worktree_name raises ValueError."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "worktree_name": "",
+        }
+        with pytest.raises(ValueError, match="worktree_name must not be empty when provided"):
+            schema.validate(data)
+
+    def test_non_string_worktree_name_raises(self) -> None:
+        """Non-string worktree_name raises ValueError."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "worktree_name": 123,
+        }
+        with pytest.raises(ValueError, match="worktree_name must be a string or null"):
+            schema.validate(data)
+
+    def test_null_worktree_name_is_valid(self) -> None:
+        """Null worktree_name is valid (not set yet)."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "worktree_name": None,
+        }
+        schema.validate(data)  # Should not raise
+
+    def test_unknown_fields_raises(self) -> None:
+        """Unknown fields raise ValueError."""
+        schema = PlanHeaderSchema()
+        data = {
+            "schema_version": "2",
+            "created_at": "2024-01-15T10:30:00Z",
+            "created_by": "testuser",
+            "unknown_field": "value",
+        }
+        with pytest.raises(ValueError, match="Unknown fields: unknown_field"):
+            schema.validate(data)
+
+    def test_get_key(self) -> None:
+        """get_key returns correct key."""
+        schema = PlanHeaderSchema()
+        assert schema.get_key() == "plan-header"

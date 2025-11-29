@@ -40,7 +40,7 @@ def test_create_from_file(tmp_path) -> None:
 
         # Verify Schema V2 format: metadata in body
         assert "plan-header" in body
-        assert "worktree_name" in body
+        # Note: worktree_name is set later when worktree is actually created
 
         # Verify plan content was added as first comment
         assert len(issues.added_comments) == 1
@@ -238,9 +238,9 @@ def test_create_uses_schema_v2(tmp_path) -> None:
         header_block = find_metadata_block(body, "plan-header")
         assert header_block is not None
         assert header_block.data["schema_version"] == "2"
-        assert header_block.data["worktree_name"] == "schema-v2-test"
         assert "created_at" in header_block.data
         assert "created_by" in header_block.data
+        # Note: worktree_name is set later when worktree is actually created
 
         # First comment should contain plan-body metadata block
         comment_number, comment_body = issues.added_comments[0]
@@ -307,8 +307,12 @@ def test_create_with_h2_title_fallback(tmp_path) -> None:
         assert title == "H2 Title"
 
 
-def test_create_derives_worktree_name_from_title(tmp_path) -> None:
-    """Test that worktree_name is correctly derived from title."""
+def test_create_does_not_include_worktree_name(tmp_path) -> None:
+    """Test that worktree_name is NOT included at issue creation time.
+
+    worktree_name is now set later when the actual worktree is created,
+    not at issue creation time.
+    """
     # Arrange
     plan_file = tmp_path / "plan.md"
     plan_content = "# My Cool Feature!\n\nDetails"
@@ -325,8 +329,8 @@ def test_create_derives_worktree_name_from_title(tmp_path) -> None:
         # Assert
         assert result.exit_code == 0
 
-        # Verify worktree name was sanitized correctly
+        # Verify worktree_name is NOT in the header
         title, body, labels = issues.created_issues[0]
         header_block = find_metadata_block(body, "plan-header")
         assert header_block is not None
-        assert header_block.data["worktree_name"] == "my-cool-feature"
+        assert "worktree_name" not in header_block.data

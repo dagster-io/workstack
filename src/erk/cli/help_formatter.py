@@ -2,6 +2,8 @@
 
 import click
 
+from erk.cli.alias import get_aliases
+
 
 class GroupedCommandGroup(click.Group):
     """Click Group that organizes commands into logical sections in help output.
@@ -18,10 +20,18 @@ class GroupedCommandGroup(click.Group):
 
         commands = []
         hidden_commands = []
+        # Build alias map: alias_name -> primary_name
+        alias_map: dict[str, str] = {}
+
         for subcommand in self.list_commands(ctx):
             cmd = self.get_command(ctx, subcommand)
             if cmd is None:
                 continue
+
+            # Build alias map from decorator-declared aliases
+            for alias_name in get_aliases(cmd):
+                alias_map[alias_name] = subcommand
+
             if cmd.hidden:
                 if show_hidden:
                     hidden_commands.append((subcommand, cmd))
@@ -31,10 +41,10 @@ class GroupedCommandGroup(click.Group):
         if not commands:
             return
 
-        # Define command organization
-        core_navigation = ["checkout", "co", "up", "down"]
+        # Define command organization (aliases now derived from decorator, not hardcoded)
+        core_navigation = ["checkout", "up", "down"]
         command_groups = ["wt", "plan", "stack", "run", "admin", "config", "completion"]
-        top_level_plans = ["list", "ls", "implement", "submit"]
+        top_level_plans = ["list", "implement", "submit"]
         initialization = ["init"]
 
         # Categorize commands
@@ -42,9 +52,13 @@ class GroupedCommandGroup(click.Group):
         group_cmds = []
         plan_cmds = []
         init_cmds = []
-        alias_cmds = []
+        other_cmds = []
 
         for name, cmd in commands:
+            # Skip aliases (they'll be shown with their primary command)
+            if name in alias_map:
+                continue
+
             if name in core_navigation:
                 core_cmds.append((name, cmd))
             elif name in command_groups:
@@ -54,8 +68,8 @@ class GroupedCommandGroup(click.Group):
             elif name in initialization:
                 init_cmds.append((name, cmd))
             else:
-                # Everything else is a backward compatibility alias
-                alias_cmds.append((name, cmd))
+                # Other commands
+                other_cmds.append((name, cmd))
 
         # Format sections
         if plan_cmds:
@@ -70,13 +84,13 @@ class GroupedCommandGroup(click.Group):
             with formatter.section("Command Groups"):
                 self._format_command_list(ctx, formatter, group_cmds)
 
-        if alias_cmds:
-            with formatter.section("Quick Access (Aliases)"):
-                self._format_command_list(ctx, formatter, alias_cmds)
-
         if init_cmds:
             with formatter.section("Initialization"):
                 self._format_command_list(ctx, formatter, init_cmds)
+
+        if other_cmds:
+            with formatter.section("Other"):
+                self._format_command_list(ctx, formatter, other_cmds)
 
         if hidden_commands:
             with formatter.section("Deprecated (Hidden)"):
@@ -88,11 +102,22 @@ class GroupedCommandGroup(click.Group):
         formatter: click.HelpFormatter,
         commands: list[tuple[str, click.Command]],
     ) -> None:
-        """Format a list of commands with their help text."""
+        """Format a list of commands with their help text.
+
+        Commands with aliases (declared via @alias decorator) are displayed
+        as 'primary / alias1 / alias2'.
+        """
         rows = []
         for name, cmd in commands:
+            # Get aliases for this command and format display name
+            aliases = get_aliases(cmd)
+            if aliases:
+                display_name = f"{name} / {' / '.join(aliases)}"
+            else:
+                display_name = name
+
             help_text = cmd.get_short_help_str(limit=formatter.width)
-            rows.append((name, help_text))
+            rows.append((display_name, help_text))
 
         if rows:
             formatter.write_dl(rows)

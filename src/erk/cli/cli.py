@@ -1,5 +1,6 @@
 import click
 
+from erk.cli.alias import register_with_aliases
 from erk.cli.commands.admin import admin_group
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.completion import completion_group
@@ -7,7 +8,6 @@ from erk.cli.commands.config import config_group
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
-from erk.cli.commands.ls import ls_cmd
 from erk.cli.commands.plan import plan_group
 from erk.cli.commands.plan.create_cmd import create_plan
 from erk.cli.commands.plan.list_cmd import list_plans
@@ -37,17 +37,16 @@ def cli(ctx: click.Context) -> None:
 
 
 # Register all commands
+# Commands with @alias decorators use register_with_aliases() to auto-register aliases
 cli.add_command(admin_group)
-cli.add_command(checkout_cmd)
-cli.add_command(checkout_cmd, name="co")  # Alias
+register_with_aliases(cli, checkout_cmd)  # Has @alias("co")
 cli.add_command(completion_group)
 cli.add_command(config_group)
 cli.add_command(create_plan, name="create")  # Plan command
 cli.add_command(down_cmd)
 cli.add_command(implement)
 cli.add_command(init_cmd)
-cli.add_command(list_plans, name="list")  # Plan command (top-level)
-cli.add_command(ls_cmd)  # List plans
+register_with_aliases(cli, list_plans, name="list")  # Has @alias("ls")
 cli.add_command(plan_group)
 cli.add_command(pr_group)
 cli.add_command(run_group)

@@ -15,6 +15,7 @@ from erk_shared.output.output import user_output
 from rich.console import Console
 from rich.table import Table
 
+from erk.cli.alias import alias
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
 from erk.core.display_utils import (
@@ -393,6 +394,7 @@ def _list_plans_impl(
     console.print()  # Add blank line after table
 
 
+@alias("ls")
 @click.command("list")
 @plan_list_options
 @click.pass_obj
